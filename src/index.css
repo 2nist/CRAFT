@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    @apply min-h-screen text-slateish font-poppins;
+  }
+  /* Keep the base sand color on body/html only */
+  html, body { @apply bg-sand; }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bungee text-accent;
+  }
+}
+
+/* Background watermark/logo overlay */
+:root { --bg-logo-opacity: 0.2; }
+
+#root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url('/Craft_Logo_BG.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain; /* or 'cover' for full bleed */
+  opacity: var(--bg-logo-opacity); /* 0.2 = ~80% transparency */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure app content sits above the watermark */
+#root { position: relative; background-color: transparent !important; }
+#root > * { position: relative; z-index: 1; }
+
+@layer components {
+  .ca-input {
+    @apply w-full px-[0.4rem] py-[0.4rem] bg-white border border-gray-300 rounded-xs2 text-basec text-slateish transition focus:outline-none focus:border-accent focus:ring-2 focus:ring-[rgba(214,127,92,0.2)];
+  }
+  .ca-select { @apply ca-input; }
+  .ca-label { @apply block mb-[0.1rem] text-sm font-medium text-slateish; }
+
+  .ca-stat {
+    @apply bg-white px-[0.75rem] py-[0.4rem] rounded-sm2 shadow-card flex flex-col justify-center transition;
+  }
+  .ca-stat-title { @apply text-xs2 font-medium uppercase tracking-wider text-slateish; }
+  .ca-stat-value { @apply text-base font-bold text-accent mt-[0.1rem] break-words; }
+
+  .ca-tabs { @apply border-b-2 border-tea mb-[-2px]; }
+  .ca-tab {
+    @apply px-[0.6rem] py-[0.4rem] rounded-t-sm2 font-semibold text-slateish text-sm transition border border-transparent border-b-0 text-center flex-1;
+  }
+  .ca-tab:not(.active):hover { @apply bg-eggshell text-accent; }
+  .ca-tab.active {
+    @apply text-accent bg-eggshell;
+    border-bottom: 3px solid #D67F5C;
+  }
+  .ca-tab-panel { @apply bg-eggshell p-[0.75rem] rounded-sm2 shadow-panel; }
+
+  .ca-number {
+    @apply font-bungee text-lgc leading-[1.1] text-accent break-all;
+  }
+  .ca-price-hero { @apply text-lgp; }
+
+  .ca-btn {
+    @apply bg-accent text-white font-semibold rounded-xs2 px-4 py-2 text-sm shadow-sm transition-colors;
+  }
+  .ca-btn:focus { @apply outline-none ring-2 ring-[rgba(214,127,92,0.2)] ring-offset-2; }
+  .ca-btn:hover { background-color: #c66d4d; }
+
+  .ca-btn-outline {
+    @apply bg-transparent text-accent border border-accent rounded-xs2 px-4 py-2 text-sm transition-colors;
+  }
+  .ca-btn-outline:hover { background-color: rgba(214,127,92,0.08); }
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  font-variant-numeric: tabular-nums;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Fade-in animation for generated results */
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+

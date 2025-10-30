@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    body { 
+      margin: 0; 
+      padding: 1rem;
+      font-family: 'Poppins', sans-serif;
+      background: #F5E5D0;
+      color: #4a5a63;
+    }
+    .tool-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      font-family: 'Bungee', sans-serif;
+      color: #d67f5c;
+      font-size: 1.5rem;
+      margin: 0 0 1rem 0;
+    }
+    .form-label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #4a5a63;
+    }
+    .form-input {
+      width: 100%;
+      padding: 0.4rem;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 0.4rem;
+      color: #0f172a;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #d67f5c;
+      box-shadow: 0 0 0 2px rgba(214, 127, 92, 0.2);
+    }
+    button {
+      background: #d67f5c;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.4rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    button:hover {
+      background: #c66d4d;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f2ebe1;
+      border-radius: 0.5rem;
+      border: 2px solid #d67f5c;
+    }
+    .result-value {
+      font-family: 'Bungee', sans-serif;
+      font-size: 1.3rem;
+      color: #d67f5c;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="tool-container">
+    <h1>Simple Calculator</h1>
+    <p style="color: #4a5a63; margin-bottom: 1rem;">This is an example plugin demonstrating the modular tool system.</p>
+    
+    <label class="ca-label">First Number</label>
+    <input type="number" id="num1" class="ca-input" value="10" />
+    
+    <label class="ca-label">Second Number</label>
+    <input type="number" id="num2" class="ca-input" value="5" />
+    
+    <button class="ca-btn" onclick="calculate()">Calculate Sum</button>
+    
+    <div id="result" style="display: none;" class="ca-card">
+      <div class="ca-label" style="margin-bottom: 0;">RESULT</div>
+      <div class="ca-number ca-price-hero" id="resultValue">0</div>
+    </div>
+  </div>
+
+  <script>
+    function calculate() {
+      const num1 = parseFloat(document.getElementById('num1').value) || 0;
+      const num2 = parseFloat(document.getElementById('num2').value) || 0;
+      const sum = num1 + num2;
+      
+      document.getElementById('resultValue').textContent = sum;
+      document.getElementById('result').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

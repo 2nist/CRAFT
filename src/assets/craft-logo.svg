@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400">
+  <!-- Color scheme from the image: dark teal/slate #4A5F6B -->
+  <defs>
+    <style>
+      .logo-text { fill: #4A5F6B; }
+      .logo-icon { fill: #4A5F6B; }
+    </style>
+  </defs>
+  
+  <!-- Icon: Stylized hop/plant in circle -->
+  <g class="logo-icon">
+    <!-- Outer circular shape -->
+    <path d="M 80 200 Q 80 120 140 80 Q 200 40 260 80 Q 320 120 320 200 Q 320 280 260 320 Q 200 360 140 320 Q 80 280 80 200 Z" fill="none" stroke="#4A5F6B" stroke-width="8"/>
+    
+    <!-- Inner hop/plant design -->
+    <ellipse cx="200" cy="150" rx="25" ry="35" transform="rotate(-15 200 150)"/>
+    <ellipse cx="180" cy="190" rx="28" ry="38" transform="rotate(-25 180 190)"/>
+    <ellipse cx="220" cy="190" rx="28" ry="38" transform="rotate(25 220 190)"/>
+    <ellipse cx="200" cy="230" rx="30" ry="40" transform="rotate(-10 200 230)"/>
+    
+    <!-- Leaf veins/details -->
+    <line x1="200" y1="120" x2="200" y2="270" stroke="#4A5F6B" stroke-width="3" opacity="0.7"/>
+  </g>
+  
+  <!-- Text: "Craft" -->
+  <text x="360" y="240" font-family="'Bungee', sans-serif" font-size="140" font-weight="700" class="logo-text">Craft</text>
+  
+  <!-- Text: "automation" (smaller, below) -->
+  <text x="360" y="310" font-family="'Poppins', sans-serif" font-size="60" font-weight="400" letter-spacing="8" class="logo-text">automation</text>
+</svg>

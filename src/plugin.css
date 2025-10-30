@@ -1,0 +1,130 @@
+/* Shared plugin styles (no Tailwind at runtime) */
+/* Colors and fonts map to app tokens */
+:root {
+  --sand: #F5E5D0;
+  --slateish: #4A5A63;
+  --accent: #D67F5C;
+  --eggshell: #F2EBE1;
+  --tea: #D1DDBE;
+}
+
+/* Headings default */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Bungee', sans-serif;
+  color: var(--accent);
+}
+
+/* Components */
+.ca-label {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--slateish);
+}
+
+.ca-input, .ca-select {
+  width: 100%;
+  padding: 0.4rem;
+  background: #fff;
+  border: 1px solid #d1d5db; /* gray-300 */
+  border-radius: 0.4rem; /* xs2 */
+  color: #0f172a;
+  font-size: 0.8rem; /* basec */
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ca-input:focus, .ca-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(214,127,92,0.2);
+}
+
+.ca-number {
+  font-family: 'Bungee', sans-serif;
+  font-size: 1.1rem;
+  line-height: 1.1;
+  color: var(--accent);
+  word-break: break-all;
+}
+.ca-price-hero { font-size: 1.3rem; }
+
+/* Simple card */
+.ca-card {
+  background: #fff;
+  padding: 0.75rem 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Buttons */
+.ca-btn {
+  background: var(--accent);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color .15s ease;
+}
+.ca-btn:hover { background: #c66d4d; }
+.ca-btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.ca-btn-outline:hover { background: rgba(214,127,92,0.08); }
+
+/* Tabs */
+.ca-tabs {
+  border-bottom: 2px solid var(--tea);
+  margin-bottom: -2px;
+  display: flex;
+  gap: 0.25rem;
+}
+.ca-tab {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  font-weight: 600;
+  color: var(--slateish);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.ca-tab:hover { background: var(--eggshell); color: var(--accent); }
+.ca-tab.active {
+  color: var(--accent);
+  background: var(--eggshell);
+  border-bottom: 3px solid var(--accent);
+}
+.ca-tab-panel {
+  background: var(--eggshell);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 15px rgba(0,0,0,0.10);
+}
+
+/* Stat card */
+.ca-stat {
+  background: #fff;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.ca-stat-title {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--slateish);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.ca-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 0.1rem;
+  word-break: break-word;
+}
