@@ -1773,15 +1773,24 @@ Location: Not applicable - derived data.
             <img src="/Craft_Logo.png" alt="Craft Automation" className="h-10 object-contain" />
             <h1 className="text-2xl">{VIEWS[view].name}</h1>
           </div>
-          <a
-            href="https://github.com/google/gemini-dev-copilot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-gray-500 hover:text-accent flex items-center"
-          >
-            <HelpCircle className="h-4 w-4 mr-1" />
-            Help
-          </a>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setView('settings')}
+              className="text-gray-500 hover:text-accent p-2 rounded-md hover:bg-gray-50 transition-colors"
+              title="Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+            <a
+              href="https://github.com/google/gemini-dev-copilot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-500 hover:text-accent flex items-center"
+            >
+              <HelpCircle className="h-4 w-4 mr-1" />
+              Help
+            </a>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6 relative z-10">
           {VIEWS[view].component}
