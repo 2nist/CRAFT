@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Component Catalog Item",
+  "description": "Defines a single item in the component catalog, based on the component_catalog.csv file.",
+  "type": "object",
+  "properties": {
+    "sku": {
+      "description": "The internal part SKU (from the 'PART' column, e.G., 'ENC', 'PLC-IDEC-16IO').",
+      "type": "string"
+    },
+    "description": {
+      "description": "The human-readable description of the part.",
+      "type": "string"
+    },
+    "partNumber": {
+      "description": "The manufacturer's part number (from 'PART#').",
+      "type": "string"
+    },
+    "vendor": {
+      "description": "The vendor/supplier (from 'VNDR').",
+      "type": "string"
+    },
+    "vendorPartNumber": {
+      "description": "The vendor's catalog number (from 'VNDR#').",
+      "type": "string"
+    },
+    "cost": {
+      "description": "The unit cost of the item.",
+      "type": "number",
+      "minimum": 0
+    },
+    "unit": {
+      "description": "The unit of measure (from 'UNIT', e.g., 'ea.').",
+      "type": "string",
+      "default": "ea."
+    },
+    "category": {
+      "description": "The primary category or assembly (from 'ASSEMBLY', e.g., 'ENCLOSURE', 'Control Systems').",
+      "type": "string"
+    },
+    "tags": {
+      "description": "A list of tags for searching (from 'TAGS').",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "description": "Additional notes for the part.",
+      "type": "string"
+    },
+    "manualLink": {
+      "description": "A URL to the part's manual or spec sheet.",
+      "type": "string",
+      "format": "uri"
+    },
+    "lastPriceUpdate": {
+      "description": "The date the price was last verified.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "attributes": {
+      "description": "An object for technical specifications.",
+      "type": "object",
+      "properties": {
+        "voltage": { "type": "string" },
+        "phase": { "type": "string" },
+        "amps": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "sku",
+    "description",
+    "partNumber",
+    "vendor",
+    "cost",
+    "category"
+  ]
+}

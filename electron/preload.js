@@ -39,6 +39,34 @@ contextBridge.exposeInMainWorld('plugins', {
   getHTML: (pluginId) => ipcRenderer.invoke('plugins:getHTML', pluginId),
 })
 
+// Expose components API
+contextBridge.exposeInMainWorld('components', {
+  getAll: () => ipcRenderer.invoke('components:getAll'),
+  search: (filters) => ipcRenderer.invoke('components:search', filters),
+  getBySku: (sku) => ipcRenderer.invoke('components:getBySku', sku),
+  getCategories: () => ipcRenderer.invoke('components:getCategories'),
+  getVendors: () => ipcRenderer.invoke('components:getVendors'),
+})
+
+// Expose assemblies API
+contextBridge.exposeInMainWorld('assemblies', {
+  getAll: () => ipcRenderer.invoke('assemblies:getAll'),
+  search: (filters) => ipcRenderer.invoke('assemblies:search', filters),
+  getById: (assemblyId) => ipcRenderer.invoke('assemblies:getById', assemblyId),
+  expand: (assemblyId) => ipcRenderer.invoke('assemblies:expand', assemblyId),
+  getCategories: () => ipcRenderer.invoke('assemblies:getCategories'),
+})
+
+// Expose panels API
+contextBridge.exposeInMainWorld('panels', {
+  getAll: () => ipcRenderer.invoke('panels:getAll'),
+  save: (panel) => ipcRenderer.invoke('panels:save', panel),
+  delete: (panelId) => ipcRenderer.invoke('panels:delete', panelId),
+  search: (filters) => ipcRenderer.invoke('panels:search', filters),
+  getById: (panelId) => ipcRenderer.invoke('panels:getById', panelId),
+  expand: (panelId) => ipcRenderer.invoke('panels:expand', panelId),
+})
+
 // Expose Node.js process information
 contextBridge.exposeInMainWorld('versions', {
   node: () => process.versions.node,

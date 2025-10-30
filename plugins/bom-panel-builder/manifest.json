@@ -1,0 +1,10 @@
+{
+  "id": "bom-panel-builder",
+  "name": "BOM & Panel Builder",
+  "version": "1.0.0",
+  "description": "Visual panel designer with assembly integration and real-time BOM expansion with cost calculation",
+  "author": "Craft Automation",
+  "entry": "index.html",
+  "icon": "📋",
+  "category": "Design Tools"
+}

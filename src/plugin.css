@@ -8,6 +8,102 @@
   --tea: #D1DDBE;
 }
 
+/* Global CSS Reset - Force plugins to follow app theme */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  background-color: var(--sand) !important;
+  color: var(--slateish) !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Override common plugin styling conflicts */
+body {
+  background-color: var(--sand) !important;
+  color: var(--slateish) !important;
+  font-family: 'Poppins', 'Inter', sans-serif !important;
+}
+
+/* Force Tailwind-like utilities if plugins use them */
+.bg-white { background-color: white !important; }
+.bg-gray-50 { background-color: #f9fafb !important; }
+.bg-gray-100 { background-color: #f3f4f6 !important; }
+.bg-gray-800 { background-color: #1f2937 !important; }
+.bg-gray-900 { background-color: #111827 !important; }
+
+.text-white { color: white !important; }
+.text-gray-50 { color: #f9fafb !important; }
+.text-gray-100 { color: #f3f4f6 !important; }
+.text-gray-300 { color: #d1d5db !important; }
+.text-gray-400 { color: #9ca3af !important; }
+.text-gray-500 { color: #6b7280 !important; }
+.text-gray-600 { color: #4b5563 !important; }
+.text-gray-700 { color: #374151 !important; }
+.text-gray-800 { color: #1f2937 !important; }
+.text-gray-900 { color: #111827 !important; }
+
+.border-gray-200 { border-color: #e5e7eb !important; }
+.border-gray-300 { border-color: #d1d5db !important; }
+.border-gray-600 { border-color: #4b5563 !important; }
+.border-gray-700 { border-color: #374151 !important; }
+
+/* Override dark theme colors that plugins might use */
+.bg-black, .bg-slate-900, .bg-slate-800, .bg-slate-700 {
+  background-color: white !important;
+}
+
+.text-black, .text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600 {
+  color: var(--slateish) !important;
+}
+
+/* Override any hardcoded dark colors */
+[style*="background-color:#1a1614"],
+[style*="background-color:#2d2925"],
+[style*="background-color:#3d3935"],
+[style*="background-color:#4d4945"] {
+  background-color: white !important;
+}
+
+[style*="color:#f5f0ea"],
+[style*="color:#ff6f29"] {
+  color: var(--slateish) !important;
+}
+
+/* Force all elements to use light theme */
+div, span, p, input, select, textarea, button, table, th, td, tr {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* Specific overrides for common plugin elements */
+input, select, textarea {
+  background-color: white !important;
+  color: var(--slateish) !important;
+  border: 1px solid #d1d5db !important;
+}
+
+button {
+  background-color: var(--accent) !important;
+  color: white !important;
+  border: none !important;
+}
+
+table {
+  background-color: white !important;
+  color: var(--slateish) !important;
+}
+
+th, td {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
 /* Headings default */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Bungee', sans-serif;

@@ -1,0 +1,14 @@
+[
+  {
+    "panelId": "PANEL-EXAMPLE-001",
+    "projectId": "CA251029035-101001110",
+    "description": "Example Panel - Replace with your panels",
+    "assemblies": [
+      {
+        "assemblyId": "ASM-EXAMPLE-001",
+        "quantity": 1
+      }
+    ],
+    "oneOffComponents": []
+  }
+]

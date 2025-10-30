@@ -1,0 +1,18 @@
+[
+  {
+    "id": "EXAMPLE-001",
+    "partNumber": "ABC-12345",
+    "description": "Example Component - Replace with your component list",
+    "manufacturer": "Example Mfg",
+    "category": "Sensors",
+    "subcategory": "Temperature",
+    "price": 45.99,
+    "quantity": 100,
+    "specifications": {
+      "voltage": "24V DC",
+      "range": "-40 to 125°C",
+      "accuracy": "±0.5°C"
+    },
+    "notes": "This is a placeholder - replace with actual component data"
+  }
+]

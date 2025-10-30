@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Assembly",
+  "description": "A reusable template or 'kit' of components and their quantities.",
+  "type": "object",
+  "properties": {
+    "assemblyId": {
+      "description": "A unique identifier for this assembly template (e.g., 'ASM-VFD-1.5HP').",
+      "type": "string"
+    },
+    "description": {
+      "description": "A human-readable name for this assembly (e.g., '1.5HP VFD Starter Kit').",
+      "type": "string"
+    },
+    "category": {
+      "description": "A standardized category for sorting assemblies.",
+      "type": "string",
+      "enum": [
+        "Enclosure",
+        "Disconnect",
+        "Fuse",
+        "Branch Breaker",
+        "PWRDST",
+        "Control",
+        "SAFETY",
+        "PLC/COM",
+        "MOTOR CONTROL/HEATER CONTROL",
+        "WIRING",
+        "INSTRUMENT",
+        "PNU"
+      ]
+    },
+    "components": {
+      "description": "A list of components (from the catalog) required for this assembly.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "description": "The 'sku' of the component, linking to the component_schema.json.",
+            "type": "string"
+          },
+          "quantity": {
+            "description": "The number of this component required.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "notes": {
+            "description": "Optional notes (e.g., 'Mount on left side').",
+            "type": "string"
+          }
+        },
+        "required": ["sku", "quantity"]
+      }
+    },
+    "estimatedLaborHours": {
+      "description": "Estimated time in hours to build this one assembly.",
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "assemblyId",
+    "description",
+    "components"
+  ]
+}

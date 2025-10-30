@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Ajv from 'ajv';
 import PluginRenderer from './PluginRenderer';
+import componentsSchema from './data/components/schema.json';
 
 // --- Data from your Google Sheet ---
 
@@ -323,6 +324,84 @@ const DEFAULT_PROJECT_SCHEMA = {
   "additionalProperties": false
 };
 
+// Default Assemblies Schema
+const DEFAULT_ASSEMBLIES_SCHEMA = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Assembly Schema",
+  "description": "Schema for project assemblies, which are collections of components grouped by function.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique assembly identifier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable assembly name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the assembly's purpose"
+    },
+    "components": {
+      "type": "array",
+      "description": "List of component SKUs in this assembly",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["id", "name", "components"]
+};
+
+// Default Panels Schema
+const DEFAULT_PANELS_SCHEMA = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Panel Schema",
+  "description": "Schema for electrical panels, defining layout and components.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique panel identifier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Panel name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Panel description"
+    },
+    "dimensions": {
+      "type": "object",
+      "description": "Physical dimensions of the panel",
+      "properties": {
+        "width": {
+          "type": "number",
+          "description": "Width in inches"
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in inches"
+        },
+        "depth": {
+          "type": "number",
+          "description": "Depth in inches"
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "description": "List of component SKUs installed in this panel",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["id", "name"]
+};
+
 // --- Helper Functions & Hooks ---
 
 /**
@@ -406,6 +485,87 @@ function useProjectSchema() {
   };
 }
 
+/**
+ * Custom hook to load and manage any schema
+ */
+function useSchema(key, defaultSchema) {
+  const [customSchema, setCustomSchema] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load custom schema from database on mount
+  useEffect(() => {
+    const loadSchema = async () => {
+      try {
+        if (window.db) {
+          const schemaString = await window.db.loadSetting(key);
+          if (schemaString) {
+            setCustomSchema(JSON.parse(schemaString));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading schema from database:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSchema();
+  }, [key]);
+
+  const activeSchema = useMemo(() => customSchema || defaultSchema, [customSchema, defaultSchema]);
+
+  const validateAndSetSchema = useCallback(async (schemaString) => {
+    let schemaObj;
+    try {
+      schemaObj = JSON.parse(schemaString);
+    } catch (e) {
+      setValidationError(`Invalid JSON: ${e.message}`);
+      return false;
+    }
+
+    try {
+      const ajv = new Ajv();
+      const validate = ajv.compile(schemaObj);
+      // Test with a minimal object
+      validate({});
+      
+      // Save to database
+      if (window.db) {
+        await window.db.saveSetting(key, schemaString);
+      }
+      
+      setCustomSchema(schemaObj);
+      setValidationError(null);
+      return true;
+    } catch (e) {
+      setValidationError(`Invalid Schema: ${e.message}`);
+      return false;
+    }
+  }, [key]);
+
+  const resetSchema = async () => {
+    try {
+      if (window.db) {
+        await window.db.deleteSetting(key);
+      }
+      setCustomSchema(null);
+      setValidationError(null);
+    } catch (error) {
+      console.error('Error resetting schema:', error);
+    }
+  };
+
+  return {
+    schema: activeSchema,
+    schemaString: JSON.stringify(activeSchema, null, 2),
+    validateAndSetSchema,
+    resetSchema,
+    validationError,
+    isCustom: !!customSchema,
+    isLoading
+  };
+}
+
 // --- React Components ---
 
 /**
@@ -434,8 +594,8 @@ const SchemaSelect = ({ field, schema, value, onChange, label, disabled = false,
         className="ca-select"
       >
         <option value="">{options.length === 0 ? 'No options available' : `Select ${label}...`}</option>
-        {options.map((opt) => (
-          <option key={opt.const} value={opt.const}>
+        {options.map((opt, idx) => (
+          <option key={opt.const + '-' + idx} value={opt.const}>
             {`${opt.const} - ${opt.description}`}
           </option>
         ))}
@@ -528,9 +688,9 @@ const CustomerInput = ({ value, onChange, customerData }) => {
       
       {showDropdown && filteredCustomers.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-          {filteredCustomers.map(([id, name]) => (
+          {filteredCustomers.map(([id, name], idx) => (
             <div
-              key={id}
+              key={id + '-' + idx}
               onClick={() => handleSelectCustomer(id)}
               className="px-3 py-2 hover:bg-eggshell cursor-pointer border-b border-gray-100 last:border-b-0"
             >
@@ -778,11 +938,75 @@ const ProjectNumberGenerator = ({ schema, customerData, projects, onProjectAdd }
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium text-gray-500">Project Number</label>
-              <p className="font-mono text-lg text-gray-900 bg-gray-50 p-2 rounded">{generatedProject}</p>
+              <div className="flex gap-2">
+                <p className="flex-1 font-mono text-lg text-gray-900 bg-gray-50 p-2 rounded" id="generatedProjectText">{generatedProject}</p>
+                <button
+                  onClick={() => {
+                    const text = generatedProject;
+                    const doCopy = async () => {
+                      try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(text);
+                        } else {
+                          throw new Error('Clipboard API not available');
+                        }
+                      } catch (_) {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-1000px';
+                        ta.style.top = '0';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        try { document.execCommand('copy'); } catch {}
+                        document.body.removeChild(ta);
+                      }
+                    };
+                    doCopy();
+                  }}
+                  className="ca-btn-outline px-3"
+                  title="Copy to clipboard"
+                >
+                  📋 Copy
+                </button>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Quote Number</label>
-              <p className="font-mono text-lg text-gray-900 bg-gray-50 p-2 rounded">{generatedQuote}</p>
+              <div className="flex gap-2">
+                <p className="flex-1 font-mono text-lg text-gray-900 bg-gray-50 p-2 rounded" id="generatedQuoteText">{generatedQuote}</p>
+                <button
+                  onClick={() => {
+                    const text = generatedQuote;
+                    const doCopy = async () => {
+                      try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(text);
+                        } else {
+                          throw new Error('Clipboard API not available');
+                        }
+                      } catch (_) {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-1000px';
+                        ta.style.top = '0';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        try { document.execCommand('copy'); } catch {}
+                        document.body.removeChild(ta);
+                      }
+                    };
+                    doCopy();
+                  }}
+                  className="ca-btn-outline px-3"
+                  title="Copy to clipboard"
+                >
+                  📋 Copy
+                </button>
+              </div>
             </div>
           </div>
           <div className="mt-4 p-4 border border-gray-200 rounded-lg">
@@ -829,7 +1053,7 @@ const ProjectNumberGenerator = ({ schema, customerData, projects, onProjectAdd }
                 </tr>
               )}
               {projects.map(p => (
-                <tr key={p.id}>
+                <tr key={p.id + '-' + p.quoteNumber}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-900">{p.quoteNumber}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600">{p.projectNumber}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{customerData[p.customer] || p.customer}</td>
@@ -847,87 +1071,114 @@ const ProjectNumberGenerator = ({ schema, customerData, projects, onProjectAdd }
 /**
  * "Plugin": Schema Wizard
  */
-const SchemaWizard = ({ schemaString, onSave, onReset, validationError, isCustom }) => {
-  const [localSchemaString, setLocalSchemaString] = useState(schemaString);
-  const [saveStatus, setSaveStatus] = useState(null); // 'success' or 'error'
+const SchemaWizard = ({ tabs }) => {
+  const [activeTab, setActiveTab] = useState(tabs[0].key);
+  const currentTab = tabs.find(t => t.key === activeTab);
+
+  if (currentTab.key === 'help') {
+    return (
+      <div className="p-6 bg-white shadow rounded-lg space-y-4">
+        <h3 className="text-lg leading-6">Schema Wizard - Help</h3>
+        <pre className="whitespace-pre-wrap text-sm text-gray-700">{currentTab.content}</pre>
+      </div>
+    );
+  }
+
+  const [localSchemaString, setLocalSchemaString] = useState(currentTab.schemaString);
+  const [saveStatus, setSaveStatus] = useState(null);
 
   useEffect(() => {
-    setLocalSchemaString(schemaString);
-  }, [schemaString]);
+    setLocalSchemaString(currentTab.schemaString);
+  }, [currentTab.schemaString]);
 
   const handleSave = () => {
-    const success = onSave(localSchemaString);
+    const success = currentTab.onSave(localSchemaString);
     if (success) {
       setSaveStatus('success');
     } else {
       setSaveStatus('error');
     }
-    // Clear status message after 3 seconds
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
   const handleReset = () => {
-    onReset();
+    currentTab.onReset();
     setSaveStatus(null);
   };
-  
-  return (
-     <div className="p-6 bg-white shadow rounded-lg space-y-4">
-       <h3 className="text-lg leading-6">
-          Schema Wizard
-        </h3>
-        <p className="text-sm text-gray-600">
-          Edit the JSON schema used by the generator. This allows you to add or change codes.
-          Be careful, as invalid JSON or an invalid schema will cause errors.
-        </p>
-        
-        {isCustom && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">You are using a custom schema saved in local storage.</p>
-          </div>
-        )}
 
-        <div>
+  return (
+    <div className="p-6 bg-white shadow rounded-lg space-y-4">
+      <h3 className="text-lg leading-6">Schema Wizard</h3>
+
+      <div className="flex space-x-1 border-b">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === tab.key
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {tab.name}
+          </button>
+        ))}
+      </div>
+
+      {currentTab.key !== 'help' && (
+        <>
+          <p className="text-sm text-gray-600">
+            Edit the JSON schema for {currentTab.name}. Be careful, as invalid JSON or schema will cause errors.
+          </p>
+
+          {currentTab.isCustom && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-700">You are using a custom schema saved in local storage.</p>
+            </div>
+          )}
+
           <textarea
             rows="25"
             className="block w-full shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 border-gray-300 rounded-md font-mono text-xs"
             value={localSchemaString}
             onChange={(e) => setLocalSchemaString(e.target.value)}
           />
-        </div>
-        
-        {validationError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <h4>Validation Error</h4>
-            <p className="text-sm text-red-700 font-mono mt-1">{validationError}</p>
+
+          {currentTab.validationError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <h4>Validation Error</h4>
+              <p className="text-sm text-red-700 font-mono mt-1">{currentTab.validationError}</p>
+            </div>
+          )}
+
+          {saveStatus === 'success' && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-700">Schema validated and saved successfully!</p>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={!currentTab.isCustom}
+              className="ca-btn-outline disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="mr-2 h-4 w-4 inline" />
+              Reset to Default
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="ca-btn inline-flex justify-center"
+            >
+              <Save className="mr-2 h-5 w-5" />
+              Validate & Save Schema
+            </button>
           </div>
-        )}
-        
-        {saveStatus === 'success' && (
-           <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-sm text-green-700">Schema validated and saved successfully!</p>
-          </div>
-        )}
-        
-        <div className="flex justify-between items-center">
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={!isCustom}
-            className="ca-btn-outline disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="mr-2 h-4 w-4 inline" />
-            Reset to Default
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="ca-btn inline-flex justify-center"
-          >
-            <Save className="mr-2 h-5 w-5" />
-            Validate & Save Schema
-          </button>
-        </div>
+        </>
+      )}
     </div>
   );
 };
@@ -1041,7 +1292,7 @@ const SettingsPanel = ({ onClearData, onClearSchema, customerData, onAddCustomer
                       <h5 className="text-sm mb-2">Custom Customers ({customCustomers.length})</h5>
                       <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
                         {customCustomers.map(([id, name]) => (
-                          <div key={id} className="flex justify-between items-center px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
+                          <div key={id + '-' + idx} className="flex justify-between items-center px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
                             <div>
                               <span className="font-mono font-semibold text-indigo-600">{id}</span>
                               <span className="ml-2 text-sm text-gray-700">{name}</span>
@@ -1067,8 +1318,8 @@ const SettingsPanel = ({ onClearData, onClearSchema, customerData, onAddCustomer
                   <h4 className="mb-3">Product Catalog</h4>
                   <p className="text-sm text-gray-600 mb-3">These are the available Product codes used in the generator.</p>
                   <div className="max-h-64 overflow-y-auto border border-gray-200 rounded">
-                    {(schema?.properties?.productCode?.oneOf || []).map((opt) => (
-                      <div key={opt.const} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0">
+                    {(schema?.properties?.productCode?.oneOf || []).map((opt, idx) => (
+                      <div key={opt.const + '-' + idx} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0">
                         <div>
                           <span className="font-mono font-semibold text-accent mr-2">{opt.const}</span>
                           <span className="text-sm text-gray-800">{opt.description}</span>
@@ -1108,13 +1359,6 @@ const SettingsPanel = ({ onClearData, onClearSchema, customerData, onAddCustomer
             {confirmClearSchema ? "Confirm Reset" : "Reset to Default Schema"}
           </button>
         </div>
-        
-        <div className="p-4 border border-gray-200 rounded-lg">
-          <h4>About</h4>
-          <p className="text-sm text-gray-600 mt-1">
-           This application simulates a plugin-based desktop app. All data (projects, custom schema) is stored in your browser's local storage.
-          </p>
-        </div>
     </div>
   );
 };
@@ -1126,6 +1370,9 @@ const SettingsPanel = ({ onClearData, onClearSchema, customerData, onAddCustomer
 export default function App() {
   const [view, setView] = useState('generator'); // 'generator', 'wizard', 'settings'
   const { schema, schemaString, validateAndSetSchema, resetSchema, validationError, isCustom, isLoading: schemaLoading } = useProjectSchema();
+  const componentsSchemaHook = useSchema('componentsSchema', componentsSchema);
+  const assembliesSchemaHook = useSchema('assembliesSchema', DEFAULT_ASSEMBLIES_SCHEMA);
+  const panelsSchemaHook = useSchema('panelsSchema', DEFAULT_PANELS_SCHEMA);
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [customers, setCustomers] = useState({});
@@ -1369,12 +1616,81 @@ export default function App() {
       name: "Schema Wizard",
       icon: Code,
       component: <SchemaWizard
-                    schemaString={schemaString}
-                    onSave={validateAndSetSchema}
-                    onReset={resetSchema}
-                    validationError={validationError}
-                    isCustom={isCustom}
-                 />
+        tabs={[
+          {
+            key: 'project',
+            name: 'Project',
+            schemaString: schemaString,
+            onSave: validateAndSetSchema,
+            onReset: resetSchema,
+            validationError: validationError,
+            isCustom: isCustom
+          },
+          {
+            key: 'components',
+            name: 'Components',
+            schemaString: componentsSchemaHook.schemaString,
+            onSave: componentsSchemaHook.validateAndSetSchema,
+            onReset: componentsSchemaHook.resetSchema,
+            validationError: componentsSchemaHook.validationError,
+            isCustom: componentsSchemaHook.isCustom
+          },
+          {
+            key: 'assemblies',
+            name: 'Assemblies',
+            schemaString: assembliesSchemaHook.schemaString,
+            onSave: assembliesSchemaHook.validateAndSetSchema,
+            onReset: assembliesSchemaHook.resetSchema,
+            validationError: assembliesSchemaHook.validationError,
+            isCustom: assembliesSchemaHook.isCustom
+          },
+          {
+            key: 'panels',
+            name: 'Panels',
+            schemaString: panelsSchemaHook.schemaString,
+            onSave: panelsSchemaHook.validateAndSetSchema,
+            onReset: panelsSchemaHook.resetSchema,
+            validationError: panelsSchemaHook.validationError,
+            isCustom: panelsSchemaHook.isCustom
+          },
+          {
+            key: 'help',
+            name: 'Help',
+            content: `# Schema Overview
+
+## Project Schema
+The project schema defines the 4-pillar coding system for projects and quotes. It includes industry codes, product codes, control types, and scope of work. This schema is used by the project number generator to validate and generate project numbers.
+
+Location: Defined inline in App.jsx as DEFAULT_PROJECT_SCHEMA.
+
+## Components Schema
+The components schema validates individual items in the component catalog. Each component has properties like SKU, description, part number, vendor, cost, category, etc. This schema ensures data integrity for the parts database.
+
+Location: src/data/components/schema.json
+
+## Assemblies Schema
+Assemblies are collections of components grouped by function. They represent logical groupings like "Motor Control Center" or "Brewing System". Assemblies reference component SKUs and can have descriptions.
+
+Location: Defined inline in App.jsx as DEFAULT_ASSEMBLIES_SCHEMA. (No separate file)
+
+## Panels Schema
+Panels define physical electrical panels with dimensions and component layouts. They include width, height, depth, and lists of components installed in the panel.
+
+Location: Defined inline in App.jsx as DEFAULT_PANELS_SCHEMA. (No separate file)
+
+## BOM (Bill of Materials)
+The BOM is derived from assemblies and panels. It aggregates all components needed for a project, calculating quantities and totals. No separate schema file as it's computed from other data.
+
+Location: Not applicable - derived data.
+
+## Usage Notes
+- Schemas are stored in local storage as JSON strings.
+- Custom schemas override defaults.
+- Invalid schemas will cause validation errors.
+- Reset to default removes custom schemas.`
+          }
+        ]}
+      />
     },
     settings: {
       name: "Settings",
@@ -1412,7 +1728,7 @@ export default function App() {
   });
 
   // Show loading state while data is being loaded
-  if (schemaLoading || projectsLoading || customersLoading || pluginsLoading) {
+  if (schemaLoading || projectsLoading || customersLoading || pluginsLoading || componentsSchemaHook.isLoading || assembliesSchemaHook.isLoading || panelsSchemaHook.isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
         <div className="text-center">
@@ -1467,7 +1783,7 @@ export default function App() {
             Help
           </a>
         </header>
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 relative z-10">
           {VIEWS[view].component}
         </main>
       </div>

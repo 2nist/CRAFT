@@ -1,0 +1,2 @@
+id,partNumber,description,manufacturer,category,subcategory,price,quantity,notes
+EXAMPLE-001,ABC-12345,"Example Component - Replace with your component list",Example Mfg,Sensors,Temperature,45.99,100,"This is a placeholder - replace with actual component data"

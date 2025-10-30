@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Panel",
+  "description": "A specific panel for a project, built from a list of assemblies.",
+  "type": "object",
+  "properties": {
+    "panelId": {
+      "description": "A unique identifier for this specific panel (e.g., a UUID or a project-based ID like '25-001-P1').",
+      "type": "string"
+    },
+    "projectId": {
+      "description": "The main Project Number this panel belongs to (e.g., '25-001-10-100-1-10').",
+      "type": "string"
+    },
+    "description": {
+      "description": "A human-readable name for this panel (e.g., 'Main Brewhouse Panel', 'Cellar Glycol Control').",
+      "type": "string"
+    },
+    "assemblies": {
+      "description": "A list of assemblies (from the assembly library) required for this panel.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assemblyId": {
+            "description": "The 'assemblyId' of the template, linking to the assembly_schema.json.",
+            "type": "string"
+          },
+          "quantity": {
+            "description": "The number of this assembly required.",
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": ["assemblyId", "quantity"]
+      }
+    },
+    "oneOffComponents": {
+      "description": "Components added directly to the panel, not part of a standard assembly.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "description": "The 'sku' of the component, linking to the component_schema.json.",
+            "type": "string"
+          },
+          "quantity": {
+            "description": "The number of this component required.",
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": ["sku", "quantity"]
+      }
+    }
+  },
+  "required": [
+    "panelId",
+    "projectId",
+    "description"
+  ]
+}
