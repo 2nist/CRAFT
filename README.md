@@ -1,30 +1,42 @@
 # Electron Vite React Tailwind App
 
-A modern desktop application built with Electron, Vite, React, and Tailwind CSS.
+Craft Automation Desktop application built with Electron, Vite, React, and Tailwind CSS.
 
 ## Features
 
-- ⚡️ Electron for cross-platform desktop applications
-- ⚛️ React 18 for building user interfaces
-- 🚀 Vite for fast development and building
-- 🎨 Tailwind CSS for utility-first styling
-- 🔒 Secure IPC communication between main and renderer processes
-- 🛠️ Hot module replacement (HMR) for development
+-  Electron for cross-platform desktop applications
+-  React 18 for building user interfaces
+-  Vite for fast development and building
+-  Tailwind CSS for utility-first styling
+-  Secure IPC communication between main and renderer processes
+-  Hot module replacement (HMR) for development
 
 ## Project Structure
 
 ```
 ├── electron/
-│   ├── main.js       # Electron main process
-│   └── preload.js    # Preload script for secure IPC
+│   ├── main.js              # Electron main process with IPC handlers
+│   └── preload.js           # Preload script for secure IPC
 ├── src/
-│   ├── App.jsx       # Main React component
-│   ├── main.jsx      # React entry point
-│   └── index.css     # Global styles with Tailwind
-├── index.html        # HTML entry point
-├── vite.config.js    # Vite configuration for renderer
+│   ├── App.jsx              # Main React component with generator, schema wizard, settings
+│   ├── PluginRenderer.jsx   # Plugin iframe renderer with shared CSS injection
+│   ├── main.jsx             # React entry point
+│   ├── index.css            # Global styles with Tailwind + custom components
+│   ├── plugin.css           # Shared CSS for plugins (injected into iframes)
+│   └── assets/
+│       └── craft-logo.svg   # Craft Automation logo SVG
+├── plugins/
+│   └── example-tool/
+│       ├── manifest.json    # Plugin metadata
+│       └── index.html       # Plugin UI
+├── public/
+│   ├── Craft_Logo.png       # Header logo (swappable)
+│   └── Craft_Logo_BG.png    # Background watermark
+├── index.html               # HTML entry point
+├── vite.config.js           # Vite configuration for renderer
 ├── vite.config.electron.js  # Vite configuration for Electron
-└── package.json      # Project dependencies and scripts
+├── tailwind.config.js       # Tailwind theme customization
+└── package.json             # Project dependencies and scripts
 ```
 
 ## Getting Started
