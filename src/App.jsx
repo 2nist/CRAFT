@@ -6,7 +6,6 @@ import {
   Trash2,
   AlertTriangle,
   LayoutGrid,
-  Settings,
   HelpCircle,
   Code
 } from 'lucide-react';
@@ -1691,18 +1690,6 @@ Location: Not applicable - derived data.
           }
         ]}
       />
-    },
-    settings: {
-      name: "Settings",
-      icon: Settings,
-      component: <SettingsPanel
-                    onClearData={handleClearProjects}
-                    onClearSchema={resetSchema}
-                                    customerData={customers}
-                                    onAddCustomer={handleAddCustomer}
-                                    onDeleteCustomer={handleDeleteCustomer}
-                                    schema={schema}
-                 />
     }
   };
 
@@ -1774,13 +1761,6 @@ Location: Not applicable - derived data.
             <h1 className="text-2xl">{VIEWS[view].name}</h1>
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setView('settings')}
-              className="text-gray-500 hover:text-accent p-2 rounded-md hover:bg-gray-50 transition-colors"
-              title="Settings"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
             <a
               href="https://github.com/google/gemini-dev-copilot"
               target="_blank"
