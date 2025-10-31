@@ -327,7 +327,7 @@
         const scop = (scopeCode || "").toString().padStart(2, '0');
 
         const baseId = `CA${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}`;
-        const quoteId = `CQ${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}-0`; // Add sequence
+        const quoteId = `CQ${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}-00`; // Add sequence
 
         setQuote(prev => ({
           ...prev,
@@ -437,58 +437,13 @@
             {/* --- Step 1: Project Details --- */}
             <div className={`tab-content ${activeTab === 'details' ? 'active' : ''}`}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column: Project Info */}
+                {/* Left Column: Project Classification */}
                 <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
-                  <h3 className="text-xl font-semibold border-b pb-2">Project Info</h3>
-                  <div>
-                    <label className="label" htmlFor="projectName">Project Name</label>
-                    <input
-                      id="projectName"
-                      type="text"
-                      className="input"
-                      value={quote.projectName}
-                      onChange={(e) => handleTopLevelChange('projectName', e.target.value)}
-                    />
-                  </div>
+                  <h3 className="text-xl font-semibold border-b pb-2">Project Classification</h3>
                   <div>
                     <label className="label" htmlFor="customer">Customer</label>
                     <SelectCustomer value={quote.customer} onChange={handleCustomerChange} customers={customers} />
                   </div>
-                  <div className="grid-col-2">
-                    <div>
-                      <label className="label" htmlFor="salesRep">Sales Rep</label>
-                      <input
-                        id="salesRep"
-                        type="text"
-                        className="input"
-                        value={quote.salesRep}
-                        onChange={(e) => handleTopLevelChange('salesRep', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="label" htmlFor="oem">OEM</label>
-                      <input
-                        id="oem"
-                        type="text"
-                        className="input"
-                        value={quote.oem}
-                        onChange={(e) => handleTopLevelChange('oem', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                   <div>
-                    <label className="label" htmlFor="quoteId">Generated Quote ID</label>
-                    <input id="quoteId" type="text" className="input bg-gray-100" value={quote.quoteId} readOnly />
-                  </div>
-                   <div>
-                    <label className="label" htmlFor="projectId">Generated Project ID</label>
-                    <input id="projectId" type="text" className="input bg-gray-100" value={quote.projectId} readOnly />
-                  </div>
-                </div>
-
-                {/* Right Column: 4-Pillar Codes */}
-                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
-                  <h3 className="text-xl font-semibold border-b pb-2">Project Classification</h3>
                   <div>
                     <label className="label" htmlFor="industryCode">Industry</label>
                     <SelectCode
@@ -528,6 +483,51 @@
                       options={schemas.scope}
                       placeholder="Select a Scope"
                     />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="quoteId">Generated Quote ID</label>
+                    <input id="quoteId" type="text" className="input bg-gray-100" value={quote.quoteId} readOnly />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="projectId">Generated Project ID</label>
+                    <input id="projectId" type="text" className="input bg-gray-100" value={quote.projectId} readOnly />
+                  </div>
+                </div>
+
+                {/* Right Column: Project Info */}
+                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
+                  <h3 className="text-xl font-semibold border-b pb-2">Project Info</h3>
+                  <div>
+                    <label className="label" htmlFor="projectName">Project Name</label>
+                    <input
+                      id="projectName"
+                      type="text"
+                      className="input"
+                      value={quote.projectName}
+                      onChange={(e) => handleTopLevelChange('projectName', e.target.value)}
+                    />
+                  </div>
+                  <div className="grid-col-2">
+                    <div>
+                      <label className="label" htmlFor="salesRep">Sales Rep</label>
+                      <input
+                        id="salesRep"
+                        type="text"
+                        className="input"
+                        value={quote.salesRep}
+                        onChange={(e) => handleTopLevelChange('salesRep', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="label" htmlFor="oem">OEM</label>
+                      <input
+                        id="oem"
+                        type="text"
+                        className="input"
+                        value={quote.oem}
+                        onChange={(e) => handleTopLevelChange('oem', e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
