@@ -254,18 +254,45 @@
       const [schemas, setSchemas] = useState({ industry: [], product: [], control: [], scope: [] });
       const [customers, setCustomers] = useState([]);
       useEffect(() => {
-        const loadData = async () => {
-          const [industry, product, control, scope, cust] = await Promise.all([
-            window.schemas.getIndustry(),
-            window.schemas.getProduct(),
-            window.schemas.getControl(),
-            window.schemas.getScope(),
-            window.customers.getAll()
-          ]);
-          setSchemas({ industry, product, control, scope });
-          setCustomers(cust);
+        console.log('Customers state updated:', customers);
+      }, [customers]);
+      useEffect(() => {
+        const loadSchemas = async () => {
+          try {
+            console.log('Loading schema data...');
+            const [industry, product, control, scope] = await Promise.all([
+              window.schemas.getIndustry(),
+              window.schemas.getProduct(),
+              window.schemas.getControl(),
+              window.schemas.getScope()
+            ]);
+            console.log('Schema data loaded');
+            setSchemas({ industry, product, control, scope });
+          } catch (error) {
+            console.error('Error loading schema data:', error);
+          }
         };
-        loadData();
+        
+        const loadCustomers = async () => {
+          try {
+            console.log('Loading customer data...');
+            console.log('window.customers available:', !!window.customers);
+            if (!window.customers) {
+              console.error('window.customers not available');
+              return;
+            }
+            const cust = await window.customers.getAll();
+            console.log('Customer data loaded:', cust);
+            setCustomers(cust || []);
+          } catch (error) {
+            console.error('Error loading customer data:', error);
+            setCustomers([]);
+          }
+        };
+        
+        loadSchemas();
+        // Add a small delay for customers
+        setTimeout(loadCustomers, 200);
       }, []);
 
       const isAutomated = useMemo(() => {
@@ -443,6 +470,9 @@
                   <div>
                     <label className="label" htmlFor="customer">Customer</label>
                     <SelectCustomer value={quote.customer} onChange={handleCustomerChange} customers={customers} />
+                    <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
+                      Debug: {customers.length} customers loaded
+                    </div>
                   </div>
                   <div>
                     <label className="label" htmlFor="industryCode">Industry</label>
@@ -711,6 +741,7 @@
     }
     
     function SelectCustomer({ id, value, onChange, customers }) {
+      console.log('SelectCustomer render:', { customers, customersLength: customers?.length });
       return (
         <select id={id} className="select" value={value || ""} onChange={onChange}>
           <option value="">Select a Customer</option>
@@ -725,13 +756,292 @@
 
     // Placeholder components for Step 3 and Step 4
     function ProductConfigurator({ productCode, productConfig, onChange }) {
+      const [activeSection, setActiveSection] = useState('motors');
+      const [selectValues, setSelectValues] = useState({});
+      
+      // Product-specific configurations
+      const getProductConfig = (code) => {
+        if (code === 100 || code === "100") {
+          return {
+            name: "Brewery Brewhouse",
+            sections: ['motors', 'heaters', 'inputs', 'outputs'],
+            motorTypes: [
+              { value: 'mash_pump', label: 'Mash Pump Motor' },
+              { value: 'wort_pump', label: 'Wort Pump Motor' },
+              { value: 'hot_liquor_pump', label: 'Hot Liquor Pump Motor' },
+              { value: 'sparge_pump', label: 'Sparge Pump Motor' },
+              { value: 'agitator', label: 'Mash Agitator Motor' },
+              { value: 'grain_mill', label: 'Grain Mill Motor' }
+            ],
+            heaterTypes: [
+              { value: 'mash_heater', label: 'Mash Tun Heater' },
+              { value: 'hlt_heater', label: 'Hot Liquor Tank Heater' },
+              { value: 'kettle_heater', label: 'Brew Kettle Heater' }
+            ],
+            inputTypes: [
+              { value: 'temp_mash', label: 'Mash Temperature' },
+              { value: 'temp_hlt', label: 'HLT Temperature' },
+              { value: 'temp_kettle', label: 'Kettle Temperature' },
+              { value: 'level_mash', label: 'Mash Level' },
+              { value: 'level_hlt', label: 'HLT Level' },
+              { value: 'level_kettle', label: 'Kettle Level' },
+              { value: 'flow_mash', label: 'Mash Flow Rate' },
+              { value: 'flow_sparge', label: 'Sparge Flow Rate' },
+              { value: 'pressure', label: 'System Pressure' }
+            ],
+            outputTypes: [
+              { value: 'valve_mash_in', label: 'Mash In Valve' },
+              { value: 'valve_mash_out', label: 'Mash Out Valve' },
+              { value: 'valve_sparge', label: 'Sparge Valve' },
+              { value: 'valve_kettle', label: 'Kettle Valve' },
+              { value: 'pump_mash', label: 'Mash Pump Control' },
+              { value: 'pump_wort', label: 'Wort Pump Control' },
+              { value: 'pump_hot_liquor', label: 'Hot Liquor Pump Control' },
+              { value: 'heater_mash', label: 'Mash Heater Control' },
+              { value: 'heater_hlt', label: 'HLT Heater Control' },
+              { value: 'heater_kettle', label: 'Kettle Heater Control' },
+              { value: 'agitator_control', label: 'Agitator Control' }
+            ]
+          };
+        } else {
+          return {
+            name: `Product ${code || 'Not Selected'}`,
+            sections: ['motors', 'heaters', 'inputs', 'outputs'],
+            motorTypes: [
+              { value: 'generic_motor', label: 'Generic Motor' },
+              { value: 'pump', label: 'Pump Motor' },
+              { value: 'agitator', label: 'Agitator Motor' },
+              { value: 'conveyor', label: 'Conveyor Motor' }
+            ],
+            heaterTypes: [
+              { value: 'generic_heater', label: 'Generic Heater' },
+              { value: 'electric_heater', label: 'Electric Heater' },
+              { value: 'steam_heater', label: 'Steam Heater' }
+            ],
+            inputTypes: [
+              { value: 'generic_input', label: 'Generic Input' },
+              { value: 'temperature', label: 'Temperature Sensor' },
+              { value: 'pressure', label: 'Pressure Sensor' },
+              { value: 'level', label: 'Level Sensor' },
+              { value: 'flow', label: 'Flow Sensor' }
+            ],
+            outputTypes: [
+              { value: 'generic_output', label: 'Generic Output' },
+              { value: 'valve', label: 'Control Valve' },
+              { value: 'relay', label: 'Relay Output' },
+              { value: 'contactor', label: 'Contactor' }
+            ]
+          };
+        }
+      };
+
+      const config = getProductConfig(productCode);
+
+      const handleSelectChange = (section, value) => {
+        if (value) {
+          addItem(section, value);
+          setSelectValues(prev => ({ ...prev, [section]: '' }));
+        }
+      };
+
+      const addItem = (section, type) => {
+        const newItem = {
+          id: Date.now() + Math.random(),
+          type: type,
+          quantity: 1,
+          specifications: '',
+          notes: ''
+        };
+        
+        const updatedConfig = {
+          ...productConfig,
+          [section]: [...(productConfig[section] || []), newItem]
+        };
+        onChange(updatedConfig);
+      };
+
+      const removeItem = (section, id) => {
+        const updatedConfig = {
+          ...productConfig,
+          [section]: (productConfig[section] || []).filter(item => item.id !== id)
+        };
+        onChange(updatedConfig);
+      };
+
+      const updateItem = (section, id, field, value) => {
+        const updatedConfig = {
+          ...productConfig,
+          [section]: (productConfig[section] || []).map(item => 
+            item.id === id ? { ...item, [field]: value } : item
+          )
+        };
+        onChange(updatedConfig);
+      };
+
+      const getTypeLabel = (section, type) => {
+        const types = config && config[typeKeys[section]] ? config[typeKeys[section]] : [];
+        const typeObj = types.find ? types.find(t => t.value === type) : null;
+        return typeObj ? typeObj.label : type;
+      };
+
+      const typeKeys = {
+        motors: 'motorTypes',
+        heaters: 'heaterTypes',
+        inputs: 'inputTypes',
+        outputs: 'outputTypes'
+      };
+
+      const renderSection = (section) => {
+        const items = productConfig[section] || [];
+        const types = config && config[typeKeys[section]] ? config[typeKeys[section]] : [];
+        
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h4 className="text-lg font-semibold capitalize">{section}</h4>
+              <select 
+                className="select text-sm"
+                value={selectValues[section] || ''}
+                onChange={(e) => handleSelectChange(section, e.target.value)}
+              >
+                <option value="">Add {section.slice(0, -1)}...</option>
+                {Array.isArray(types) && types.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+            
+            {items.length === 0 ? (
+              <div className="text-center text-gray-500 p-6 bg-gray-50 rounded-lg">
+                <p>No {section} configured yet.</p>
+                <p className="text-sm mt-1">Use the dropdown above to add {section}.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {items.map(item => (
+                  <div key={item.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900">
+                          {getTypeLabel(section, item.type)}
+                        </h5>
+                      </div>
+                      <button 
+                        onClick={() => removeItem(section, item.id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        title="Remove item"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="label text-sm">Quantity</label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="input text-sm"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(section, item.id, 'quantity', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="label text-sm">Specifications</label>
+                        <input
+                          type="text"
+                          className="input text-sm"
+                          placeholder={`e.g., ${section === 'motors' ? '5HP, 230/460V, 3-phase' : section === 'heaters' ? '36kW, 480V' : section === 'inputs' ? '4-20mA, PT100' : '24VDC solenoid'}`}
+                          value={item.specifications}
+                          onChange={(e) => updateItem(section, item.id, 'specifications', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3">
+                      <label className="label text-sm">Notes</label>
+                      <textarea
+                        className="input text-sm"
+                        rows="2"
+                        placeholder="Additional notes or requirements..."
+                        value={item.notes}
+                        onChange={(e) => updateItem(section, item.id, 'notes', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      if (!productCode) {
+        return (
+          <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
+            <h3 className="text-xl font-semibold border-b pb-2 mb-4">Product Configuration</h3>
+            <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">
+              <Info size={32} className="mx-auto mb-2" />
+              <p>Please select a product in Step 1 to configure product-specific options.</p>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
-          <h3 className="text-xl font-semibold border-b pb-2 mb-4">Product Configuration</h3>
-          <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">
-            <Wand2 size={32} className="mx-auto mb-2" />
-            <p>Product configuration will be implemented here.</p>
-            <p className="text-sm mt-2">Product Code: {productCode || 'Not selected'}</p>
+          <h3 className="text-xl font-semibold border-b pb-2 mb-4">
+            Product Configuration: {config.name}
+          </h3>
+          
+          {/* Product Info */}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="font-medium">Product Code: {productCode || 'Not selected'}</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Motors: {config.motorTypes.length} | Heaters: {config.heaterTypes.length} | 
+                Inputs: {config.inputTypes.length} | Outputs: {config.outputTypes.length}
+              </div>
+            </div>
+          </div>
+          
+          {/* Section Tabs */}
+          <div className="flex mb-6 border-b border-gray-200">
+            {config.sections.map(section => (
+              <button
+                key={section}
+                onClick={() => setActiveSection(section)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeSection === section
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {section.charAt(0).toUpperCase() + section.slice(1)} ({(productConfig[section] || []).length})
+              </button>
+            ))}
+          </div>
+          
+          {/* Active Section Content */}
+          <div className="min-h-[400px]">
+            {renderSection(activeSection)}
+          </div>
+          
+          {/* Summary */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2">Configuration Summary</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              {config.sections.map(section => (
+                <div key={section} className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {(productConfig[section] || []).length}
+                  </div>
+                  <div className="text-gray-600 capitalize">{section}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       );

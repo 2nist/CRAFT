@@ -16,6 +16,194 @@ let loadedAssemblies = []
 let quoteSchema
 let quoteValidate
 
+// Default customer data (same as in App.jsx)
+const DEFAULT_CUSTOMER_DATA = {
+  "001": "Malt Handling",
+  "002": "Blichmann Engineering",
+  "003": "Still Dragon",
+  "004": "Silverback Equipment",
+  "005": "RMS Roller",
+  "006": "ABM Equipment, Inc.",
+  "007": "JP Craft Brewing Services",
+  "008": "Rovisys",
+  "009": "Laser Mechanisms, Inc",
+  "010": "Crawford Brewing",
+  "011": "Konig Brewing Solutions",
+  "012": "Paul Mueller",
+  "013": "Perceptive Controls",
+  "014": "ABT",
+  "015": "Minnetonka Brewing Company",
+  "016": "Premier Stainless",
+  "017": "Oronoko Iron Works",
+  "100": "Walls Distilling",
+  "101": "Onewell Brewing",
+  "102": "Lotus Beverage Alliance",
+  "103": "Jackie O's",
+  "104": "Bridges End",
+  "105": "Ada Valley Meats",
+  "106": "White Labs",
+  "107": "Mighty Squirrel Brewing",
+  "108": "Knowlton House",
+  "109": "Las Vegas Distillery",
+  "110": "Blackshire Distillery",
+  "111": "The Brewing Projekt",
+  "112": "Old Route 69",
+  "113": "Napali Brewery",
+  "114": "Bolero Snort",
+  "115": "Disco Witch Brewing",
+  "116": "Bentonville Brewing Company",
+  "117": "Edmonds Electric",
+  "118": "Burning Barrel",
+  "119": "SidMac Engineering & MFG Inc",
+  "120": "Brother Justus",
+  "121": "LogOff Brewing",
+  "122": "Clag Brewing Co.",
+  "123": "Pareidolia Brewing Company",
+  "124": "Cave Hill Farms Brewery",
+  "125": "Hound Song Brewing",
+  "126": "Cowboy Craft",
+  "127": "Bridge's End",
+  "128": "Big Grove",
+  "129": "Brown",
+  "130": "Bridge's End Brewing",
+  "131": "Acme Electric",
+  "132": "Alewife Brewing",
+  "133": "One Well Brewing",
+  "134": "Mystique Barrel Brewing and Lager House",
+  "135": "Fierce Whiskers",
+  "136": "Ragged Branch",
+  "137": "Oracle Brewing",
+  "138": "Raffaldini Vineyards",
+  "139": "Turks Head Brewing",
+  "140": "Old Dominick",
+  "141": "Russian River",
+  "142": "Copper Mule",
+  "143": "Black Band Distillery",
+  "144": "Chilton Mill Brewing",
+  "145": "Stubborn Brothers Brewing",
+  "146": "3 Howls Distillery",
+  "147": "Mystique Brewing",
+  "148": "Las Vegas Distilling",
+  "149": "Oasis Well Systems",
+  "150": "Gnosis Brewing",
+  "151": "Watermark Brewing Co",
+  "152": "Grain Theory Brewery",
+  "153": "Heron Bay Brewing",
+  "154": "Zipline Brewing",
+  "155": "Aurellias Brewing",
+  "156": "Savage & Cooke Distillery",
+  "157": "Aurora Brewing",
+  "158": "Virginia Commonwealth",
+  "159": "Territorial Brewing Co",
+  "160": "More Brewing Company",
+  "161": "Dead Low Brewing",
+  "162": "Watauga Brewing",
+  "163": "Turks Head",
+  "164": "HiHo",
+  "165": "Eagle Park Brewing",
+  "166": "Zymos Brewing",
+  "167": "Black Button Distilling",
+  "168": "Journeyman Distillery",
+  "169": "Lively Beerworks",
+  "170": "Eastern Market Brewing",
+  "171": "Corsair",
+  "172": "Rushing Duck Brewing",
+  "173": "Rushing Duck",
+  "174": "Zipline",
+  "175": "Talea Brewing",
+  "176": "Belshire Brewery",
+  "177": "Big Grove Cedar Rapids",
+  "178": "Speckled Pig",
+  "179": "Southern Hart Brewing",
+  "180": "Mothfire Brewing",
+  "181": "Sunroom Brewing",
+  "182": "U.S. Engineering",
+  "183": "Indian River",
+  "184": "Towns End Brewing",
+  "185": "Westbrook Brewing",
+  "186": "Pareidolia Brewing",
+  "187": "Black Circle Brewing",
+  "188": "Big Creek Beverage",
+  "189": "State Line Distillery",
+  "190": "Good People Brewing",
+  "191": "Breckenridge Distillery",
+  "192": "Wiggly Bridge Distillery",
+  "193": "Two Water Brewing",
+  "194": "Engine 3 Brewing",
+  "195": "CLC Provisions",
+  "196": "Stillfire Brewing",
+  "197": "Mellön Brasserie",
+  "198": "Somerset Brewing",
+  "199": "Magosh Brewing",
+  "200": "Pareidolla Brewing Company",
+  "201": "Big Grove Brewing",
+  "202": "Sangfroid Distilling",
+  "203": "Bevy Brewing",
+  "204": "Imperial Yeast",
+  "205": "Earl Giles",
+  "206": "Speckled Pig Brewing",
+  "207": "Foundation Mechanical",
+  "208": "4 Hands Brewing",
+  "209": "Marfa Spirit",
+  "210": "Southern Illinois University",
+  "211": "Crazy Uncle Mikes",
+  "212": "Old Nation Brewing",
+  "213": "Lanthier Winery",
+  "214": "Barrett Beverage",
+  "215": "Stadacone",
+  "216": "Wiggly Bridge",
+  "217": "Hampton Brewing Co",
+  "218": "Grey Sail Brewing",
+  "219": "Gambler's Bay",
+  "220": "Grain Creations Brewing Company, LLC",
+  "221": "Speckled Pig Brewing Co.",
+  "222": "World's Most Famous Brewery",
+  "223": "Manhattan Project",
+  "224": "John Emerald Distilling Co",
+  "225": "Alematic",
+  "226": "Alter Brewing",
+  "227": "Prairie Ales",
+  "228": "Kevin Kowalski",
+  "229": "Old Nation",
+  "230": "Black Heron",
+  "231": "Hershey Equipment",
+  "232": "Brewery 1817",
+  "233": "Mikerphone Brewing",
+  "234": "Bragg Creek Distillers",
+  "235": "Tusculum Brewing Company",
+  "236": "Aurora",
+  "237": "The Pass Beer Company",
+  "238": "Schadegg Mechanical",
+  "239": "Sumter Brewing",
+  "240": "Shu Brewing",
+  "241": "Cerveza Citos Brewery",
+  "242": "Tin Mill Brewery",
+  "243": "Eastern Market Brewing Co",
+  "244": "B'Brew Systems & Solutions",
+  "245": "The Lab",
+  "246": "The Craft Consult",
+  "247": "Process Equipment Sales",
+  "248": "Green Door Distilling",
+  "249": "CLAG Brewing Company",
+  "250": "Balds Birds Brewing",
+  "251": "Brewing Projekt",
+  "252": "Bono Burns Dist.",
+  "253": "Double Clutch Brewing",
+  "254": "Formula Brewing",
+  "255": "Quality Tank Solutions",
+  "256": "Gusto brewing Company",
+  "257": "Waypoint Processing",
+  "258": "Alvarium Beer",
+  "259": "Trillium Brewing",
+  "260": "Foremost Properties LLC",
+  "261": "Fromm Family",
+  "262": "Fifty West",
+  "263": "Arvon Brewing",
+  "264": "Scofflaw Brewing",
+  "265": "Bonesaw Brewing",
+  "266": "KVCC",
+};
+
 // Initialize data storage
 async function initDataStorage() {
   dataPath = path.join(app.getPath('userData'), 'data')
@@ -179,14 +367,9 @@ function createWindow() {
     },
   })
 
-  // In development, load from vite dev server
-  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
-  } else {
-    // In production, load the built index.html
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
-  }
+  // Load from dist folder (built files)
+  mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  mainWindow.webContents.openDevTools()
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -716,11 +899,27 @@ ipcMain.handle('schemas:getScope', async () => {
 // Customers IPC handlers
 
 ipcMain.handle('customers:getAll', async () => {
-  return [
-    { id: "035", name: "Acme Brewing" },
-    { id: "036", name: "Beta Distilling" },
-    { id: "037", name: "Zeta Water" }
-  ];
+  try {
+    // Load custom customers from database
+    const customCustomers = await readJSONFile('settings.json') || {}
+    const customCustomerData = customCustomers.customCustomers ? JSON.parse(customCustomers.customCustomers) : {}
+    
+    // Merge with default customers
+    const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+    
+    // Convert to array format expected by plugins
+    return Object.entries(allCustomers).map(([id, name]) => ({
+      id: id,
+      name: name
+    }))
+  } catch (err) {
+    console.error('Error loading customers:', err)
+    // Fallback to defaults
+    return Object.entries(DEFAULT_CUSTOMER_DATA).map(([id, name]) => ({
+      id: id,
+      name: name
+    }))
+  }
 });
 
 // IPC handlers for communication with renderer process
