@@ -13,11 +13,7 @@ const PluginRenderer = ({ pluginId, htmlContent }) => {
       const iframe = iframeRef.current;
       const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
       
-      iframeDoc.open();
-      iframeDoc.write(htmlContent);
-      iframeDoc.close();
-
-      // Expose Electron APIs to the plugin iframe context
+      // Expose Electron APIs to the plugin iframe context FIRST
       try {
         const win = iframe.contentWindow;
         if (win) {
@@ -34,6 +30,10 @@ const PluginRenderer = ({ pluginId, htmlContent }) => {
         // eslint-disable-next-line no-console
         console.warn('Failed to expose APIs to plugin iframe:', e);
       }
+
+      iframeDoc.open();
+      iframeDoc.write(htmlContent);
+      iframeDoc.close();
 
       // Inject global theme override CSS FIRST (before any plugin styles)
       const head = iframeDoc.head || iframeDoc.getElementsByTagName('head')[0];
