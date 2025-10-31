@@ -51,6 +51,8 @@ contextBridge.exposeInMainWorld('components', {
 // Expose assemblies API
 contextBridge.exposeInMainWorld('assemblies', {
   getAll: () => ipcRenderer.invoke('assemblies:getAll'),
+  save: (assemblyObj) => ipcRenderer.invoke('assemblies:save', assemblyObj),
+  delete: (assemblyId) => ipcRenderer.invoke('assemblies:delete', assemblyId),
   search: (filters) => ipcRenderer.invoke('assemblies:search', filters),
   getById: (assemblyId) => ipcRenderer.invoke('assemblies:getById', assemblyId),
   expand: (assemblyId) => ipcRenderer.invoke('assemblies:expand', assemblyId),

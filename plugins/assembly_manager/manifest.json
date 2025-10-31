@@ -1,0 +1,10 @@
+{
+  "id": "assembly-manager",
+  "name": "Assembly Manager",
+  "version": "1.0.0",
+  "description": "Create and manage reusable component assemblies for quotes and panels",
+  "author": "Craft Automation",
+  "entry": "index.html",
+  "icon": "Package",
+  "category": "Assembly Tools"
+}

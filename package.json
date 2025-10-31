@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && electron-builder",
+    "build": "npm run electron:build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build:electron && npm run build:renderer",
@@ -63,7 +63,7 @@
     ],
     "win": {
       "target": [
-        "nsis"
+        "dir"
       ]
     }
   }

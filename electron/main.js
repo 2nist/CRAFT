@@ -582,9 +582,87 @@ ipcMain.handle('components:getVendors', async () => {
 
 // Assembly IPC handlers
 
-// Get all assemblies
+// Get all assemblies (user data + bundled)
 ipcMain.handle('assemblies:getAll', async () => {
-  return loadedAssemblies
+  try {
+    // Load user assemblies from data directory
+    const userAssemblies = await readJSONFile('assemblies.json') || []
+    
+    // Merge with bundled assemblies (user assemblies take precedence)
+    const allAssemblies = [...loadedAssemblies]
+    
+    // Add or update with user assemblies
+    for (const userAssembly of userAssemblies) {
+      const existingIndex = allAssemblies.findIndex(a => a.assemblyId === userAssembly.assemblyId)
+      if (existingIndex >= 0) {
+        allAssemblies[existingIndex] = userAssembly
+      } else {
+        allAssemblies.push(userAssembly)
+      }
+    }
+    
+    return allAssemblies
+  } catch (err) {
+    console.error('Error loading assemblies:', err)
+    return loadedAssemblies // Fallback to bundled
+  }
+})
+
+// Save an assembly (validate against schema first)
+ipcMain.handle('assemblies:save', async (event, assemblyToSave) => {
+  try {
+    // Load assembly schema
+    let assemblySchemaPath
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      assemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'assemblies', 'assembly-schema.json')
+    } else {
+      assemblySchemaPath = path.join(process.resourcesPath, 'data', 'assemblies', 'assembly-schema.json')
+    }
+    
+    const schemaData = await fs.readFile(assemblySchemaPath, 'utf-8')
+    const assemblySchema = JSON.parse(schemaData)
+    const ajv = new Ajv()
+    const validate = ajv.compile(assemblySchema)
+    
+    // Validate the assembly
+    const valid = validate(assemblyToSave)
+    if (!valid) {
+      return { success: false, errors: validate.errors }
+    }
+    
+    // Load existing user assemblies
+    let userAssemblies = await readJSONFile('assemblies.json') || []
+    
+    // Find and replace or add new
+    const existingIndex = userAssemblies.findIndex(a => a.assemblyId === assemblyToSave.assemblyId)
+    if (existingIndex >= 0) {
+      userAssemblies[existingIndex] = assemblyToSave
+    } else {
+      userAssemblies.push(assemblyToSave)
+    }
+    
+    // Save back to file
+    await writeJSONFile('assemblies.json', userAssemblies)
+    
+    return { success: true, data: assemblyToSave }
+  } catch (err) {
+    console.error('Error saving assembly:', err)
+    throw err
+  }
+})
+
+// Delete an assembly
+ipcMain.handle('assemblies:delete', async (event, assemblyId) => {
+  try {
+    let userAssemblies = await readJSONFile('assemblies.json') || []
+    const initialLength = userAssemblies.length
+    userAssemblies = userAssemblies.filter(a => a.assemblyId !== assemblyId)
+    await writeJSONFile('assemblies.json', userAssemblies)
+    return { success: true, changes: initialLength - userAssemblies.length }
+  } catch (err) {
+    console.error('Error deleting assembly:', err)
+    throw err
+  }
 })
 
 // Search assemblies by filters
