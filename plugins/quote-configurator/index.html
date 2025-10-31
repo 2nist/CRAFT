@@ -255,38 +255,15 @@
       const [customers, setCustomers] = useState([]);
       useEffect(() => {
         const loadData = async () => {
-          try {
-            console.log('Loading schema data...');
-            console.log('Available APIs:', {
-              schemas: !!window.schemas,
-              customers: !!window.customers,
-              quotes: !!window.quotes
-            });
-            
-            if (!window.schemas || !window.customers) {
-              console.error('Required APIs not available in plugin context');
-              return;
-            }
-            
-            const [industry, product, control, scope, cust] = await Promise.all([
-              window.schemas.getIndustry(),
-              window.schemas.getProduct(),
-              window.schemas.getControl(),
-              window.schemas.getScope(),
-              window.customers.getAll()
-            ]);
-            console.log('Schema data loaded:', { 
-              industry: industry.length, 
-              product: product.length, 
-              control: control.length, 
-              scope: scope.length, 
-              customers: cust.length 
-            });
-            setSchemas({ industry, product, control, scope });
-            setCustomers(cust);
-          } catch (error) {
-            console.error('Error loading schema data:', error);
-          }
+          const [industry, product, control, scope, cust] = await Promise.all([
+            window.schemas.getIndustry(),
+            window.schemas.getProduct(),
+            window.schemas.getControl(),
+            window.schemas.getScope(),
+            window.customers.getAll()
+          ]);
+          setSchemas({ industry, product, control, scope });
+          setCustomers(cust);
         };
         loadData();
       }, []);
@@ -721,7 +698,6 @@
 
     // --- Helper Components ---
     function SelectCode({ id, value, onChange, options, placeholder }) {
-      console.log(`SelectCode ${id}:`, { value, options: options.length, placeholder });
       return (
         <select id={id} className="select" value={value || ""} onChange={onChange}>
           <option value="">{placeholder}</option>
@@ -735,7 +711,6 @@
     }
     
     function SelectCustomer({ id, value, onChange, customers }) {
-      console.log('SelectCustomer:', { value, customers: customers.length });
       return (
         <select id={id} className="select" value={value || ""} onChange={onChange}>
           <option value="">Select a Customer</option>
