@@ -24,6 +24,9 @@ const PluginRenderer = ({ pluginId, htmlContent }) => {
           if (window.components) win.components = window.components;
           if (window.assemblies) win.assemblies = window.assemblies;
           if (window.panels) win.panels = window.panels;
+          if (window.schemas) win.schemas = window.schemas;
+          if (window.customers) win.customers = window.customers;
+          if (window.quotes) win.quotes = window.quotes;
           if (window.db) win.db = window.db;
           if (window.electronAPI) win.electronAPI = window.electronAPI;
         }
