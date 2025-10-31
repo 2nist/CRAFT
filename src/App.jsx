@@ -1068,6 +1068,296 @@ const ProjectNumberGenerator = ({ schema, customerData, projects, onProjectAdd }
 };
 
 /**
+ * Schema Property Card Component
+ * Visual editor for individual schema properties
+ */
+const SchemaPropertyCard = ({ propertyKey, property, onUpdate, onDelete, isRequired }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const handleTypeChange = (newType) => {
+    const updatedProperty = { ...property, type: newType };
+
+    // Remove enum if type changes away from string
+    if (newType !== 'string' && updatedProperty.enum) {
+      delete updatedProperty.enum;
+    }
+
+    // Remove oneOf if type changes
+    if (newType !== 'integer' && updatedProperty.oneOf) {
+      delete updatedProperty.oneOf;
+    }
+
+    onUpdate(propertyKey, updatedProperty);
+  };
+
+  const handleDescriptionChange = (description) => {
+    onUpdate(propertyKey, { ...property, description });
+  };
+
+  const handleRequiredToggle = () => {
+    // This will be handled by the parent component
+  };
+
+  const handleEnumChange = (enumValues) => {
+    if (enumValues.trim()) {
+      const enumArray = enumValues.split(',').map(v => v.trim()).filter(v => v);
+      onUpdate(propertyKey, { ...property, enum: enumArray });
+    } else {
+      const updatedProperty = { ...property };
+      delete updatedProperty.enum;
+      onUpdate(propertyKey, updatedProperty);
+    }
+  };
+
+  const handleOneOfChange = (oneOfString) => {
+    if (oneOfString.trim()) {
+      try {
+        const oneOfArray = JSON.parse(oneOfString);
+        onUpdate(propertyKey, { ...property, oneOf: oneOfArray });
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
+    } else {
+      const updatedProperty = { ...property };
+      delete updatedProperty.oneOf;
+      onUpdate(propertyKey, updatedProperty);
+    }
+  };
+
+  const getTypeOptions = () => [
+    { value: 'string', label: 'Text (string)' },
+    { value: 'number', label: 'Number' },
+    { value: 'integer', label: 'Integer' },
+    { value: 'boolean', label: 'Yes/No (boolean)' },
+    { value: 'object', label: 'Object' },
+    { value: 'array', label: 'List (array)' }
+  ];
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <h4 className="font-semibold text-gray-800 font-mono">{propertyKey}</h4>
+          {isRequired && (
+            <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">Required</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-gray-500 hover:text-gray-700 p-1"
+          >
+            {expanded ? '−' : '+'}
+          </button>
+          <button
+            onClick={() => onDelete(propertyKey)}
+            className="text-red-500 hover:text-red-700 p-1"
+            title="Delete property"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+          <select
+            value={property.type || 'string'}
+            onChange={(e) => handleTypeChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            {getTypeOptions().map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <input
+            type="text"
+            value={property.description || ''}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            placeholder="Describe this field..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 space-y-4 border-t pt-4">
+          {(property.type === 'string' || !property.type) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Allowed Values (Enum) - Optional
+              </label>
+              <input
+                type="text"
+                value={property.enum ? property.enum.join(', ') : ''}
+                onChange={(e) => handleEnumChange(e.target.value)}
+                placeholder="value1, value2, value3"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Comma-separated list of allowed values</p>
+            </div>
+          )}
+
+          {property.type === 'integer' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Options (oneOf) - Advanced
+              </label>
+              <textarea
+                value={property.oneOf ? JSON.stringify(property.oneOf, null, 2) : ''}
+                onChange={(e) => handleOneOfChange(e.target.value)}
+                placeholder='[{"const": 10, "description": "Option 1"}, {"const": 20, "description": "Option 2"}]'
+                rows="3"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">JSON array of options with const and description</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Schema Builder Component
+ * Visual schema editor with property cards
+ */
+const SchemaBuilder = ({ schemaString, onSchemaChange, validationError }) => {
+  const [schema, setSchema] = useState({});
+  const [newPropertyKey, setNewPropertyKey] = useState('');
+  const [requiredFields, setRequiredFields] = useState([]);
+
+  // Parse schema string when it changes
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(schemaString);
+      setSchema(parsed.properties || {});
+      setRequiredFields(parsed.required || []);
+    } catch (e) {
+      // Invalid JSON, keep current state
+    }
+  }, [schemaString]);
+
+  // Reconstruct schema string when local state changes
+  useEffect(() => {
+    const reconstructed = {
+      $schema: "http://json-schema.org/draft-07/schema#",
+      type: "object",
+      properties: schema,
+      required: requiredFields.filter(field => schema[field]) // Only include required fields that exist
+    };
+    onSchemaChange(JSON.stringify(reconstructed, null, 2));
+  }, [schema, requiredFields, onSchemaChange]);
+
+  const handlePropertyUpdate = (key, updatedProperty) => {
+    setSchema(prev => ({
+      ...prev,
+      [key]: updatedProperty
+    }));
+  };
+
+  const handlePropertyDelete = (key) => {
+    setSchema(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+    setRequiredFields(prev => prev.filter(field => field !== key));
+  };
+
+  const handleAddProperty = () => {
+    if (!newPropertyKey.trim() || schema[newPropertyKey.trim()]) return;
+
+    const key = newPropertyKey.trim();
+    setSchema(prev => ({
+      ...prev,
+      [key]: {
+        type: 'string',
+        description: ''
+      }
+    }));
+    setNewPropertyKey('');
+  };
+
+  const handleRequiredToggle = (key) => {
+    setRequiredFields(prev =>
+      prev.includes(key)
+        ? prev.filter(field => field !== key)
+        : [...prev, key]
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-medium text-gray-900">Schema Properties</h4>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newPropertyKey}
+            onChange={(e) => setNewPropertyKey(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAddProperty()}
+            placeholder="New property name..."
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+          <button
+            onClick={handleAddProperty}
+            disabled={!newPropertyKey.trim()}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add Property
+          </button>
+        </div>
+      </div>
+
+      {validationError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <h4 className="text-sm font-medium text-red-800">Validation Error</h4>
+          <p className="text-sm text-red-700 font-mono mt-1">{validationError}</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {Object.entries(schema).map(([key, property]) => (
+          <div key={key} className="relative">
+            <SchemaPropertyCard
+              propertyKey={key}
+              property={property}
+              onUpdate={handlePropertyUpdate}
+              onDelete={handlePropertyDelete}
+              isRequired={requiredFields.includes(key)}
+            />
+            <div className="mt-2 flex items-center">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={requiredFields.includes(key)}
+                  onChange={() => handleRequiredToggle(key)}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Required field</span>
+              </label>
+            </div>
+          </div>
+        ))}
+
+        {Object.keys(schema).length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No properties defined yet. Add your first property above.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/**
  * "Plugin": Schema Wizard
  */
 const SchemaWizard = ({ tabs }) => {
@@ -1085,6 +1375,7 @@ const SchemaWizard = ({ tabs }) => {
 
   const [localSchemaString, setLocalSchemaString] = useState(currentTab.schemaString);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'json'
 
   useEffect(() => {
     setLocalSchemaString(currentTab.schemaString);
@@ -1127,9 +1418,36 @@ const SchemaWizard = ({ tabs }) => {
 
       {currentTab.key !== 'help' && (
         <>
-          <p className="text-sm text-gray-600">
-            Edit the JSON schema for {currentTab.name}. Be careful, as invalid JSON or schema will cause errors.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Edit the JSON schema for {currentTab.name}. Choose your preferred editing mode below.
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Mode:</span>
+              <div className="flex rounded-md border border-gray-300">
+                <button
+                  onClick={() => setEditorMode('visual')}
+                  className={`px-3 py-1 text-sm ${
+                    editorMode === 'visual'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  } rounded-l-md border-r border-gray-300`}
+                >
+                  Visual
+                </button>
+                <button
+                  onClick={() => setEditorMode('json')}
+                  className={`px-3 py-1 text-sm ${
+                    editorMode === 'json'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  } rounded-r-md`}
+                >
+                  JSON
+                </button>
+              </div>
+            </div>
+          </div>
 
           {currentTab.isCustom && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -1137,14 +1455,22 @@ const SchemaWizard = ({ tabs }) => {
             </div>
           )}
 
-          <textarea
-            rows="25"
-            className="block w-full shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 border-gray-300 rounded-md font-mono text-xs"
-            value={localSchemaString}
-            onChange={(e) => setLocalSchemaString(e.target.value)}
-          />
+          {editorMode === 'visual' ? (
+            <SchemaBuilder
+              schemaString={localSchemaString}
+              onSchemaChange={setLocalSchemaString}
+              validationError={currentTab.validationError}
+            />
+          ) : (
+            <textarea
+              rows="25"
+              className="block w-full shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 border-gray-300 rounded-md font-mono text-xs"
+              value={localSchemaString}
+              onChange={(e) => setLocalSchemaString(e.target.value)}
+            />
+          )}
 
-          {currentTab.validationError && (
+          {currentTab.validationError && editorMode === 'json' && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <h4>Validation Error</h4>
               <p className="text-sm text-red-700 font-mono mt-1">{currentTab.validationError}</p>
@@ -1181,10 +1507,6 @@ const SchemaWizard = ({ tabs }) => {
     </div>
   );
 };
-
-/**
- * "Plugin": Settings Panel
- */
 const SettingsPanel = ({ onClearData, onClearSchema, customerData, onAddCustomer, onDeleteCustomer, schema }) => {
   const [confirmClearData, setConfirmClearData] = useState(false);
   const [confirmClearSchema, setConfirmClearSchema] = useState(false);
@@ -1290,7 +1612,7 @@ const SettingsPanel = ({ onClearData, onClearSchema, customerData, onAddCustomer
                     <div>
                       <h5 className="text-sm mb-2">Custom Customers ({customCustomers.length})</h5>
                       <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
-                        {customCustomers.map(([id, name]) => (
+                        {customCustomers.map(([id, name], idx) => (
                           <div key={id + '-' + idx} className="flex justify-between items-center px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
                             <div>
                               <span className="font-mono font-semibold text-indigo-600">{id}</span>
