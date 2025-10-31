@@ -7,7 +7,8 @@ import {
   AlertTriangle,
   LayoutGrid,
   HelpCircle,
-  Code
+  Code,
+  Settings
 } from 'lucide-react';
 import Ajv from 'ajv';
 import PluginRenderer from './PluginRenderer';
@@ -1068,11 +1069,109 @@ const ProjectNumberGenerator = ({ schema, customerData, projects, onProjectAdd }
 };
 
 /**
- * Schema Property Card Component
- * Visual editor for individual schema properties
+ * OneOf Option Editor Component
+ * Visual editor for individual oneOf options
  */
+const OneOfOptionCard = ({ option, index, onUpdate, onDelete }) => {
+  const handleConstChange = (newConst) => {
+    const numValue = parseInt(newConst);
+    if (!isNaN(numValue)) {
+      onUpdate(index, { ...option, const: numValue });
+    }
+  };
+
+  const handleDescriptionChange = (description) => {
+    onUpdate(index, { ...option, description });
+  };
+
+  return (
+    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md border">
+      <div className="flex-1">
+        <label className="block text-xs font-medium text-gray-600 mb-1">Value</label>
+        <input
+          type="number"
+          value={option.const || ''}
+          onChange={(e) => handleConstChange(e.target.value)}
+          placeholder="10"
+          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
+      <div className="flex-1">
+        <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+        <input
+          type="text"
+          value={option.description || ''}
+          onChange={(e) => handleDescriptionChange(e.target.value)}
+          placeholder="Option description..."
+          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      </div>
+      <button
+        onClick={() => onDelete(index)}
+        className="text-red-500 hover:text-red-700 p-1 mt-4"
+        title="Remove option"
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
+/**
+ * OneOf Editor Component
+ * Visual editor for oneOf arrays with individual option cards
+ */
+const OneOfEditor = ({ oneOf, onChange }) => {
+  const handleOptionUpdate = (index, updatedOption) => {
+    const newArray = [...oneOf];
+    newArray[index] = updatedOption;
+    onChange(newArray);
+  };
+
+  const handleOptionDelete = (index) => {
+    const newArray = oneOf.filter((_, i) => i !== index);
+    onChange(newArray);
+  };
+
+  const handleAddOption = () => {
+    const newArray = [...oneOf, { const: oneOf.length > 0 ? Math.max(...oneOf.map(o => o.const || 0)) + 1 : 1, description: '' }];
+    onChange(newArray);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-700">Options</label>
+        <button
+          onClick={handleAddOption}
+          className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          + Add Option
+        </button>
+      </div>
+
+      <div className="space-y-2 max-h-60 overflow-y-auto">
+        {oneOf.map((option, index) => (
+          <OneOfOptionCard
+            key={index}
+            option={option}
+            index={index}
+            onUpdate={handleOptionUpdate}
+            onDelete={handleOptionDelete}
+          />
+        ))}
+      </div>
+
+      {oneOf.length === 0 && (
+        <div className="text-center py-4 text-gray-500 text-sm">
+          No options defined. Click "Add Option" to get started.
+        </div>
+      )}
+    </div>
+  );
+};
 const SchemaPropertyCard = ({ propertyKey, property, onUpdate, onDelete, isRequired }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!property.oneOf && property.oneOf.length > 0);
 
   const handleTypeChange = (newType) => {
     const updatedProperty = { ...property, type: newType };
@@ -1109,19 +1208,8 @@ const SchemaPropertyCard = ({ propertyKey, property, onUpdate, onDelete, isRequi
     }
   };
 
-  const handleOneOfChange = (oneOfString) => {
-    if (oneOfString.trim()) {
-      try {
-        const oneOfArray = JSON.parse(oneOfString);
-        onUpdate(propertyKey, { ...property, oneOf: oneOfArray });
-      } catch (e) {
-        // Invalid JSON, ignore
-      }
-    } else {
-      const updatedProperty = { ...property };
-      delete updatedProperty.oneOf;
-      onUpdate(propertyKey, updatedProperty);
-    }
+  const handleOneOfChange = (oneOfArray) => {
+    onUpdate(propertyKey, { ...property, oneOf: oneOfArray });
   };
 
   const getTypeOptions = () => [
@@ -1208,14 +1296,10 @@ const SchemaPropertyCard = ({ propertyKey, property, onUpdate, onDelete, isRequi
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Options (oneOf) - Advanced
               </label>
-              <textarea
-                value={property.oneOf ? JSON.stringify(property.oneOf, null, 2) : ''}
-                onChange={(e) => handleOneOfChange(e.target.value)}
-                placeholder='[{"const": 10, "description": "Option 1"}, {"const": 20, "description": "Option 2"}]'
-                rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              <OneOfEditor
+                oneOf={property.oneOf || []}
+                onChange={handleOneOfChange}
               />
-              <p className="text-xs text-gray-500 mt-1">JSON array of options with const and description</p>
             </div>
           )}
         </div>
@@ -2012,6 +2096,18 @@ Location: Not applicable - derived data.
           }
         ]}
       />
+    },
+    settings: {
+      name: "Settings",
+      icon: Settings,
+      component: <SettingsPanel
+        onClearData={handleClearProjects}
+        onClearSchema={resetSchema}
+        customerData={customers}
+        onAddCustomer={handleAddCustomer}
+        onDeleteCustomer={handleDeleteCustomer}
+        schema={schema}
+      />
     }
   };
 
@@ -2057,7 +2153,7 @@ Location: Not applicable - derived data.
           <span className="ml-2 text-xl font-semibold">Project Tools</span>
         </div>
         <nav className="flex-1 px-2 py-4 space-y-2">
-          {Object.entries(VIEWS).map(([key, { name, icon: Icon }]) => (
+          {Object.entries(VIEWS).filter(([key]) => key !== 'settings').map(([key, { name, icon: Icon }]) => (
             <button
               key={key}
               onClick={() => setView(key)}
@@ -2083,6 +2179,17 @@ Location: Not applicable - derived data.
             <h1 className="text-2xl">{VIEWS[view].name}</h1>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setView('settings')}
+              className={`p-2 rounded-md transition-colors ${
+                view === 'settings'
+                  ? 'bg-gray-200 text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+              title="Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
             <a
               href="https://github.com/google/gemini-dev-copilot"
               target="_blank"

@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
+import Ajv from 'ajv'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -12,6 +13,8 @@ let pluginsPath
 let loadedPlugins = []
 let loadedComponents = []
 let loadedAssemblies = []
+let quoteSchema
+let quoteValidate
 
 // Initialize data storage
 async function initDataStorage() {
@@ -196,6 +199,19 @@ app.whenReady().then(async () => {
   await loadPlugins()
   await loadComponents()
   await loadAssemblies()
+  
+  // Load quote schema
+  let quoteSchemaPath
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+    quoteSchemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json')
+  } else {
+    quoteSchemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json')
+  }
+  const quoteSchemaData = await fs.readFile(quoteSchemaPath, 'utf-8')
+  quoteSchema = JSON.parse(quoteSchemaData)
+  const ajv = new Ajv()
+  quoteValidate = ajv.compile(quoteSchema)
+  
   createWindow()
 
   app.on('activate', () => {
@@ -587,6 +603,125 @@ ipcMain.handle('panels:expand', async (event, panelId) => {
     return null
   }
 })
+
+// Quote IPC handlers
+
+// Save a quote
+ipcMain.handle('quote:save', async (event, quoteObject) => {
+  const valid = quoteValidate(quoteObject)
+  if (!valid) {
+    return { success: false, errors: quoteValidate.errors }
+  }
+  const quotesDir = path.join(dataPath, 'quotes')
+  await fs.mkdir(quotesDir, { recursive: true })
+  const filePath = path.join(quotesDir, `${quoteObject.quoteId}.json`)
+  await fs.writeFile(filePath, JSON.stringify(quoteObject, null, 2), 'utf-8')
+  return { success: true, path: filePath }
+})
+
+// Get all quotes
+ipcMain.handle('quote:get-all', async () => {
+  const quotesDir = path.join(dataPath, 'quotes')
+  try {
+    const files = await fs.readdir(quotesDir)
+    const jsonFiles = files.filter(f => f.endsWith('.json'))
+    const quotes = []
+    for (const file of jsonFiles) {
+      const filePath = path.join(quotesDir, file)
+      const data = await fs.readFile(filePath, 'utf-8')
+      quotes.push(JSON.parse(data))
+    }
+    return quotes
+  } catch (err) {
+    if (err.code === 'ENOENT') return []
+    throw err
+  }
+})
+
+// Get quote by ID
+ipcMain.handle('quote:get-by-id', async (event, quoteId) => {
+  const quotesDir = path.join(dataPath, 'quotes')
+  const filePath = path.join(quotesDir, `${quoteId}.json`)
+  try {
+    const data = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(data)
+  } catch (err) {
+    if (err.code === 'ENOENT') return null
+    throw err
+  }
+})
+
+// Delete a quote
+ipcMain.handle('quote:delete', async (event, quoteId) => {
+  const quotesDir = path.join(dataPath, 'quotes')
+  const filePath = path.join(quotesDir, `${quoteId}.json`)
+  try {
+    await fs.unlink(filePath)
+    return { success: true }
+  } catch (err) {
+    if (err.code === 'ENOENT') return { success: false, error: 'Quote not found' }
+    throw err
+  }
+})
+
+// Schemas IPC handlers
+
+ipcMain.handle('schemas:getIndustry', async () => {
+  return [
+    { const: 10, description: "Alcohol: Brewing" },
+    { const: 11, description: "Alcohol: Distillation" },
+    { const: 12, description: "Alcohol: Fermentation" },
+    { const: 20, description: "Food: Food&Bev" },
+    { const: 30, description: "Water: Water Treatment" },
+    { const: 31, description: "Water: Waste Water" },
+    { const: 40, description: "Manufacturing: Material Handling" },
+    { const: 41, description: "Manufacturing: Packaging" },
+    { const: 50, description: "Bio/Chem: Pharma" },
+    { const: 99, description: "General Industry" }
+  ];
+});
+
+ipcMain.handle('schemas:getProduct', async () => {
+  return [
+    { const: 100, description: "Brewery: Brewhouse" },
+    { const: 101, description: "Brewery: 2 Vessel" },
+    { const: 120, description: "Fermentation: Cellar" },
+    { const: 130, description: "Grain: Grain Handling" },
+    { const: 140, description: "Motor Control: Motor" },
+    { const: 160, description: "Sanitary: CIP" },
+    { const: 999, description: "General Product" }
+  ];
+});
+
+ipcMain.handle('schemas:getControl', async () => {
+  return [
+    { const: 1, description: "Automated" },
+    { const: 2, description: "Manual" },
+    { const: 3, description: "Termination" },
+    { const: 9, description: "None" }
+  ];
+});
+
+ipcMain.handle('schemas:getScope', async () => {
+  return [
+    { const: 10, description: "Production: New Build" },
+    { const: 11, description: "Production: Modification" },
+    { const: 20, description: "Field: Commissioning" },
+    { const: 40, description: "Engineering: Engineering (Hard)" },
+    { const: 50, description: "Admin: Warranty" },
+    { const: 99, description: "General Scope" }
+  ];
+});
+
+// Customers IPC handlers
+
+ipcMain.handle('customers:getAll', async () => {
+  return [
+    { id: "035", name: "Acme Brewing" },
+    { id: "036", name: "Beta Distilling" },
+    { id: "037", name: "Zeta Water" }
+  ];
+});
 
 // IPC handlers for communication with renderer process
 ipcMain.handle('ping', () => {

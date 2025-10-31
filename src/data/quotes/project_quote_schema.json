@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Project Quote Configuration",
+  "description": "A schema for configuring a new project or quote, based on panel, assembly, and custom features.",
+  "type": "object",
+  "properties": {
+    "quoteId": {
+      "description": "The unique quote number (e.g., 'CQ251031035-10100110-0').",
+      "type": "string"
+    },
+    "projectId": {
+      "description": "Optional: The project number if the quote is approved (e.g., 'CA251031035-10100110').",
+      "type": "string"
+    },
+    "projectName": {
+      "description": "Human-readable name for the project.",
+      "type": "string"
+    },
+    "customer": {
+      "description": "Customer ID or name.",
+      "type": "string"
+    },
+    "salesRep": {
+      "type": "string"
+    },
+    "oem": {
+      "type": "string"
+    },
+    "status": {
+      "description": "The current state of the quote/project.",
+      "type": "string",
+      "enum": ["draft", "quoted", "approved", "in_progress", "complete"],
+      "default": "draft"
+    },
+    "projectCodes": {
+      "description": "The 4-pillar classification codes for this project.",
+      "type": "object",
+      "properties": {
+        "industryCode": { "type": "integer" },
+        "productCode": { "type": "integer" },
+        "controlCode": { "type": "integer" },
+        "scopeCode": { "type": "integer" }
+      },
+      "required": ["industryCode", "productCode", "controlCode", "scopeCode"]
+    },
+    "controlPanelConfig": {
+      "description": "Base configuration for the main control panel.",
+      "type": "object",
+      "properties": {
+        "voltage": { "type": "string" },
+        "phase": { "type": "string" },
+        "enclosureType": { "type": "string" },
+        "enclosureRating": { "type": "string" },
+        "hmiSize": { "type": "string" },
+        "plcPlatform": { "type": "string" },
+        "disconnect": { "type": "string" },
+        "plcModel": { "type": "string" },
+        "ioCapacity": {
+          "type": "object",
+          "properties": {
+            "AI": { "type": "integer", "default": 0 },
+            "DI": { "type": "integer", "default": 0 },
+            "AO": { "type": "integer", "default": 0 },
+            "DO": { "type": "integer", "default": 0 }
+          }
+        },
+        "safetyRating": { "type": "string" },
+        "networkProtocols": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["voltage", "phase", "enclosureType", "hmiSize", "plcPlatform"]
+    },
+    "productConfiguration": {
+      "description": "Product-specific inputs used to auto-generate the assembly list (Your Step 3).",
+      "type": "object",
+      "properties": {
+        "motors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "hp": { "type": "number" },
+              "controlType": { "type": "string", "enum": ["VFD", "On/Off"] }
+            },
+            "required": ["name", "hp", "controlType"]
+          }
+        },
+        "heaters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "kw": { "type": "number" },
+              "controlType": { "type": "string", "enum": ["SSR", "On/Off"] }
+            },
+            "required": ["name", "kw", "controlType"]
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["Temp", "Level", "Pressure", "Flow", "Loadcell", "Prox", "Custom"] }
+            },
+            "required": ["name", "type"]
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["Modulating", "On/Off", "Pneumatic", "Custom"] }
+            },
+            "required": ["name", "type"]
+          }
+        }
+      },
+      "default": {}
+    },
+    "selectedAssemblies": {
+      "description": "List of assemblies from the library to include in this panel.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assemblyId": {
+            "description": "Links to the assemblyId in assembly_schema.json.",
+            "type": "string"
+          },
+          "quantity": { "type": "integer", "default": 1 },
+          "customName": { "type": "string" },
+          "configuration": {
+            "description": "Key-value pairs for assembly-specific options.",
+            "type": "object",
+            "additionalProperties": true
+          },
+          "selectedFeatures": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "selectedSubAssemblies": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["assemblyId", "quantity"]
+      },
+      "default": []
+    },
+    "customFeatures": {
+      "description": "One-off items or labor charges specific to this quote.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "cost": { "type": "number", "default": 0 },
+          "laborHours": { "type": "number", "default": 0 }
+        },
+        "required": ["id", "name", "cost"]
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "quoteId",
+    "projectName",
+    "customer",
+    "salesRep",
+    "projectCodes",
+    "controlPanelConfig"
+  ]
+}

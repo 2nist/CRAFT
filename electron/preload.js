@@ -67,6 +67,27 @@ contextBridge.exposeInMainWorld('panels', {
   expand: (panelId) => ipcRenderer.invoke('panels:expand', panelId),
 })
 
+// Expose quotes API
+contextBridge.exposeInMainWorld('quotes', {
+  save: (quoteObj) => ipcRenderer.invoke('quote:save', quoteObj),
+  getAll: () => ipcRenderer.invoke('quote:get-all'),
+  getById: (id) => ipcRenderer.invoke('quote:get-by-id', id),
+  delete: (id) => ipcRenderer.invoke('quote:delete', id),
+})
+
+// Expose schemas API
+contextBridge.exposeInMainWorld('schemas', {
+  getIndustry: () => ipcRenderer.invoke('schemas:getIndustry'),
+  getProduct: () => ipcRenderer.invoke('schemas:getProduct'),
+  getControl: () => ipcRenderer.invoke('schemas:getControl'),
+  getScope: () => ipcRenderer.invoke('schemas:getScope'),
+})
+
+// Expose customers API
+contextBridge.exposeInMainWorld('customers', {
+  getAll: () => ipcRenderer.invoke('customers:getAll'),
+})
+
 // Expose Node.js process information
 contextBridge.exposeInMainWorld('versions', {
   node: () => process.versions.node,

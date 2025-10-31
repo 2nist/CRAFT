@@ -1,0 +1,10 @@
+{
+  "id": "quote-configurator",
+  "name": "Quote Configurator",
+  "version": "1.0.0",
+  "description": "4-step quote configuration wizard with product selection, panel config, and BOM generation",
+  "author": "Craft Automation",
+  "entry": "index.html",
+  "icon": "FileText",
+  "category": "Quote Tools"
+}

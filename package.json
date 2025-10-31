@@ -11,17 +11,34 @@
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build:electron && npm run build:renderer",
     "build:electron": "vite build --config vite.config.electron.js",
-    "build:renderer": "vite build"
+    "build:renderer": "vite build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
-  "keywords": ["electron", "vite", "react", "tailwind"],
+  "keywords": [
+    "electron",
+    "vite",
+    "react",
+    "tailwind"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-react": "^7.28.5",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
+    "babel-jest": "^30.2.0",
     "concurrently": "^8.2.2",
     "electron": "^28.2.0",
     "electron-builder": "^24.9.1",
+    "identity-obj-proxy": "^3.0.0",
+    "jest-environment-jsdom": "^30.2.0",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "vite": "^5.0.12",
@@ -45,7 +62,9 @@
       "dist-electron/**/*"
     ],
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     }
   }
 }

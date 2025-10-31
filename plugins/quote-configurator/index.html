@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quote Configurator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --primary: #c7a783; /* Example primary color */
+      --secondary: #f0e6d8;
+      --text: #3d2c1d;
+      --bg: #fbf9f6;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 1.5rem;
+    }
+    .tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      background-color: var(--secondary);
+      color: var(--text);
+      border-radius: 0.375rem 0.375rem 0 0;
+      border: 1px solid var(--primary);
+      border-bottom: none;
+      opacity: 0.7;
+      font-weight: 500;
+    }
+    .tab.active {
+      background-color: var(--bg);
+      border-bottom: 1px solid var(--bg);
+      opacity: 1;
+      font-weight: 600;
+      transform: translateY(1px);
+    }
+    .tab-content {
+      display: none;
+      background-color: var(--bg);
+      border: 1px solid var(--primary);
+      border-radius: 0 0.375rem 0.375rem 0.375rem;
+      padding: 1.5rem;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .input, .select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      background-color: white;
+      transition: border-color 0.2s;
+    }
+    .input:focus, .select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--secondary);
+    }
+    .label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+    }
+    .grid-col-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .grid-col-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      color: white;
+      background-color: var(--primary);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
+    .btn-secondary {
+      background-color: #a0aec0;
+    }
+    .alert {
+      padding: 1rem;
+      border-radius: 0.375rem;
+      margin-top: 1rem;
+    }
+    .alert-success {
+      background-color: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+    .alert-error {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Icon components as inline SVG (no external dependency)
+    const FileText = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14,2 14,8 20,8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10,9 9,9 8,9"/>
+      </svg>
+    );
+    
+    const Info = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 16v-4"/>
+        <path d="M12 8h.01"/>
+      </svg>
+    );
+    
+    const HardHat = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/>
+        <path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/>
+        <path d="M4 15v-3a6 6 0 0 1 6-6h0"/>
+        <path d="M14 6a6 6 0 0 1 6 6v3"/>
+      </svg>
+    );
+    
+    const Package = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+        <line x1="12" y1="22.08" x2="12" y2="12"/>
+      </svg>
+    );
+    
+    const Save = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17,21 17,13 7,13 7,21"/>
+        <polyline points="7,3 7,8 15,8"/>
+      </svg>
+    );
+    
+    const AlertCircle = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    );
+    
+    const CheckCircle = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22,4 12,14.01 9,11.01"/>
+      </svg>
+    );
+    
+    const Trash2 = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <polyline points="3,6 5,6 21,6"/>
+        <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"/>
+        <line x1="10" y1="11" x2="10" y2="17"/>
+        <line x1="14" y1="11" x2="14" y2="17"/>
+      </svg>
+    );
+    
+    const PlusCircle = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v8"/>
+        <path d="M8 12h8"/>
+      </svg>
+    );
+    
+    const Wand2 = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21.64 3.64a1.5 1.5 0 0 0-2.12 0l-3.97 3.97L15.25 7l3.97-3.97a1.5 1.5 0 0 0 0-2.12z"/>
+        <path d="M11.5 12.5a3 3 0 0 0 0 4.24l3.97 3.97a1.5 1.5 0 0 0 2.12 0l3.97-3.97a3 3 0 0 0 0-4.24l-3.97-3.97a3 3 0 0 0-4.24 0l-3.97 3.97z"/>
+        <path d="M7 17l-4.5 4.5"/>
+        <path d="M7 7l-4.5-4.5"/>
+        <path d="M17 7l4.5-4.5"/>
+        <path d="M17 17l4.5 4.5"/>
+      </svg>
+    );
+
+    // --- Main App Component ---
+    function App() {
+      const [activeTab, setActiveTab] = useState('details');
+      const [quote, setQuote] = useState({
+        quoteId: "",
+        projectId: "",
+        projectName: "",
+        customer: "",
+        salesRep: "",
+        oem: "",
+        status: "draft",
+        projectCodes: {
+          industryCode: "",
+          productCode: "",
+          controlCode: "",
+          scopeCode: ""
+        },
+        controlPanelConfig: {
+          voltage: "480V",
+          phase: "3-Phase",
+          enclosureType: "NEMA 4X Stainless",
+          enclosureRating: "",
+          hmiSize: "",
+          plcPlatform: "",
+          disconnect: "Fused",
+          plcModel: "",
+          ioCapacity: { AI: 0, DI: 0, AO: 0, DO: 0 },
+          safetyRating: "",
+          networkProtocols: []
+        },
+        productConfiguration: {
+          motors: [],
+          heaters: [],
+          inputs: [],
+          outputs: []
+        },
+        selectedAssemblies: [],
+        customFeatures: []
+      });
+      
+      const [statusMessage, setStatusMessage] = useState({ type: '', text: '', errors: [] });
+
+      const [isLoading, setIsLoading] = useState(false);
+
+      const [schemas, setSchemas] = useState({ industry: [], product: [], control: [], scope: [] });
+      const [customers, setCustomers] = useState([]);
+      useEffect(() => {
+        const loadData = async () => {
+          const [industry, product, control, scope, cust] = await Promise.all([
+            window.schemas.getIndustry(),
+            window.schemas.getProduct(),
+            window.schemas.getControl(),
+            window.schemas.getScope(),
+            window.customers.getAll()
+          ]);
+          setSchemas({ industry, product, control, scope });
+          setCustomers(cust);
+        };
+        loadData();
+      }, []);
+
+      const isAutomated = useMemo(() => {
+        return quote.projectCodes.controlCode === 1;
+      }, [quote.projectCodes.controlCode]);
+
+      // --- Event Handlers ---
+
+      // Generic handler for nested state
+      const handleChange = (section, field, value) => {
+        setQuote(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            [field]: value
+          }
+        }));
+      };
+
+      // Handler for top-level fields
+      const handleTopLevelChange = (field, value) => {
+        setQuote(prev => ({
+          ...prev,
+          [field]: value
+        }));
+      };
+
+      // Handler for productConfiguration (arrays)
+      const handleProductConfigChange = (config) => {
+         setQuote(prev => ({ 
+           ...prev, 
+           productConfiguration: config 
+         }));
+      };
+      
+      // Handler for selectedAssemblies and customFeatures (arrays)
+      const handleBOMChange = (section, items) => {
+        setQuote(prev => ({
+          ...prev,
+          [section]: items
+        }));
+      };
+
+      // Specific handler for generating quote/project numbers
+      const handleGenerateIds = (customerCode) => {
+        // This re-implements the logic from your quotetool.html
+        if (!customerCode) return;
+        
+        const d = new Date();
+        const yy = d.getFullYear().toString().slice(-2);
+        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+        const dd = d.getDate().toString().padStart(2, '0');
+        const cust = customerCode.toUpperCase().padEnd(3, 'X'); // Use 3 chars for consistency
+        
+        const { industryCode, productCode, controlCode, scopeCode } = quote.projectCodes;
+        const ind = (industryCode || "").toString().padStart(2, '0');
+        const prod = (productCode || "").toString().padStart(3, '0');
+        const cont = (controlCode || "").toString();
+        const scop = (scopeCode || "").toString().padStart(2, '0');
+
+        const baseId = `CA${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}`;
+        const quoteId = `CQ${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}-0`; // Add sequence
+
+        setQuote(prev => ({
+          ...prev,
+          projectId: baseId,
+          quoteId: quoteId
+        }));
+      };
+      
+      const handleCustomerChange = (e) => {
+        const custId = e.target.value;
+        handleTopLevelChange('customer', custId);
+        handleGenerateIds(custId); // Auto-generate IDs on customer change
+      };
+
+      const handleCodeChange = (field, value) => {
+        // Parse to integer, or set to empty string if invalid
+        const intValue = value ? parseInt(value, 10) : "";
+        handleChange('projectCodes', field, intValue);
+      };
+
+      // Auto-generate IDs when codes change, if customer is already set
+      useEffect(() => {
+        if (quote.customer) {
+          handleGenerateIds(quote.customer);
+        }
+      }, [quote.projectCodes, quote.customer]);
+
+      // --- Save Handler ---
+      const handleSaveQuote = async () => {
+        setStatusMessage({ type: '', text: '' });
+        setIsLoading(true);
+        
+        try {
+          // --- TODO: Real Validation ---
+          // In a real app, use AJV with the schema to validate `quote`
+          if (!quote.projectName) {
+             setStatusMessage({ type: 'error', text: 'Project Name is required.', errors: [{message: 'Project Name is required.'}] });
+             setActiveTab('details');
+             return;
+          }
+
+          // Use the real API
+          const result = await window.quotes.save(quote);
+
+          if (result.success) {
+            setStatusMessage({ 
+              type: 'success', 
+              text: `Quote saved successfully! Path: ${result.path}` 
+            });
+          } else {
+            setStatusMessage({ 
+              type: 'error', 
+              text: `Failed to save quote. Validation errors: ${result.errors.map(e => e.message).join(', ')}`,
+              errors: result.errors
+            });
+          }
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      return (
+        <div className="container mx-auto max-w-6xl">
+          <header className="flex justify-between items-center mb-4 pb-4 border-b border-gray-300">
+            <div>
+              <h1 className="text-3xl font-bold text-[var(--primary)]">Quote Configurator</h1>
+              <p className="text-lg text-gray-600">{quote.projectName || "New Project Quote"}</p>
+            </div>
+            <button className="btn flex items-center gap-2" onClick={handleSaveQuote} disabled={isLoading}>
+              <Save size={18} />
+              {isLoading ? "Saving..." : "Save Quote"}
+            </button>
+          </header>
+
+          {/* --- Status Message --- */}
+          {statusMessage.text && (
+            <div className={`alert ${statusMessage.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+              <div className="flex items-center gap-2">
+                {statusMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                <span className="font-semibold">{statusMessage.text}</span>
+              </div>
+            </div>
+          )}
+
+          {/* --- Wizard Tabs --- */}
+          <div className="flex mb-[-1px] z-10 relative">
+            <div className={`tab ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
+              <FileText size={16} className="inline-block mr-2" />
+              Step 1: Project Details
+            </div>
+            <div className={`tab ${activeTab === 'panel' ? 'active' : ''}`} onClick={() => setActiveTab('panel')}>
+              <HardHat size={16} className="inline-block mr-2" />
+              Step 2: Panel Config
+            </div>
+            <div className={`tab ${activeTab === 'product' ? 'active' : ''}`} onClick={() => setActiveTab('product')}>
+              <Info size={16} className="inline-block mr-2" />
+              Step 3: Product Config
+            </div>
+            <div className={`tab ${activeTab === 'bom' ? 'active' : ''}`} onClick={() => setActiveTab('bom')}>
+              <Package size={16} className="inline-block mr-2" />
+              Step 4: BOM
+            </div>
+          </div>
+
+          {/* --- Tab Content --- */}
+          <div className="relative">
+            {/* --- Step 1: Project Details --- */}
+            <div className={`tab-content ${activeTab === 'details' ? 'active' : ''}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column: Project Info */}
+                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
+                  <h3 className="text-xl font-semibold border-b pb-2">Project Info</h3>
+                  <div>
+                    <label className="label" htmlFor="projectName">Project Name</label>
+                    <input
+                      id="projectName"
+                      type="text"
+                      className="input"
+                      value={quote.projectName}
+                      onChange={(e) => handleTopLevelChange('projectName', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="customer">Customer</label>
+                    <SelectCustomer value={quote.customer} onChange={handleCustomerChange} customers={customers} />
+                  </div>
+                  <div className="grid-col-2">
+                    <div>
+                      <label className="label" htmlFor="salesRep">Sales Rep</label>
+                      <input
+                        id="salesRep"
+                        type="text"
+                        className="input"
+                        value={quote.salesRep}
+                        onChange={(e) => handleTopLevelChange('salesRep', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="label" htmlFor="oem">OEM</label>
+                      <input
+                        id="oem"
+                        type="text"
+                        className="input"
+                        value={quote.oem}
+                        onChange={(e) => handleTopLevelChange('oem', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                   <div>
+                    <label className="label" htmlFor="quoteId">Generated Quote ID</label>
+                    <input id="quoteId" type="text" className="input bg-gray-100" value={quote.quoteId} readOnly />
+                  </div>
+                   <div>
+                    <label className="label" htmlFor="projectId">Generated Project ID</label>
+                    <input id="projectId" type="text" className="input bg-gray-100" value={quote.projectId} readOnly />
+                  </div>
+                </div>
+
+                {/* Right Column: 4-Pillar Codes */}
+                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
+                  <h3 className="text-xl font-semibold border-b pb-2">Project Classification</h3>
+                  <div>
+                    <label className="label" htmlFor="industryCode">Industry</label>
+                    <SelectCode
+                      id="industryCode"
+                      value={quote.projectCodes.industryCode}
+                      onChange={(e) => handleCodeChange('industryCode', e.target.value)}
+                      options={schemas.industry}
+                      placeholder="Select an Industry"
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="productCode">Product</label>
+                     <SelectCode
+                      id="productCode"
+                      value={quote.projectCodes.productCode}
+                      onChange={(e) => handleCodeChange('productCode', e.target.value)}
+                      options={schemas.product}
+                      placeholder="Select a Product"
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="controlCode">Control</label>
+                     <SelectCode
+                      id="controlCode"
+                      value={quote.projectCodes.controlCode}
+                      onChange={(e) => handleCodeChange('controlCode', e.target.value)}
+                      options={schemas.control}
+                      placeholder="Select a Control Type"
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="scopeCode">Scope</label>
+                     <SelectCode
+                      id="scopeCode"
+                      value={quote.projectCodes.scopeCode}
+                      onChange={(e) => handleCodeChange('scopeCode', e.target.value)}
+                      options={schemas.scope}
+                      placeholder="Select a Scope"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* --- Step 2: Panel Config --- */}
+            <div className={`tab-content ${activeTab === 'panel' ? 'active' : ''}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Left Column: Power & Enclosure */}
+                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
+                  <h3 className="text-xl font-semibold border-b pb-2">Power & Enclosure</h3>
+                  <div className="grid-col-2">
+                    <div>
+                      <label className="label" htmlFor="voltage">Voltage</label>
+                      <select 
+                        id="voltage" 
+                        className="select" 
+                        value={quote.controlPanelConfig.voltage}
+                        onChange={(e) => handleChange('controlPanelConfig', 'voltage', e.target.value)}
+                      >
+                        <option>480V</option>
+                        <option>240V</option>
+                        <option>208V</option>
+                        <option>120V</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label" htmlFor="phase">Phase</label>
+                      <select 
+                        id="phase" 
+                        className="select" 
+                        value={quote.controlPanelConfig.phase}
+                        onChange={(e) => handleChange('controlPanelConfig', 'phase', e.target.value)}
+                      >
+                        <option>3-Phase</option>
+                        <option>1-Phase</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="label" htmlFor="disconnect">Disconnect</label>
+                    <select 
+                      id="disconnect" 
+                      className="select" 
+                      value={quote.controlPanelConfig.disconnect}
+                      onChange={(e) => handleChange('controlPanelConfig', 'disconnect', e.target.value)}
+                    >
+                      <option>Fused</option>
+                      <option>Non-Fused</option>
+                      <option>Breaker</option>
+                      <option>None</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="label" htmlFor="enclosureType">Enclosure Type</label>
+                    <select 
+                      id="enclosureType" 
+                      className="select" 
+                      value={quote.controlPanelConfig.enclosureType}
+                      onChange={(e) => handleChange('controlPanelConfig', 'enclosureType', e.target.value)}
+                    >
+                      <option>NEMA 4X Stainless</option>
+                      <option>NEMA 4 Painted Steel</option>
+                      <option>NEMA 12 Painted Steel</option>
+                      <option>NEMA 1</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="label" htmlFor="enclosureRating">Enclosure Rating (Optional)</label>
+                    <input
+                      id="enclosureRating"
+                      type="text"
+                      className="input"
+                      placeholder="e.g., UL 508A"
+                      value={quote.controlPanelConfig.enclosureRating}
+                      onChange={(e) => handleChange('controlPanelConfig', 'enclosureRating', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column: Automation (Conditional) */}
+                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
+                  <h3 className="text-xl font-semibold border-b pb-2">Automation</h3>
+                  
+                  {/* This section only shows if Control Type is "Automated" */}
+                  {isAutomated ? (
+                    <>
+                      <div>
+                        <label className="label" htmlFor="plcPlatform">PLC Platform</label>
+                        <select 
+                          id="plcPlatform" 
+                          className="select" 
+                          value={quote.controlPanelConfig.plcPlatform}
+                          onChange={(e) => handleChange('controlPanelConfig', 'plcPlatform', e.target.value)}
+                        >
+                          <option value="">Select Platform</option>
+                          <option>Allen-Bradley</option>
+                          <option>Siemens</option>
+                          <option>AutomationDirect</option>
+                          <option>Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="hmiSize">HMI Size</label>
+                        <select 
+                          id="hmiSize" 
+                          className="select" 
+                          value={quote.controlPanelConfig.hmiSize}
+                          onChange={(e) => handleChange('controlPanelConfig', 'hmiSize', e.target.value)}
+                        >
+                          <option value="">Select Size</option>
+                          <option>4 inch</option>
+                          <option>7 inch</option>
+                          <option>10 inch</option>
+                          <option>12 inch</option>
+                          <option>15 inch</option>
+                          <option>None</option>
+                        </select>
+                      </div>
+                       <div>
+                        <label className="label" htmlFor="plcModel">PLC Model (Optional)</label>
+                        <input
+                          id="plcModel"
+                          type="text"
+                          className="input"
+                          placeholder="e.g., CompactLogix L33ER"
+                          value={quote.controlPanelConfig.plcModel}
+                          onChange={(e) => handleChange('controlPanelConfig', 'plcModel', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-gray-500 text-center p-8 bg-gray-50 rounded-lg">
+                      <Info size={32} className="mx-auto mb-2" />
+                      Select "Automated" in Step 1 to configure PLC & HMI options.
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+
+            {/* --- Step 3: Product Config --- */}
+            <div className={`tab-content ${activeTab === 'product' ? 'active' : ''}`}>
+              <ProductConfigurator 
+                productCode={quote.projectCodes.productCode}
+                productConfig={quote.productConfiguration}
+                onChange={handleProductConfigChange}
+              />
+            </div>
+
+            {/* --- Step 4: BOM --- */}
+            <div className={`tab-content ${activeTab === 'bom' ? 'active' : ''}`}>
+              <BomAssistance
+                quote={quote}
+                onBOMChange={handleBOMChange}
+                searchAssemblies={window.assemblies.search}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Helper Components ---
+    function SelectCode({ id, value, onChange, options, placeholder }) {
+      return (
+        <select id={id} className="select" value={value} onChange={onChange}>
+          <option value="">{placeholder}</option>
+          {options.map(opt => (
+            <option key={opt.const} value={opt.const}>
+              {opt.const} - {opt.description}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    
+    function SelectCustomer({ id, value, onChange, customers }) {
+      return (
+        <select id={id} className="select" value={value} onChange={onChange}>
+          <option value="">Select a Customer</option>
+          {customers.map(cust => (
+            <option key={cust.id} value={cust.id}>
+              {cust.id} - {cust.name}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    // Placeholder components for Step 3 and Step 4
+    function ProductConfigurator({ productCode, productConfig, onChange }) {
+      return (
+        <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
+          <h3 className="text-xl font-semibold border-b pb-2 mb-4">Product Configuration</h3>
+          <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">
+            <Wand2 size={32} className="mx-auto mb-2" />
+            <p>Product configuration will be implemented here.</p>
+            <p className="text-sm mt-2">Product Code: {productCode || 'Not selected'}</p>
+          </div>
+        </div>
+      );
+    }
+
+    function BomAssistance({ quote, onBOMChange, searchAssemblies }) {
+      return (
+        <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
+          <h3 className="text-xl font-semibold border-b pb-2 mb-4">BOM Assistance</h3>
+          <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">
+            <Package size={32} className="mx-auto mb-2" />
+            <p>BOM assistance and assembly selection will be implemented here.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Render App ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
