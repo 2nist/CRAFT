@@ -1000,17 +1000,35 @@ ipcMain.handle('customers:getAll', async () => {
   }
 });
 
-// IPC handlers for communication with renderer process
-ipcMain.handle('ping', () => {
-  console.log('Received ping from renderer')
-  return 'pong'
+// Product Templates IPC handlers
+
+// Get product template by product code
+ipcMain.handle('product-templates:get', async (event, productCode) => {
+  try {
+    const filePath = path.join(dataPath, 'product-templates', `${productCode}.json`)
+    const data = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(data)
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return null // Template doesn't exist
+    }
+    console.error('Error loading product template:', err)
+    throw err
+  }
 })
 
-ipcMain.handle('get-app-version', () => {
-  return app.getVersion()
-})
-
-ipcMain.on('message-from-renderer', (event, message) => {
-  console.log('Message from renderer:', message)
-  event.reply('message-from-main', `Main process received: ${message}`)
+// Save product template
+ipcMain.handle('product-templates:save', async (event, templateObject) => {
+  try {
+    // Ensure the product-templates directory exists
+    const templatesDir = path.join(dataPath, 'product-templates')
+    await fs.mkdir(templatesDir, { recursive: true })
+    
+    const filePath = path.join(templatesDir, `${templateObject.productCode}.json`)
+    await fs.writeFile(filePath, JSON.stringify(templateObject, null, 2), 'utf-8')
+    return { success: true }
+  } catch (err) {
+    console.error('Error saving product template:', err)
+    throw err
+  }
 })

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Template Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.378.0/dist/lucide-react.js"></script>
+  <style>
+    :root {
+      --primary: #c7a783; /* Example primary color */
+      --secondary: #f0e6d8;
+      --text: #3d2c1d;
+      --bg: #fbf9f6;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 1.5rem;
+    }
+    .input, .select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      background-color: white;
+      transition: border-color 0.2s;
+    }
+    .input:focus, .select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--secondary);
+    }
+    .label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      color: white;
+      background-color: var(--primary);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
+    .btn-secondary {
+      background-color: #a0aec0;
+    }
+    .btn-danger {
+      background-color: #e53e3e;
+      color: white;
+    }
+    .btn-small {
+       padding: 0.25rem 0.5rem;
+       font-weight: 500;
+    }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+    const {
+      Package, Save, ArrowLeft, Settings, Trash2, PlusCircle, Link2, Info,
+      List, Type, CheckSquare, Droplet, Zap, Wind, AlertCircle, CheckCircle
+    } = lucideReact;
+
+    // --- Main App Component ---
+    function App() {
+      const [productSchema, setProductSchema] = useState([]);
+      const [currentTemplate, setCurrentTemplate] = useState(null); // Template being edited
+      const [isLoading, setIsLoading] = useState(true);
+      const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+
+      const api = window.productTemplates;
+      const schemaApi = window.schemas;
+
+      const loadProductSchema = async () => {
+        setIsLoading(true);
+        setStatusMessage({ type: '', text: '' });
+        try {
+          const data = await window.schemas.getProduct();
+          setProductSchema(data);
+        } catch (err) {
+          setStatusMessage({ type: 'error', text: 'Failed to load product schema.' });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        loadProductSchema();
+      }, []);
+
+      const handleSelectProduct = async (productCode) => {
+        if (!productCode) {
+          setCurrentTemplate(null);
+          return;
+        }
+
+        setIsLoading(true);
+        const template = await api.get(productCode);
+
+        if (template) {
+          setCurrentTemplate(template);
+        } else {
+          setCurrentTemplate({
+            productCode: parseInt(productCode, 10),
+            sections: []
+          });
+        }
+        setIsLoading(false);
+      };
+
+      const handleSave = async (templateToSave) => {
+        setStatusMessage({ type: '', text: '' });
+        const result = await api.save(templateToSave);
+
+        if (result.success) {
+          setStatusMessage({ type: 'success', text: `Template for "${templateToSave.productCode}" saved.` });
+          setCurrentTemplate(templateToSave);
+        } else {
+          setStatusMessage({ type: 'error', text: 'Failed to save template.' });
+        }
+      };
+
+      const handleCancel = () => {
+        setCurrentTemplate(null);
+      };
+
+      return (
+        <div className="container mx-auto max-w-5xl">
+          <header className="mb-4 pb-4 border-b border-gray-300">
+            <h1 className="text-3xl font-bold text-[var(--primary)]">Product Template Manager</h1>
+            <p className="text-lg text-gray-600">Define the data fields and logic for the Quote Configurator (Step 3).</p>
+          </header>
+
+          {statusMessage.text && (
+            <div className={`alert ${statusMessage.type === 'success' ? 'alert-success' : 'alert-error'} mb-4`}>
+              <div className="flex items-center gap-2">
+                {statusMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                <span className="font-semibold">{statusMessage.text}</span>
+              </div>
+            </div>
+          )}
+
+          {!currentTemplate ? (
+            <ProductList
+              productSchema={productSchema}
+              onSelect={handleSelectProduct}
+              isLoading={isLoading}
+            />
+          ) : (
+            <TemplateEditor
+              key={currentTemplate.productCode}
+              template={currentTemplate}
+              productSchema={productSchema}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              isSaving={false}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // --- List View Component ---
+    function ProductList({ productSchema, onSelect, isLoading }) {
+      return (
+        <div className="space-y-4 card">
+          <h2 className="text-xl font-semibold border-b pb-2">Select a Product to Configure</h2>
+          {isLoading && <div className="text-center p-4">Loading products...</div>}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {productSchema.map(prod => (
+              <button
+                key={prod.const}
+                className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 text-left hover:border-[var(--primary)] transition-all"
+                onClick={() => onSelect(prod.const)}
+              >
+                <h3 className="text-lg font-semibold text-[var(--primary)]">{prod.const}</h3>
+                <p className="text-gray-600">{prod.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --- Editor View Component ---
+    function TemplateEditor({ template, productSchema, onSave, onCancel, isSaving }) {
+      const [currentTemplate, setCurrentTemplate] = useState(template);
+
+      const productName = productSchema.find(p => p.const === currentTemplate.productCode)?.description || "Unknown Product";
+
+      const availableSections = ['Digital IN', 'Analog IN', 'Digital Out', 'Analog Out'];
+
+      const handleAddSection = (type) => {
+        if (currentTemplate.sections.find(s => s.type === type)) return;
+
+        const newSection = { type, fields: [] };
+
+        setCurrentTemplate(prev => ({
+          ...prev,
+          sections: [...prev.sections, newSection]
+        }));
+      };
+
+      const handleRemoveSection = (type) => {
+        setCurrentTemplate(prev => ({
+          ...prev,
+          sections: prev.sections.filter(s => s.type !== type)
+        }));
+      };
+
+      const handleUpdateSection = (type, newFields) => {
+        setCurrentTemplate(prev => ({
+          ...prev,
+          sections: prev.sections.map(s =>
+            s.type === type ? { ...s, fields: newFields } : s
+          )
+        }));
+      };
+
+      return (
+        <div className="space-y-6">
+          <button className="font-semibold text-[var(--primary)] flex items-center gap-1" onClick={onCancel}>
+            <ArrowLeft size={18} />
+            Back to Product List
+          </button>
+
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-[var(--primary)]">Edit Template: {productName}</h1>
+              <p className="text-gray-600">Product Code: {currentTemplate.productCode}</p>
+            </div>
+            <button className="btn" onClick={() => onSave(currentTemplate)} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Template"}
+            </button>
+          </div>
+
+          {/* --- Section Manager --- */}
+          <div className="card space-y-4">
+            <h2 className="text-xl font-semibold border-b pb-2">Manage Configurator Sections</h2>
+            <div className="flex gap-4 flex-wrap">
+              {availableSections.map(type => (
+                <button
+                  key={type}
+                  className="btn btn-secondary"
+                  onClick={() => handleAddSection(type)}
+                  disabled={currentTemplate.sections.some(s => s.type === type)}
+                >
+                  <PlusCircle size={18} className="inline-block mr-2" />
+                  Add {type}
+                </button>
+              ))}
+            </div>
+
+            {currentTemplate.sections.length === 0 && (
+              <p className="text-gray-500 p-4 bg-gray-50 rounded-lg">No sections added. Click a button to add a configurator section.</p>
+            )}
+
+            {/* --- Added Sections Editor --- */}
+            <div className="space-y-4">
+              {currentTemplate.sections.map(section => (
+                <SectionEditor
+                  key={section.type}
+                  type={section.type}
+                  fields={section.fields}
+                  onUpdate={(newFields) => handleUpdateSection(section.type, newFields)}
+                  onRemove={() => handleRemoveSection(section.type)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <button className="btn btn-secondary" onClick={onCancel} disabled={isSaving}>Cancel</button>
+            <button className="btn" onClick={() => onSave(currentTemplate)} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Template"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Section Editor Component ---
+    // Manages the list of fields within a section (e.g., "Digital Out")
+    function SectionEditor({ type, fields, onUpdate, onRemove }) {
+
+      const getIcon = () => {
+         switch(type) {
+           case 'Digital IN': return <CheckSquare size={20} />;
+           case 'Analog IN': return <Droplet size={20} />;
+           case 'Digital Out': return <Zap size={20} />;
+           case 'Analog Out': return <Wind size={20} />;
+           default: return <Settings size={20} />;
+         }
+      };
+
+      const handleAddField = () => {
+        const newField = {
+          id: Date.now().toString(),
+          name: "New Field",
+          type: "Text",
+          properties: {},
+          subFields: []
+        };
+        onUpdate([...fields, newField]);
+      };
+
+      const handleUpdateField = (id, newFieldData) => {
+        onUpdate(fields.map(f => f.id === id ? newFieldData : f));
+      };
+
+      const handleRemoveField = (id) => {
+        onUpdate(fields.filter(f => f.id !== id));
+      };
+
+      return (
+        <div className="card space-y-4">
+          <div className="flex justify-between items-center border-b pb-2">
+            <h3 className="text-xl font-semibold flex items-center gap-2">
+              {getIcon()} {type}
+            </h3>
+            <button className="btn btn-danger" onClick={onRemove}>
+              <Trash2 size={18} className="inline-block mr-1" />
+              Remove Section
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {fields.length > 0 && fields.map(field => (
+              <FieldEditor
+                key={field.id}
+                field={field}
+                onUpdate={(newFieldData) => handleUpdateField(field.id, newFieldData)}
+                onRemove={() => handleRemoveField(field.id)}
+              />
+            ))}
+
+            <button className="btn btn-secondary w-full" onClick={handleAddField}>
+               <PlusCircle size={18} className="inline-block mr-2" />
+               Add Field to {type}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Field Editor Component ---
+    // This is the core component for defining a field (e.g., "Motor")
+    function FieldEditor({ field, onUpdate, onRemove }) {
+
+      const handleFieldChange = (prop, value) => {
+        onUpdate({ ...field, [prop]: value });
+      };
+
+      const handleTypeChange = (e) => {
+        const newType = e.target.value;
+        let newProperties = {};
+        if (newType === "List") {
+          newProperties = { options: [{ name: "Option 1", assemblyQuery: { category: "", description: "" } }] };
+        }
+        onUpdate({ ...field, type: newType, properties: newProperties });
+      };
+
+      const handleSubFieldChange = (newSubFields) => {
+        onUpdate({ ...field, subFields: newSubFields });
+      };
+
+      return (
+        <div className="card p-4 bg-gray-50 border-gray-200 space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div>
+                <label className="label">Field Name</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={field.name}
+                  onChange={(e) => handleFieldChange('name', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Field Type</label>
+                <select
+                  className="select"
+                  value={field.type}
+                  onChange={handleTypeChange}
+                >
+                  <option value="Text">Text</option>
+                  <option value="Number">Number</option>
+                  <option value="Boolean">Boolean (Toggle)</option>
+                  <option value="List">List (Dropdown)</option>
+                </select>
+              </div>
+            </div>
+            <button className="btn btn-danger" onClick={onRemove}>
+              <Trash2 size={18} />
+            </button>
+          </div>
+
+          {/* --- Renders properties for the *field itself* (e.g., List options) --- */}
+          {field.type === "List" && (
+            <ListOptionEditor
+              properties={field.properties}
+              onUpdate={(newProps) => handleFieldChange('properties', newProps)}
+            />
+          )}
+
+          {/* --- Renders the editor for *sub-fields* (e.g., HP, Voltage) --- */}
+          <SubFieldEditor
+            subFields={field.subFields || []}
+            onUpdate={handleSubFieldChange}
+          />
+        </div>
+      );
+    }
+
+    // --- Sub-Field Editor ---
+    // Manages the list of properties for a complex field (e.g., Motor -> HP, Voltage)
+    function SubFieldEditor({ subFields, onUpdate }) {
+
+      const handleAddSubField = () => {
+        const newSubField = { id: Date.now().toString(), name: "New Property", type: "Text", rules: {} };
+        onUpdate([...subFields, newSubField]);
+      };
+
+      const handleRemoveSubField = (id) => {
+        onUpdate(subFields.filter(sf => sf.id !== id));
+      };
+
+      const handleSubFieldChange = (id, prop, value) => {
+        onUpdate(subFields.map(sf => sf.id === id ? { ...sf, [prop]: value } : sf));
+      };
+
+      const handleRuleChange = (id, rule, value) => {
+         onUpdate(subFields.map(sf => sf.id === id ? { ...sf, rules: { ...sf.rules, [rule]: value } } : sf));
+      };
+
+      return (
+        <div className="pl-4 border-l-4 border-[var(--primary)] space-y-3">
+          <h4 className="text-md font-semibold">Properties for this Field</h4>
+          {subFields.map(sf => (
+            <div key={sf.id} className="grid grid-cols-4 gap-2 p-2 bg-white rounded border">
+              <div>
+                <label className="label">Property Name</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={sf.name}
+                  onChange={(e) => handleSubFieldChange(sf.id, 'name', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Property Type</label>
+                <select
+                  className="select"
+                  value={sf.type}
+                  onChange={(e) => handleSubFieldChange(sf.id, 'type', e.target.value)}
+                >
+                  <option value="Text">Text</option>
+                  <option value="Number">Number</option>
+                  <option value="Boolean">Boolean</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Data Rule (Optional)</label>
+                <select
+                  className="select"
+                  value={sf.rules?.inherit || ""}
+                  onChange={(e) => handleRuleChange(sf.id, 'inherit', e.target.value)}
+                >
+                  <option value="">None</option>
+                  <option value="voltage">Inherit: Panel Voltage</option>
+                  <option value="phase">Inherit: Panel Phase</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  className="btn btn-danger btn-small"
+                  onClick={() => handleRemoveSubField(sf.id)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-secondary btn-small" onClick={handleAddSubField}>
+            <PlusCircle size={16} className="inline-block mr-1" />
+            Add Property
+          </button>
+        </div>
+      );
+    }
+
+    // --- List Option Editor ---
+    // Manages the options for a "List" type field (e.g., "VFD", "On/Off")
+    function ListOptionEditor({ properties, onUpdate }) {
+      const options = properties.options || [];
+
+      const handleAddOption = () => {
+        const newOption = { name: `Option ${options.length + 1}`, assemblyQuery: { category: "", description: "" } };
+        onUpdate({ ...properties, options: [...options, newOption] });
+      };
+
+      const handleRemoveOption = (index) => {
+        onUpdate({ ...properties, options: options.filter((_, i) => i !== index) });
+      };
+
+      const handleOptionChange = (index, prop, value) => {
+        const newOptions = [...options];
+        newOptions[index] = { ...newOptions[index], [prop]: value };
+        onUpdate({ ...properties, options: newOptions });
+      };
+
+      const handleQueryChange = (index, prop, value) => {
+        const newOptions = [...options];
+        newOptions[index] = {
+          ...newOptions[index],
+          assemblyQuery: {
+            ...newOptions[index].assemblyQuery,
+            [prop]: value
+          }
+        };
+        onUpdate({ ...properties, options: newOptions });
+      };
+
+      return (
+        <div className="pl-4 border-l-4 border-[var(--primary)] space-y-3">
+          <h4 className="text-md font-semibold">List Options & BOM Mapping</h4>
+          {options.map((opt, index) => (
+            <div key={index} className="p-2 bg-white rounded border space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <label className="label">Option Name</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={opt.name}
+                    onChange={(e) => handleOptionChange(index, 'name', e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-danger btn-small ml-2 mt-5"
+                  onClick={() => handleRemoveOption(index)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                 <div>
+                    <label className="label">BOM: Search Category</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="e.g., MOTOR CONTROL/..."
+                      value={opt.assemblyQuery.category}
+                      onChange={(e) => handleQueryChange(index, 'category', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">BOM: Search Description</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="e.g., VFD, Starter"
+                      value={opt.assemblyQuery.description}
+                      onChange={(e) => handleQueryChange(index, 'description', e.target.value)}
+                    />
+                  </div>
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-secondary btn-small" onClick={handleAddOption}>
+            <PlusCircle size={16} className="inline-block mr-1" />
+            Add Option
+          </button>
+        </div>
+      );
+    }
+
+
+    // --- Render App ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

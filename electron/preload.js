@@ -90,6 +90,12 @@ contextBridge.exposeInMainWorld('customers', {
   getAll: () => ipcRenderer.invoke('customers:getAll'),
 })
 
+// Expose product templates API
+contextBridge.exposeInMainWorld('productTemplates', {
+  get: (productCode) => ipcRenderer.invoke('product-templates:get', productCode),
+  save: (template) => ipcRenderer.invoke('product-templates:save', template),
+})
+
 // Expose Node.js process information
 contextBridge.exposeInMainWorld('versions', {
   node: () => process.versions.node,
