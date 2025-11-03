@@ -1,0 +1,90 @@
+[
+  {
+    "assemblyId": "ASM-ENCLOSURE-24x36",
+    "description": "24x36 NEMA 4X Enclosure Kit",
+    "category": "Enclosure",
+    "components": [
+      {
+        "sku": "ENC-2436-4X",
+        "quantity": 1,
+        "notes": "Main control enclosure"
+      }
+    ],
+    "estimatedLaborHours": 2
+  },
+  {
+    "assemblyId": "ASM-DISCONNECT-100A",
+    "description": "100A Disconnect Switch Assembly",
+    "category": "Disconnect",
+    "components": [
+      {
+        "sku": "DIS-100A-3P",
+        "quantity": 1,
+        "notes": "Main disconnect"
+      }
+    ],
+    "estimatedLaborHours": 1.5
+  },
+  {
+    "assemblyId": "ASM-PLC-BASIC",
+    "description": "Basic PLC Starter Kit",
+    "category": "PLC/COM",
+    "components": [
+      {
+        "sku": "PLC-CPU-1500",
+        "quantity": 1,
+        "notes": "CPU module"
+      },
+      {
+        "sku": "PLC-PWR-24V",
+        "quantity": 1,
+        "notes": "Power supply"
+      }
+    ],
+    "estimatedLaborHours": 4
+  },
+  {
+    "assemblyId": "ASM-HMI-10INCH",
+    "description": "10-inch HMI Touchscreen",
+    "category": "PLC/COM",
+    "components": [
+      {
+        "sku": "HMI-10-COLOR",
+        "quantity": 1,
+        "notes": "Touchscreen panel"
+      }
+    ],
+    "estimatedLaborHours": 2
+  },
+  {
+    "assemblyId": "ASM-VFD-5HP",
+    "description": "5HP VFD Motor Starter",
+    "category": "MOTOR CONTROL/HEATER CONTROL",
+    "components": [
+      {
+        "sku": "VFD-5HP-480V",
+        "quantity": 1,
+        "notes": "Variable frequency drive"
+      }
+    ],
+    "estimatedLaborHours": 3
+  },
+  {
+    "assemblyId": "ASM-SAFETY-ESTOP",
+    "description": "Emergency Stop Safety Circuit",
+    "category": "SAFETY",
+    "components": [
+      {
+        "sku": "ESTOP-BUTTON-RED",
+        "quantity": 2,
+        "notes": "Emergency stop buttons"
+      },
+      {
+        "sku": "SAFETY-RELAY-DUAL",
+        "quantity": 1,
+        "notes": "Safety relay module"
+      }
+    ],
+    "estimatedLaborHours": 2.5
+  }
+]

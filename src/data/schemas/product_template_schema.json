@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Product Template",
+  "description": "Configuration template for a specific product type, defining which I/O sections and assemblies are available.",
+  "type": "object",
+  "properties": {
+    "productCode": {
+      "description": "The Product Code this template applies to (e.g., 100, 140).",
+      "type": "number"
+    },
+    "productName": {
+      "description": "The name of the product (e.g., 'Brewhouse', 'Motor Control').",
+      "type": "string"
+    },
+    "availableSections": {
+      "description": "Which of the 4 main I/O sections are enabled for this product.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["DI", "DO", "AI", "AO"]
+      }
+    },
+    "defaultAssemblies": {
+      "description": "A list of assembly IDs that should be pre-selected for this product type.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requiredAssemblies": {
+      "description": "A list of assembly IDs that are always required (cannot be removed).",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "optionalAssemblies": {
+      "description": "A list of assembly IDs that can be optionally added.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ioDefaults": {
+      "description": "Default I/O counts for each section.",
+      "type": "object",
+      "properties": {
+        "DI": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 },
+            "default": { "type": "number", "minimum": 0 }
+          }
+        },
+        "DO": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 },
+            "default": { "type": "number", "minimum": 0 }
+          }
+        },
+        "AI": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 },
+            "default": { "type": "number", "minimum": 0 }
+          }
+        },
+        "AO": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number", "minimum": 0 },
+            "max": { "type": "number", "minimum": 0 },
+            "default": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "estimatedBaseLaborHours": {
+      "description": "Base labor hours for this product type (before assemblies).",
+      "type": "number",
+      "minimum": 0
+    },
+    "notes": {
+      "description": "Additional configuration notes or instructions.",
+      "type": "string"
+    }
+  },
+  "required": ["productCode", "productName", "availableSections"]
+}

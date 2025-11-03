@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craft Tools Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.379.0/dist/lucide-react.js"></script>
+    <style>
+        :root {
+            --plugin-bg: #0f172a;
+            --plugin-text: #e2e8f0;
+            --plugin-text-light: #94a3b8;
+            --plugin-border: #334155;
+            --plugin-primary: #3b82f6;
+            --plugin-primary-hover: #2563eb;
+            --plugin-bg-light: #1e293b;
+            --plugin-bg-dark: #0f172a;
+        }
+        body {
+            background-color: var(--plugin-bg);
+            color: var(--plugin-text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
+        .plugin-scrollbar::-webkit-scrollbar { width: 8px; }
+        .plugin-scrollbar::-webkit-scrollbar-track { background: var(--plugin-bg-light); }
+        .plugin-scrollbar::-webkit-scrollbar-thumb { background: var(--plugin-border); border-radius: 4px; }
+        .plugin-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- React App ---
+        const { useState, useEffect } = React;
+        const {
+            File, FolderOpen, Plus, Search, Layers, Save, ArrowRight,
+            Zap, Calculator, Settings, Package, PackagePlus, HardHat, Wrench
+        } = lucide;
+
+        // --- API Layer ---
+        const useApi = () => {
+            const [isLoading, setIsLoading] = useState(false);
+
+            return {
+                getPluginRegistry: async () => {
+                    setIsLoading(true);
+                    try {
+                        return await window.plugins.getAll();
+                    } catch (error) {
+                        console.error('Error loading plugins:', error);
+                        return [];
+                    } finally {
+                        setIsLoading(false);
+                    }
+                },
+                loadPlugin: (pluginId, context) => {
+                    console.log(`Loading plugin: ${pluginId}`);
+                    // For standalone hub page, navigate to plugin HTML directly
+                    const pluginPath = `plugins/${pluginId}/index.html`;
+                    window.location.href = pluginPath;
+                }
+            };
+        };
+
+        // --- Helper Components ---
+        const Icon = ({ name, ...props }) => {
+            const LucideIcon = lucide[name] || File;
+            return <LucideIcon {...props} />;
+        };
+
+        function PluginCard({ plugin, onLaunch }) {
+            const handleLaunch = () => {
+                onLaunch(plugin.id, { isNew: true });
+            };
+
+            return (
+                <div
+                    className="bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col justify-between
+                                 border border-gray-700/50 hover:bg-gray-700/60
+                                 hover:border-blue-600 transition-all cursor-pointer group"
+                    onClick={handleLaunch}
+                >
+                    <div>
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="p-2.5 bg-gray-700 rounded-lg">
+                                <Icon name={plugin.icon || 'Settings'} className="text-blue-400" size={24} />
+                            </span>
+                            <ArrowRight
+                                className="text-gray-600 group-hover:text-blue-400 transition-all
+                                           transform -translate-x-2 group-hover:translate-x-0 opacity-0 group-hover:opacity-100"
+                                size={20}
+                            />
+                        </div>
+                        <h3 className="text-lg font-semibold text-white mb-2">{plugin.name}</h3>
+                        <p className="text-sm text-gray-400">{plugin.description}</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Main App Component ---
+        function App() {
+            const { getPluginRegistry, loadPlugin } = useApi();
+            const [plugins, setPlugins] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const fetchPlugins = async () => {
+                    try {
+                        setIsLoading(true);
+                        setError(null);
+                        const pluginList = await getPluginRegistry();
+                        setPlugins(pluginList || []);
+                    } catch (err) {
+                        console.error('Failed to load plugins:', err);
+                        setError('Failed to load plugins. Please check your connection.');
+                        setPlugins([]);
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                fetchPlugins();
+            }, []);
+
+            const handlePluginLaunch = (pluginId, context) => {
+                loadPlugin(pluginId, context);
+            };
+
+            return (
+                <div className="p-4 md:p-8 min-h-screen plugin-scrollbar">
+                    <header className="mb-10">
+                        <h1 className="text-4xl font-bold text-white mb-2">Craft Tools Hub</h1>
+                        <p className="text-lg text-gray-400">Welcome. Select a tool to begin.</p>
+                    </header>
+
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-800/50 border border-red-600 rounded-lg">
+                            <p className="text-red-200">{error}</p>
+                        </div>
+                    )}
+
+                    {isLoading ? (
+                        <div className="text-center text-gray-400">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mb-4"></div>
+                            <p>Loading tools...</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {plugins.map(plugin => (
+                                <PluginCard
+                                    key={plugin.id}
+                                    plugin={plugin}
+                                    onLaunch={handlePluginLaunch}
+                                />
+                            ))}
+                            {plugins.length === 0 && !error && (
+                                <div className="col-span-full text-center text-gray-400">
+                                    <p>No tools available. Please check your plugin configuration.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <footer className="text-center text-gray-600 mt-12 text-sm">
+                        Craft Automation Tools v1.0
+                    </footer>
+                </div>
+            );
+        }
+
+        // --- Mount App ---
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\CraftAuto-Sales\Craft_Tools_Hub\public\hub.html

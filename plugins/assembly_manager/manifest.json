@@ -2,7 +2,7 @@
   "id": "assembly-manager",
   "name": "Assembly Manager",
   "version": "1.0.0",
-  "description": "Create and manage reusable component assemblies for quotes and panels",
+  "description": "Build, edit, and manage reusable assembly 'kits'.",
   "author": "Craft Automation",
   "entry": "index.html",
   "icon": "Package",

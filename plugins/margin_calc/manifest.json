@@ -1,0 +1,9 @@
+{
+  "id": "margin-calc",
+  "name": "Margin Calculator",
+  "version": "1.0.0",
+  "description": "Calculate margins, markups, and pricing for quotes",
+  "entry": "index.html",
+  "icon": "DollarSign",
+  "author": "Craft Automation"
+}

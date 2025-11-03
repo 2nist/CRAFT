@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('components', {
   getBySku: (sku) => ipcRenderer.invoke('components:getBySku', sku),
   getCategories: () => ipcRenderer.invoke('components:getCategories'),
   getVendors: () => ipcRenderer.invoke('components:getVendors'),
+  syncFromCsv: (csvContent) => ipcRenderer.invoke('components:sync-from-csv', csvContent)
 })
 
 // Expose assemblies API
@@ -59,16 +60,6 @@ contextBridge.exposeInMainWorld('assemblies', {
   getCategories: () => ipcRenderer.invoke('assemblies:getCategories'),
 })
 
-// Expose panels API
-contextBridge.exposeInMainWorld('panels', {
-  getAll: () => ipcRenderer.invoke('panels:getAll'),
-  save: (panel) => ipcRenderer.invoke('panels:save', panel),
-  delete: (panelId) => ipcRenderer.invoke('panels:delete', panelId),
-  search: (filters) => ipcRenderer.invoke('panels:search', filters),
-  getById: (panelId) => ipcRenderer.invoke('panels:getById', panelId),
-  expand: (panelId) => ipcRenderer.invoke('panels:expand', panelId),
-})
-
 // Expose quotes API
 contextBridge.exposeInMainWorld('quotes', {
   save: (quoteObj) => ipcRenderer.invoke('quote:save', quoteObj),
@@ -79,15 +70,20 @@ contextBridge.exposeInMainWorld('quotes', {
 
 // Expose schemas API
 contextBridge.exposeInMainWorld('schemas', {
-  getIndustry: () => ipcRenderer.invoke('schemas:getIndustry'),
-  getProduct: () => ipcRenderer.invoke('schemas:getProduct'),
-  getControl: () => ipcRenderer.invoke('schemas:getControl'),
-  getScope: () => ipcRenderer.invoke('schemas:getScope'),
+  getIndustry: () => ipcRenderer.invoke('schemas:get-industry'),
+  getProduct: () => ipcRenderer.invoke('schemas:get-product'),
+  getControl: () => ipcRenderer.invoke('schemas:get-control'),
+  getScope: () => ipcRenderer.invoke('schemas:get-scope')
 })
 
 // Expose customers API
 contextBridge.exposeInMainWorld('customers', {
-  getAll: () => ipcRenderer.invoke('customers:getAll'),
+  getAll: () => ipcRenderer.invoke('customers:get-all')
+})
+
+// Expose calculator API
+contextBridge.exposeInMainWorld('calc', {
+  getQuoteNumber: (data) => ipcRenderer.invoke('calc:get-quote-number', data)
 })
 
 // Expose product templates API
@@ -96,9 +92,32 @@ contextBridge.exposeInMainWorld('productTemplates', {
   save: (template) => ipcRenderer.invoke('product-templates:save', template),
 })
 
-// Expose Node.js process information
-contextBridge.exposeInMainWorld('versions', {
-  node: () => process.versions.node,
-  chrome: () => process.versions.chrome,
-  electron: () => process.versions.electron,
+// Expose app API for file I/O
+contextBridge.exposeInMainWorld('app', {
+  showOpenDialog: (options) => ipcRenderer.invoke('app:show-open-dialog', options),
+  readFile: (filePath) => ipcRenderer.invoke('app:read-file', filePath)
+})
+
+// Expose pipedrive API
+contextBridge.exposeInMainWorld('pipedrive', {
+  getDeals: () => ipcRenderer.invoke('pipedrive:get-deals')
+})
+
+// Expose shell API for opening external links
+contextBridge.exposeInMainWorld('electron', {
+  shell: {
+    openExternal: (url) => ipcRenderer.invoke('shell:open-external', url)
+  },
+  on: (event, callback) => {
+    ipcRenderer.on(event, callback);
+  }
+})
+
+// Expose dashboard API
+contextBridge.exposeInMainWorld('api', {
+  getRecentQuotes: () => ipcRenderer.invoke('api:get-recent-quotes'),
+  getUsefulLinks: () => ipcRenderer.invoke('api:get-useful-links'),
+  getDocHubItems: () => ipcRenderer.invoke('api:get-doc-hub-items'),
+  getPluginRegistry: () => ipcRenderer.invoke('api:get-plugin-registry'),
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url)
 })

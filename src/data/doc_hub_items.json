@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Marketing Brochure",
+    "path": "/assets/docs/brochure.pdf",
+    "icon": "FileText"
+  },
+  {
+    "title": "Standard SOP",
+    "path": "/assets/docs/sop.pdf",
+    "icon": "BookOpen"
+  },
+  {
+    "title": "UL508A Guide",
+    "path": "/assets/docs/ul508a.pdf",
+    "icon": "ShieldCheck"
+  }
+]

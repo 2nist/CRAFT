@@ -1,81 +1,74 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Component Catalog Item",
-  "description": "Defines a single item in the component catalog, based on the component_catalog.csv file.",
+  "title": "Component",
+  "description": "A single component from the master catalog. Includes pricing from Smartsheet and custom engineering data.",
   "type": "object",
   "properties": {
     "sku": {
-      "description": "The internal part SKU (from the 'PART' column, e.G., 'ENC', 'PLC-IDEC-16IO').",
+      "description": "Manufacturer part number (Smartsheet-owned)",
       "type": "string"
     },
     "description": {
-      "description": "The human-readable description of the part.",
+      "description": "Part description and details (Smartsheet-owned)",
       "type": "string"
     },
-    "partNumber": {
-      "description": "The manufacturer's part number (from 'PART#').",
+    "category": {
+      "description": "Sub category (Smartsheet-owned)",
       "type": "string"
     },
-    "vendor": {
-      "description": "The vendor/supplier (from 'VNDR').",
-      "type": "string"
-    },
-    "vendorPartNumber": {
-      "description": "The vendor's catalog number (from 'VNDR#').",
-      "type": "string"
-    },
-    "cost": {
-      "description": "The unit cost of the item.",
+    "price": {
+      "description": "Component cost (Smartsheet-owned)",
       "type": "number",
       "minimum": 0
     },
-    "unit": {
-      "description": "The unit of measure (from 'UNIT', e.g., 'ea.').",
-      "type": "string",
-      "default": "ea."
-    },
-    "category": {
-      "description": "The primary category or assembly (from 'ASSEMBLY', e.g., 'ENCLOSURE', 'Control Systems').",
+    "vendor": {
+      "description": "Vendor code (Smartsheet-owned)",
       "type": "string"
     },
+    "uom": {
+      "description": "Unit of measure / quantity (Smartsheet-owned)",
+      "type": "string"
+    },
+    "vndrnum": {
+      "description": "Vendor part code (Smartsheet-owned)",
+      "type": "string"
+    },
+    "notes": {
+      "description": "General notes (Smartsheet-owned)",
+      "type": "string"
+    },
+    "partAbbrev": {
+      "description": "Part abbreviation (Smartsheet-owned)",
+      "type": "string"
+    },
+    "lastPriceUpdate": {
+      "description": "Last price update date (Smartsheet-owned)",
+      "type": "string"
+    },
+    "volt": {
+      "description": "Voltage rating (Engineering-owned, protected from sync)",
+      "type": ["string", "null"]
+    },
+    "phase": {
+      "description": "Phase (1 or 3) (Engineering-owned, protected from sync)",
+      "type": ["string", "null"]
+    },
+    "amps": {
+      "description": "Amperage rating (Engineering-owned, protected from sync)",
+      "type": ["string", "null"]
+    },
     "tags": {
-      "description": "A list of tags for searching (from 'TAGS').",
-      "type": "array",
+      "description": "Custom tags for filtering (Engineering-owned, protected from sync)",
+      "type": ["array", "null"],
       "items": {
         "type": "string"
       }
     },
-    "notes": {
-      "description": "Additional notes for the part.",
-      "type": "string"
-    },
     "manualLink": {
-      "description": "A URL to the part's manual or spec sheet.",
-      "type": "string",
+      "description": "URL to manual or spec sheet (Engineering-owned, protected from sync)",
+      "type": ["string", "null"],
       "format": "uri"
-    },
-    "lastPriceUpdate": {
-      "description": "The date the price was last verified.",
-      "type": "string",
-      "format": "date-time"
-    },
-    "attributes": {
-      "description": "An object for technical specifications.",
-      "type": "object",
-      "properties": {
-        "voltage": { "type": "string" },
-        "phase": { "type": "string" },
-        "amps": { "type": "string" }
-      },
-      "additionalProperties": true
     }
   },
-  "required": [
-    "sku",
-    "description",
-    "partNumber",
-    "vendor",
-    "cost",
-    "category"
-  ]
+  "required": ["sku", "description", "category", "price", "vendor"]
 }

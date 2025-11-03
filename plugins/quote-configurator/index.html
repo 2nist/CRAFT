@@ -1,1067 +1,901 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quote Configurator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    :root {
-      --primary: #c7a783; /* Example primary color */
-      --secondary: #f0e6d8;
-      --text: #3d2c1d;
-      --bg: #fbf9f6;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 1.5rem;
-    }
-    .tab {
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      background-color: var(--secondary);
-      color: var(--text);
-      border-radius: 0.375rem 0.375rem 0 0;
-      border: 1px solid var(--primary);
-      border-bottom: none;
-      opacity: 0.7;
-      font-weight: 500;
-    }
-    .tab.active {
-      background-color: var(--bg);
-      border-bottom: 1px solid var(--bg);
-      opacity: 1;
-      font-weight: 600;
-      transform: translateY(1px);
-    }
-    .tab-content {
-      display: none;
-      background-color: var(--bg);
-      border: 1px solid var(--primary);
-      border-radius: 0 0.375rem 0.375rem 0.375rem;
-      padding: 1.5rem;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    .input, .select {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.375rem;
-      background-color: white;
-      transition: border-color 0.2s;
-    }
-    .input:focus, .select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px var(--secondary);
-    }
-    .label {
-      display: block;
-      font-weight: 500;
-      margin-bottom: 0.25rem;
-      font-size: 0.875rem;
-    }
-    .grid-col-2 {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-    }
-    .grid-col-3 {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1rem;
-    }
-    .btn {
-      padding: 0.5rem 1rem;
-      border-radius: 0.375rem;
-      font-weight: 600;
-      color: white;
-      background-color: var(--primary);
-      border: none;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .btn:hover {
-      opacity: 0.8;
-    }
-    .btn-secondary {
-      background-color: #a0aec0;
-    }
-    .alert {
-      padding: 1rem;
-      border-radius: 0.375rem;
-      margin-top: 1rem;
-    }
-    .alert-success {
-      background-color: #d1fae5;
-      color: #065f46;
-      border: 1px solid #6ee7b7;
-    }
-    .alert-error {
-      background-color: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #fca5a5;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Configurator Plugin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root { --plugin-bg: #111827; --plugin-text: #e5e7eb; --plugin-text-light: #9ca3af; --plugin-border: #374151; --plugin-primary: #3b82f6; --plugin-primary-hover: #2563eb; --plugin-bg-light: #1f2937; --plugin-bg-dark: #0f172a; }
+        body { background-color: var(--plugin-bg); color: var(--plugin-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+        .plugin-scrollbar::-webkit-scrollbar { width: 8px; }
+        .plugin-scrollbar::-webkit-scrollbar-track { background: var(--plugin-bg-light); }
+        .plugin-scrollbar::-webkit-scrollbar-thumb { background: var(--plugin-border); border-radius: 4px; }
+        .plugin-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.2s; }
+        .btn-primary { background-color: var(--plugin-primary); color: white; }
+        .btn-primary:hover { background-color: var(--plugin-primary-hover); }
+        .btn-secondary { background-color: var(--plugin-bg-light); color: var(--plugin-text); border: 1px solid var(--plugin-border); }
+        .btn-secondary:hover { background-color: var(--plugin-border); }
+        .btn-danger { background-color: #dc2626; color: white; }
+        .btn-danger:hover { background-color: #b91c1c; }
+        .input-base { background-color: var(--plugin-bg-light); border: 1px solid var(--plugin-border); color: var(--plugin-text); border-radius: 0.375rem; padding: 0.5rem 0.75rem; width: 100%; transition: border-color 0.2s, box-shadow 0.2s; }
+        .input-base:focus { outline: none; border-color: var(--plugin-primary); box-shadow: 0 0 0 2px var(--plugin-bg), 0 0 0 4px var(--plugin-primary); }
+        .label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--plugin-text-light); }
+        .wizard-tabs { display: flex; border-bottom: 1px solid var(--plugin-border); }
+        .wizard-tab { flex: 1; padding: 1rem 0.5rem; text-align: center; font-weight: 600; color: var(--plugin-text-light); border-bottom: 4px solid transparent; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+        .wizard-tab-active { color: var(--plugin-primary); border-bottom-color: var(--plugin-primary); }
+        .wizard-tab-disabled { color: #4b5563; cursor: not-allowed; }
+        .form-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1rem; }
+        @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    </style>
 </head>
 <body>
+    <div id="root"></div>
 
-  <div id="root"></div>
+    <script type="text/babel">
+        // --- React App ---
+        const { useState, useEffect, useMemo, createContext, useContext } = React;
 
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+        // --- API Functions ---
+        const getSchemas = async () => ({
+            industry: await window.schemas.getIndustry(),
+            product: await window.schemas.getProduct(),
+            control: await window.schemas.getControl(),
+            scope: await window.schemas.getScope(),
+        });
 
-    // Icon components as inline SVG (no external dependency)
-    const FileText = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14,2 14,8 20,8"/>
-        <line x1="16" y1="13" x2="8" y2="13"/>
-        <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10,9 9,9 8,9"/>
-      </svg>
-    );
-    
-    const Info = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 16v-4"/>
-        <path d="M12 8h.01"/>
-      </svg>
-    );
-    
-    const HardHat = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/>
-        <path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/>
-        <path d="M4 15v-3a6 6 0 0 1 6-6h0"/>
-        <path d="M14 6a6 6 0 0 1 6 6v3"/>
-      </svg>
-    );
-    
-    const Package = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-        <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
-        <line x1="12" y1="22.08" x2="12" y2="12"/>
-      </svg>
-    );
-    
-    const Save = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-        <polyline points="17,21 17,13 7,13 7,21"/>
-        <polyline points="7,3 7,8 15,8"/>
-      </svg>
-    );
-    
-    const AlertCircle = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-    );
-    
-    const CheckCircle = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-        <polyline points="22,4 12,14.01 9,11.01"/>
-      </svg>
-    );
-    
-    const Trash2 = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <polyline points="3,6 5,6 21,6"/>
-        <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"/>
-        <line x1="10" y1="11" x2="10" y2="17"/>
-        <line x1="14" y1="11" x2="14" y2="17"/>
-      </svg>
-    );
-    
-    const PlusCircle = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 8v8"/>
-        <path d="M8 12h8"/>
-      </svg>
-    );
-    
-    const Wand2 = ({ size = 16, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M21.64 3.64a1.5 1.5 0 0 0-2.12 0l-3.97 3.97L15.25 7l3.97-3.97a1.5 1.5 0 0 0 0-2.12z"/>
-        <path d="M11.5 12.5a3 3 0 0 0 0 4.24l3.97 3.97a1.5 1.5 0 0 0 2.12 0l3.97-3.97a3 3 0 0 0 0-4.24l-3.97-3.97a3 3 0 0 0-4.24 0l-3.97 3.97z"/>
-        <path d="M7 17l-4.5 4.5"/>
-        <path d="M7 7l-4.5-4.5"/>
-        <path d="M17 7l4.5-4.5"/>
-        <path d="M17 17l4.5 4.5"/>
-      </svg>
-    );
+        const getCustomers = async () => await window.customers.getAll();
+        const useApi = () => {
+            const [isLoading, setIsLoading] = useState(false);
 
-    // --- Main App Component ---
-    function App() {
-      const [activeTab, setActiveTab] = useState('details');
-      const [quote, setQuote] = useState({
-        quoteId: "",
-        projectId: "",
-        projectName: "",
-        customer: "",
-        salesRep: "",
-        oem: "",
-        status: "draft",
-        projectCodes: {
-          industryCode: "",
-          productCode: "",
-          controlCode: "",
-          scopeCode: ""
-        },
-        controlPanelConfig: {
-          voltage: "480V",
-          phase: "3-Phase",
-          enclosureType: "NEMA 4X Stainless",
-          enclosureRating: "",
-          hmiSize: "",
-          plcPlatform: "",
-          disconnect: "Fused",
-          plcModel: "",
-          ioCapacity: { AI: 0, DI: 0, AO: 0, DO: 0 },
-          safetyRating: "",
-          networkProtocols: []
-        },
-        productConfiguration: {
-          motors: [],
-          heaters: [],
-          inputs: [],
-          outputs: []
-        },
-        selectedAssemblies: [],
-        customFeatures: []
-      });
-      
-      const [statusMessage, setStatusMessage] = useState({ type: '', text: '', errors: [] });
+            const saveQuote = (quote) => {
+                setIsLoading(true);
+                return window.quotes.save(quote).finally(() => setIsLoading(false));
+            };
 
-      const [isLoading, setIsLoading] = useState(false);
+            const loadQuote = (quoteId) => {
+                setIsLoading(true);
+                return window.quotes.getById(quoteId).finally(() => setIsLoading(false));
+            };
 
-      const [schemas, setSchemas] = useState({ industry: [], product: [], control: [], scope: [] });
-      const [customers, setCustomers] = useState([]);
-      useEffect(() => {
-        console.log('Customers state updated:', customers);
-      }, [customers]);
-      useEffect(() => {
-        const loadSchemas = async () => {
-          try {
-            console.log('Loading schema data...');
-            const [industry, product, control, scope] = await Promise.all([
-              window.schemas.getIndustry(),
-              window.schemas.getProduct(),
-              window.schemas.getControl(),
-              window.schemas.getScope()
-            ]);
-            console.log('Schema data loaded');
-            setSchemas({ industry, product, control, scope });
-          } catch (error) {
-            console.error('Error loading schema data:', error);
-          }
-        };
-        
-        const loadCustomers = async () => {
-          try {
-            console.log('Loading customer data...');
-            console.log('window.customers available:', !!window.customers);
-            if (!window.customers) {
-              console.error('window.customers not available');
-              return;
-            }
-            const cust = await window.customers.getAll();
-            console.log('Customer data loaded:', cust);
-            setCustomers(cust || []);
-          } catch (error) {
-            console.error('Error loading customer data:', error);
-            setCustomers([]);
-          }
-        };
-        
-        loadSchemas();
-        // Add a small delay for customers
-        setTimeout(loadCustomers, 200);
-      }, []);
-
-      const isAutomated = useMemo(() => {
-        return quote.projectCodes.controlCode === 1;
-      }, [quote.projectCodes.controlCode]);
-
-      // --- Event Handlers ---
-
-      // Generic handler for nested state
-      const handleChange = (section, field, value) => {
-        setQuote(prev => ({
-          ...prev,
-          [section]: {
-            ...prev[section],
-            [field]: value
-          }
-        }));
-      };
-
-      // Handler for top-level fields
-      const handleTopLevelChange = (field, value) => {
-        setQuote(prev => ({
-          ...prev,
-          [field]: value
-        }));
-      };
-
-      // Handler for productConfiguration (arrays)
-      const handleProductConfigChange = (config) => {
-         setQuote(prev => ({ 
-           ...prev, 
-           productConfiguration: config 
-         }));
-      };
-      
-      // Handler for selectedAssemblies and customFeatures (arrays)
-      const handleBOMChange = (section, items) => {
-        setQuote(prev => ({
-          ...prev,
-          [section]: items
-        }));
-      };
-
-      // Specific handler for generating quote/project numbers
-      const handleGenerateIds = (customerCode) => {
-        // This re-implements the logic from your quotetool.html
-        if (!customerCode) return;
-        
-        const d = new Date();
-        const yy = d.getFullYear().toString().slice(-2);
-        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-        const dd = d.getDate().toString().padStart(2, '0');
-        const cust = customerCode.toUpperCase().padEnd(3, 'X'); // Use 3 chars for consistency
-        
-        const { industryCode, productCode, controlCode, scopeCode } = quote.projectCodes;
-        const ind = (industryCode || "").toString().padStart(2, '0');
-        const prod = (productCode || "").toString().padStart(3, '0');
-        const cont = (controlCode || "").toString();
-        const scop = (scopeCode || "").toString().padStart(2, '0');
-
-        const baseId = `CA${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}`;
-        const quoteId = `CQ${yy}${mm}${dd}${cust}-${ind}${prod}${cont}${scop}-00`; // Add sequence
-
-        setQuote(prev => ({
-          ...prev,
-          projectId: baseId,
-          quoteId: quoteId
-        }));
-      };
-      
-      const handleCustomerChange = (e) => {
-        const custId = e.target.value;
-        handleTopLevelChange('customer', custId);
-        handleGenerateIds(custId); // Auto-generate IDs on customer change
-      };
-
-      const handleCodeChange = (field, value) => {
-        // Parse to integer, or set to empty string if invalid
-        const intValue = value ? parseInt(value, 10) : "";
-        handleChange('projectCodes', field, intValue);
-      };
-
-      // Auto-generate IDs when codes change, if customer is already set
-      useEffect(() => {
-        if (quote.customer) {
-          handleGenerateIds(quote.customer);
-        }
-      }, [quote.projectCodes, quote.customer]);
-
-      // --- Save Handler ---
-      const handleSaveQuote = async () => {
-        setStatusMessage({ type: '', text: '' });
-        setIsLoading(true);
-        
-        try {
-          // --- TODO: Real Validation ---
-          // In a real app, use AJV with the schema to validate `quote`
-          if (!quote.projectName) {
-             setStatusMessage({ type: 'error', text: 'Project Name is required.', errors: [{message: 'Project Name is required.'}] });
-             setActiveTab('details');
-             return;
-          }
-
-          // Use the real API
-          const result = await window.quotes.save(quote);
-
-          if (result.success) {
-            setStatusMessage({ 
-              type: 'success', 
-              text: `Quote saved successfully! Path: ${result.path}` 
+            const getSchemas = () => ({
+                industry: window.schemas.getIndustry(),
+                product: window.schemas.getProduct(),
+                control: window.schemas.getControl(),
+                scope: window.schemas.getScope(),
             });
-          } else {
-            setStatusMessage({ 
-              type: 'error', 
-              text: `Failed to save quote. Validation errors: ${result.errors.map(e => e.message).join(', ')}`,
-              errors: result.errors
-            });
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      };
 
-      return (
-        <div className="container mx-auto max-w-6xl">
-          <header className="flex justify-between items-center mb-4 pb-4 border-b border-gray-300">
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--primary)]">Quote Configurator</h1>
-              <p className="text-lg text-gray-600">{quote.projectName || "New Project Quote"}</p>
-            </div>
-            <button className="btn flex items-center gap-2" onClick={handleSaveQuote} disabled={isLoading}>
-              <Save size={18} />
-              {isLoading ? "Saving..." : "Save Quote"}
-            </button>
-          </header>
+            const getCustomers = () => window.customers.getAll();
 
-          {/* --- Status Message --- */}
-          {statusMessage.text && (
-            <div className={`alert ${statusMessage.type === 'success' ? 'alert-success' : 'alert-error'}`}>
-              <div className="flex items-center gap-2">
-                {statusMessage.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-                <span className="font-semibold">{statusMessage.text}</span>
-              </div>
-            </div>
-          )}
+            const searchAssemblies = (criteria) => {
+                return window.assemblies.search(criteria);
+            };
 
-          {/* --- Wizard Tabs --- */}
-          <div className="flex mb-[-1px] z-10 relative">
-            <div className={`tab ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
-              <FileText size={16} className="inline-block mr-2" />
-              Step 1: Project Details
-            </div>
-            <div className={`tab ${activeTab === 'panel' ? 'active' : ''}`} onClick={() => setActiveTab('panel')}>
-              <HardHat size={16} className="inline-block mr-2" />
-              Step 2: Panel Config
-            </div>
-            <div className={`tab ${activeTab === 'product' ? 'active' : ''}`} onClick={() => setActiveTab('product')}>
-              <Info size={16} className="inline-block mr-2" />
-              Step 3: Product Config
-            </div>
-            <div className={`tab ${activeTab === 'bom' ? 'active' : ''}`} onClick={() => setActiveTab('bom')}>
-              <Package size={16} className="inline-block mr-2" />
-              Step 4: BOM
-            </div>
-          </div>
+            return { saveQuote, loadQuote, getSchemas, getCustomers, searchAssemblies, isLoading };
+        };
+// --- Helper Components ---
 
-          {/* --- Tab Content --- */}
-          <div className="relative">
-            {/* --- Step 1: Project Details --- */}
-            <div className={`tab-content ${activeTab === 'details' ? 'active' : ''}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column: Project Classification */}
-                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
-                  <h3 className="text-xl font-semibold border-b pb-2">Project Classification</h3>
-                  <div>
-                    <label className="label" htmlFor="customer">Customer</label>
-                    <SelectCustomer value={quote.customer} onChange={handleCustomerChange} customers={customers} />
-                    <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
-                      Debug: {customers.length} customers loaded
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="industryCode">Industry</label>
-                    <SelectCode
-                      id="industryCode"
-                      value={quote.projectCodes.industryCode}
-                      onChange={(e) => handleCodeChange('industryCode', e.target.value)}
-                      options={schemas.industry}
-                      placeholder="Select an Industry"
-                    />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="productCode">Product</label>
-                     <SelectCode
-                      id="productCode"
-                      value={quote.projectCodes.productCode}
-                      onChange={(e) => handleCodeChange('productCode', e.target.value)}
-                      options={schemas.product}
-                      placeholder="Select a Product"
-                    />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="controlCode">Control</label>
-                     <SelectCode
-                      id="controlCode"
-                      value={quote.projectCodes.controlCode}
-                      onChange={(e) => handleCodeChange('controlCode', e.target.value)}
-                      options={schemas.control}
-                      placeholder="Select a Control Type"
-                    />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="scopeCode">Scope</label>
-                     <SelectCode
-                      id="scopeCode"
-                      value={quote.projectCodes.scopeCode}
-                      onChange={(e) => handleCodeChange('scopeCode', e.target.value)}
-                      options={schemas.scope}
-                      placeholder="Select a Scope"
-                    />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="quoteId">Generated Quote ID</label>
-                    <input id="quoteId" type="text" className="input bg-gray-100" value={quote.quoteId} readOnly />
-                  </div>
-                  <div>
-                    <label className="label" htmlFor="projectId">Generated Project ID</label>
-                    <input id="projectId" type="text" className="input bg-gray-100" value={quote.projectId} readOnly />
-                  </div>
-                </div>
+function SelectCode({ label, value, onFieldChange, options, fieldName, filter = null }) {
+    const groupedOptions = useMemo(() => {
+        if (!options.some(o => o.category)) return null;
+        return options.reduce((acc, option) => {
+            const group = option.category || "General";
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(option);
+            return acc;
+        }, {});
+    }, [options]);
 
-                {/* Right Column: Project Info */}
-                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
-                  <h3 className="text-xl font-semibold border-b pb-2">Project Info</h3>
-                  <div>
-                    <label className="label" htmlFor="projectName">Project Name</label>
-                    <input
-                      id="projectName"
-                      type="text"
-                      className="input"
-                      value={quote.projectName}
-                      onChange={(e) => handleTopLevelChange('projectName', e.target.value)}
+    const filteredOptions = useMemo(() => {
+        if (!filter) return options;
+        return options.filter(filter);
+    }, [options, filter]);
+    
+    const renderOptions = (opts) => opts.map(option => (
+        <option key={option.code} value={option.code}>
+            {option.description} ({option.code})
+        </option>
+    ));
+
+    return (
+        <div className="w-full">
+            <label className="label">{label}</label>
+            <select
+                className="input-base"
+                value={value || ""}
+                onChange={e => onFieldChange(fieldName, parseInt(e.target.value))}
+            >
+                <option value="" disabled>Select...</option>
+                {groupedOptions ? (
+                    Object.keys(groupedOptions).sort().map(group => (
+                        <optgroup key={group} label={group}>
+                            {renderOptions(groupedOptions[group])}
+                        </optgroup>
+                    ))
+                ) : (
+                    renderOptions(filteredOptions)
+                )}
+            </select>
+        </div>
+    );
+}
+
+function SelectCustomer({ label, value, onFieldChange, customers }) {
+    return (
+        <div className="w-full">
+            <label className="label">{label}</label>
+            <select
+                className="input-base"
+                value={value || ""}
+                onChange={e => {
+                    const custId = e.target.value;
+                    const cust = customers.find(c => c.id === custId);
+                    onFieldChange("customer", custId);
+                    // Pre-fill project name if empty
+                    onFieldChange("projectName", (prev) => prev || `${cust.name} - New Project`);
+                }}
+            >
+                <option value="" disabled>Select customer...</option>
+                {customers.map(customer => (
+                    <option key={customer.id} value={customer.id}>
+                        {customer.name} ({customer.id})
+                    </option>
+                ))}
+            </select>
+        </div>
+    );
+}
+
+function Input({ label, value, onFieldChange, fieldName, type = "text", placeholder = "" }) {
+    return (
+        <div className="w-full">
+            <label className="label">{label}</label>
+            <input
+                type={type}
+                placeholder={placeholder}
+                className="input-base"
+                value={value || ""}
+                onChange={e => onFieldChange(fieldName, e.target.value)}
+            />
+        </div>
+    );
+}
+
+function Select({ label, value, onFieldChange, fieldName, children }) {
+    return (
+        <div className="w-full">
+            <label className="label">{label}</label>
+            <select
+                className="input-base"
+                value={value || ""}
+                onChange={e => onFieldChange(fieldName, e.target.value)}
+            >
+                {children}
+            </select>
+        </div>
+    );
+}
+// --- Step 1: Project Details ---
+function ProjectDetails({ quote, setQuote, schemas, customers, generatedNumber, setGeneratedNumber }) {
+    
+    const handleFieldChange = (field, value) => {
+        setQuote(prev => ({
+            ...prev,
+            [field]: typeof value === 'function' ? value(prev[field]) : value
+        }));
+    };
+    
+    const handleCodeChange = (field, value) => {
+        setQuote(prev => ({
+            ...prev,
+            projectCodes: { ...prev.projectCodes, [field]: value }
+        }));
+    };
+
+    const generateQuoteId = () => {
+        const now = new Date();
+        const yy = now.getFullYear().toString().slice(-2);
+        const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+        const dd = now.getDate().toString().padStart(2, '0');
+        const cust = quote.customer || "XX";
+        const seq = "0"; // Sequence number, hardcoded for this mock
+        
+        const mainId = `CQ${yy}${mm}${dd}${cust}`;
+        const fullId = `${mainId}-${quote.projectCodes.industry || 'XX'}${quote.projectCodes.product || 'XXX'}${quote.projectCodes.control || 'X'}${quote.projectCodes.scope || 'XX'}-${seq}`;
+        
+        setGeneratedNumber(mainId); // Set the display number
+        setQuote(prev => ({ ...prev, quoteId: fullId }));
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="p-4 bg-gray-800 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-white mb-4">Core Project Details</h3>
+                <div className="form-grid">
+                    <SelectCustomer
+                        label="Customer"
+                        value={quote.customer}
+                        onFieldChange={handleFieldChange}
+                        customers={customers}
                     />
-                  </div>
-                  <div className="grid-col-2">
-                    <div>
-                      <label className="label" htmlFor="salesRep">Sales Rep</label>
-                      <input
-                        id="salesRep"
-                        type="text"
-                        className="input"
+                    <Input
+                        label="Project Name"
+                        fieldName="projectName"
+                        value={quote.projectName}
+                        onFieldChange={handleFieldChange}
+                        placeholder="E.g., Brewhouse Expansion"
+                    />
+                    <Input
+                        label="Sales Rep"
+                        fieldName="salesRep"
                         value={quote.salesRep}
-                        onChange={(e) => handleTopLevelChange('salesRep', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="label" htmlFor="oem">OEM</label>
-                      <input
-                        id="oem"
-                        type="text"
-                        className="input"
-                        value={quote.oem}
-                        onChange={(e) => handleTopLevelChange('oem', e.target.value)}
-                      />
-                    </div>
-                  </div>
+                        onFieldChange={handleFieldChange}
+                        placeholder="Your name"
+                    />
+                    <Select label="Status" fieldName="status" value={quote.status} onFieldChange={handleFieldChange}>
+                        <option value="Draft">Draft</option>
+                        <option value="Quoted">Quoted</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Lost">Lost</option>
+                    </Select>
                 </div>
-              </div>
             </div>
             
-            {/* --- Step 2: Panel Config --- */}
-            <div className={`tab-content ${activeTab === 'panel' ? 'active' : ''}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Left Column: Power & Enclosure */}
-                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
-                  <h3 className="text-xl font-semibold border-b pb-2">Power & Enclosure</h3>
-                  <div className="grid-col-2">
-                    <div>
-                      <label className="label" htmlFor="voltage">Voltage</label>
-                      <select 
-                        id="voltage" 
-                        className="select" 
-                        value={quote.controlPanelConfig.voltage}
-                        onChange={(e) => handleChange('controlPanelConfig', 'voltage', e.target.value)}
-                      >
-                        <option>480V</option>
-                        <option>240V</option>
-                        <option>208V</option>
-                        <option>120V</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="label" htmlFor="phase">Phase</label>
-                      <select 
-                        id="phase" 
-                        className="select" 
-                        value={quote.controlPanelConfig.phase}
-                        onChange={(e) => handleChange('controlPanelConfig', 'phase', e.target.value)}
-                      >
-                        <option>3-Phase</option>
-                        <option>1-Phase</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="label" htmlFor="disconnect">Disconnect</label>
-                    <select 
-                      id="disconnect" 
-                      className="select" 
-                      value={quote.controlPanelConfig.disconnect}
-                      onChange={(e) => handleChange('controlPanelConfig', 'disconnect', e.target.value)}
-                    >
-                      <option>Fused</option>
-                      <option>Non-Fused</option>
-                      <option>Breaker</option>
-                      <option>None</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="label" htmlFor="enclosureType">Enclosure Type</label>
-                    <select 
-                      id="enclosureType" 
-                      className="select" 
-                      value={quote.controlPanelConfig.enclosureType}
-                      onChange={(e) => handleChange('controlPanelConfig', 'enclosureType', e.target.value)}
-                    >
-                      <option>NEMA 4X Stainless</option>
-                      <option>NEMA 4 Painted Steel</option>
-                      <option>NEMA 12 Painted Steel</option>
-                      <option>NEMA 1</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="label" htmlFor="enclosureRating">Enclosure Rating (Optional)</label>
-                    <input
-                      id="enclosureRating"
-                      type="text"
-                      className="input"
-                      placeholder="e.g., UL 508A"
-                      value={quote.controlPanelConfig.enclosureRating}
-                      onChange={(e) => handleChange('controlPanelConfig', 'enclosureRating', e.target.value)}
+            <div className="p-4 bg-gray-800 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-white mb-4">Project Codes</h3>
+                <div className="form-grid grid-cols-1 md:grid-cols-4">
+                    <SelectCode
+                        label="Industry"
+                        fieldName="industry"
+                        value={quote.projectCodes.industry}
+                        onFieldChange={handleCodeChange}
+                        options={schemas.industry}
                     />
-                  </div>
+                    <SelectCode
+                        label="Product"
+                        fieldName="product"
+                        value={quote.projectCodes.product}
+                        onFieldChange={handleCodeChange}
+                        options={schemas.product}
+                    />
+                    <SelectCode
+                        label="Control"
+                        fieldName="control"
+                        value={quote.projectCodes.control}
+                        onFieldChange={handleCodeChange}
+                        options={schemas.control}
+                    />
+                    <SelectCode
+                        label="Scope"
+                        fieldName="scope"
+                        value={quote.projectCodes.scope}
+                        onFieldChange={handleCodeChange}
+                        options={schemas.scope}
+                    />
                 </div>
-
-                {/* Right Column: Automation (Conditional) */}
-                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white/50">
-                  <h3 className="text-xl font-semibold border-b pb-2">Automation</h3>
-                  
-                  {/* This section only shows if Control Type is "Automated" */}
-                  {isAutomated ? (
-                    <>
-                      <div>
-                        <label className="label" htmlFor="plcPlatform">PLC Platform</label>
-                        <select 
-                          id="plcPlatform" 
-                          className="select" 
-                          value={quote.controlPanelConfig.plcPlatform}
-                          onChange={(e) => handleChange('controlPanelConfig', 'plcPlatform', e.target.value)}
-                        >
-                          <option value="">Select Platform</option>
-                          <option>Allen-Bradley</option>
-                          <option>Siemens</option>
-                          <option>AutomationDirect</option>
-                          <option>Other</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label" htmlFor="hmiSize">HMI Size</label>
-                        <select 
-                          id="hmiSize" 
-                          className="select" 
-                          value={quote.controlPanelConfig.hmiSize}
-                          onChange={(e) => handleChange('controlPanelConfig', 'hmiSize', e.target.value)}
-                        >
-                          <option value="">Select Size</option>
-                          <option>4 inch</option>
-                          <option>7 inch</option>
-                          <option>10 inch</option>
-                          <option>12 inch</option>
-                          <option>15 inch</option>
-                          <option>None</option>
-                        </select>
-                      </div>
-                       <div>
-                        <label className="label" htmlFor="plcModel">PLC Model (Optional)</label>
-                        <input
-                          id="plcModel"
-                          type="text"
-                          className="input"
-                          placeholder="e.g., CompactLogix L33ER"
-                          value={quote.controlPanelConfig.plcModel}
-                          onChange={(e) => handleChange('controlPanelConfig', 'plcModel', e.target.value)}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-gray-500 text-center p-8 bg-gray-50 rounded-lg">
-                      <Info size={32} className="mx-auto mb-2" />
-                      Select "Automated" in Step 1 to configure PLC & HMI options.
-                    </div>
-                  )}
-
+                <div className="mt-6 flex items-center gap-4">
+                    <button onClick={generateQuoteId} className="btn btn-primary" disabled={!quote.customer}>
+                        Generate Quote Number
+                    </button>
+                    {generatedNumber && (
+                        <div className="p-3 bg-gray-900 rounded-md">
+                            <span className="font-mono text-lg text-green-400">{generatedNumber}</span>
+                        </div>
+                    )}
                 </div>
-              </div>
             </div>
-
-            {/* --- Step 3: Product Config --- */}
-            <div className={`tab-content ${activeTab === 'product' ? 'active' : ''}`}>
-              <ProductConfigurator 
-                productCode={quote.projectCodes.productCode}
-                productConfig={quote.productConfiguration}
-                onChange={handleProductConfigChange}
-              />
-            </div>
-
-            {/* --- Step 4: BOM --- */}
-            <div className={`tab-content ${activeTab === 'bom' ? 'active' : ''}`}>
-              <BomAssistance
-                quote={quote}
-                onBOMChange={handleBOMChange}
-                searchAssemblies={window.assemblies.search}
-              />
-            </div>
-          </div>
         </div>
-      );
-    }
+    );
+}
+// --- Step 2: Panel Config ---
+function PanelConfig({ quote, setQuote }) {
+    const handleConfigChange = (field, value) => {
+        setQuote(prev => ({
+            ...prev,
+            controlPanelConfig: { ...prev.controlPanelConfig, [field]: value }
+        }));
+    };
+    
+    const config = quote.controlPanelConfig || {};
+    const isAutomated = quote.projectCodes.control === 1; // 1 = Automated
 
-    // --- Helper Components ---
-    function SelectCode({ id, value, onChange, options, placeholder }) {
-      return (
-        <select id={id} className="select" value={value || ""} onChange={onChange}>
-          <option value="">{placeholder}</option>
-          {options && options.length > 0 ? options.map(opt => (
-            <option key={opt.const} value={opt.const}>
-              {opt.const} - {opt.description}
-            </option>
-          )) : <option disabled>No options available</option>}
-        </select>
-      );
+    return (
+        <div className="p-4 bg-gray-800 rounded-lg shadow max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold text-white mb-4">Panel Configuration</h3>
+            <div className="form-grid">
+                <Select label="Voltage" fieldName="voltage" value={config.voltage} onFieldChange={handleConfigChange}>
+                    <option value="" disabled>Select...</option>
+                    <option value="120V">120V</option>
+                    <option value="208V">208V</option>
+                    <option value="240V">240V</option>
+                    <option value="480V">480V</option>
+                    <option value="600V">600V</option>
+                </Select>
+                <Select label="Phase" fieldName="phase" value={config.phase} onFieldChange={handleConfigChange}>
+                    <option value="" disabled>Select...</option>
+                    <option value="1-Phase">1-Phase</option>
+                    <option value="3-Phase">3-Phase</option>
+                </Select>
+                <Select label="Enclosure Type" fieldName="enclosureType" value={config.enclosureType} onFieldChange={handleConfigChange}>
+                    <option value="" disabled>Select...</option>
+                    <option value="NEMA 1">NEMA 1 (Painted)</option>
+                    <option value="NEMA 12">NEMA 12 (Painted)</option>
+                    <option value="NEMA 4">NEMA 4 (Painted)</option>
+                    <option value="NEMA 4X">NEMA 4X (Stainless)</option>
+                </Select>
+                <Input
+                    label="Enclosure Rating (optional)"
+                    fieldName="enclosureRating"
+                    value={config.enclosureRating}
+                    onFieldChange={handleConfigChange}
+                    placeholder="E.g., 42x36x12"
+                />
+                
+                {/* Conditional Fields for Automated Panels */}
+                {isAutomated && (
+                    <>
+                        <Select label="HMI Size" fieldName="hmiSize" value={config.hmiSize} onFieldChange={handleConfigChange}>
+                            <option value="" disabled>Select...</option>
+                            <option value='7"'>7" Screen</option>
+                            <option value='10"'>10" Screen</option>
+                            <option value='12"'>12" Screen</option>
+                            <option value='15"'>15" Screen</option>
+                        </Select>
+                        <Select label="PLC Platform" fieldName="plcPlatform" value={config.plcPlatform} onFieldChange={handleConfigChange}>
+                            <option value="" disabled>Select...</option>
+                            <option value="CompactLogix">Allen-Bradley CompactLogix</option>
+                            <option value="Micro800">Allen-Bradley Micro800</option>
+                            <option value="IDEC">IDEC</option>
+                            <option value="Siemens">Siemens</option>
+                        </Select>
+                    </>
+                )}
+                {!isAutomated && (
+                    <div className="md:col-span-2 p-4 bg-gray-900 rounded-md text-gray-400 flex items-center gap-3">
+                        <svg className="w-[18px] h-[18px]" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        <span>Automation fields (HMI, PLC) are hidden because Control Type is not 'Automated'.</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+// --- Step 3: Product Config ---
+function ProductConfigurator({ quote, setQuote }) {
+    const { product } = quote.projectCodes;
+
+    const handleUpdateList = (listName, newList) => {
+        setQuote(prev => ({
+            ...prev,
+            productConfiguration: { ...prev.productConfiguration, [listName]: newList }
+        }));
+    };
+
+    const getVisibleSections = () => {
+        // This logic will be driven by the Product Template Manager in the future
+        // For now, we hard-code it based on productCode
+        const code = product;
+        if (!code) return [];
+
+        if (code >= 100 && code <= 109) return ['motors', 'heaters', 'inputs', 'outputs']; // Brewhouse
+        if (code >= 140 && code <= 149) return ['motors']; // Motor Control
+        if ((code >= 120 && code <= 129) || (code >= 160 && code <= 169)) return ['inputs', 'outputs']; // Cellar, CIP
+        
+        return [];
+    };
+
+    const sections = getVisibleSections();
+
+    if (sections.length === 0) {
+        return (
+            <div className="p-4 bg-gray-800 rounded-lg shadow max-w-2xl mx-auto text-center">
+                <h3 className="text-lg font-semibold text-white">Product Configuration</h3>
+                <p className="mt-2 text-gray-400">Please select a Product in "Step 1" to see its configuration options.</p>
+            </div>
+        );
     }
     
-    function SelectCustomer({ id, value, onChange, customers }) {
-      console.log('SelectCustomer render:', { customers, customersLength: customers?.length });
-      return (
-        <select id={id} className="select" value={value || ""} onChange={onChange}>
-          <option value="">Select a Customer</option>
-          {customers && customers.length > 0 ? customers.map(cust => (
-            <option key={cust.id} value={cust.id}>
-              {cust.id} - {cust.name}
-            </option>
-          )) : <option disabled>No customers available</option>}
-        </select>
-      );
-    }
+    const config = quote.productConfiguration;
 
-    // Placeholder components for Step 3 and Step 4
-    function ProductConfigurator({ productCode, productConfig, onChange }) {
-      const [activeSection, setActiveSection] = useState('motors');
-      const [selectValues, setSelectValues] = useState({});
-      
-      // Product-specific configurations
-      const getProductConfig = (code) => {
-        if (code === 100 || code === "100") {
-          return {
-            name: "Brewery Brewhouse",
-            sections: ['motors', 'heaters', 'inputs', 'outputs'],
-            motorTypes: [
-              { value: 'mash_pump', label: 'Mash Pump Motor' },
-              { value: 'wort_pump', label: 'Wort Pump Motor' },
-              { value: 'hot_liquor_pump', label: 'Hot Liquor Pump Motor' },
-              { value: 'sparge_pump', label: 'Sparge Pump Motor' },
-              { value: 'agitator', label: 'Mash Agitator Motor' },
-              { value: 'grain_mill', label: 'Grain Mill Motor' }
-            ],
-            heaterTypes: [
-              { value: 'mash_heater', label: 'Mash Tun Heater' },
-              { value: 'hlt_heater', label: 'Hot Liquor Tank Heater' },
-              { value: 'kettle_heater', label: 'Brew Kettle Heater' }
-            ],
-            inputTypes: [
-              { value: 'temp_mash', label: 'Mash Temperature' },
-              { value: 'temp_hlt', label: 'HLT Temperature' },
-              { value: 'temp_kettle', label: 'Kettle Temperature' },
-              { value: 'level_mash', label: 'Mash Level' },
-              { value: 'level_hlt', label: 'HLT Level' },
-              { value: 'level_kettle', label: 'Kettle Level' },
-              { value: 'flow_mash', label: 'Mash Flow Rate' },
-              { value: 'flow_sparge', label: 'Sparge Flow Rate' },
-              { value: 'pressure', label: 'System Pressure' }
-            ],
-            outputTypes: [
-              { value: 'valve_mash_in', label: 'Mash In Valve' },
-              { value: 'valve_mash_out', label: 'Mash Out Valve' },
-              { value: 'valve_sparge', label: 'Sparge Valve' },
-              { value: 'valve_kettle', label: 'Kettle Valve' },
-              { value: 'pump_mash', label: 'Mash Pump Control' },
-              { value: 'pump_wort', label: 'Wort Pump Control' },
-              { value: 'pump_hot_liquor', label: 'Hot Liquor Pump Control' },
-              { value: 'heater_mash', label: 'Mash Heater Control' },
-              { value: 'heater_hlt', label: 'HLT Heater Control' },
-              { value: 'heater_kettle', label: 'Kettle Heater Control' },
-              { value: 'agitator_control', label: 'Agitator Control' }
-            ]
-          };
-        } else {
-          return {
-            name: `Product ${code || 'Not Selected'}`,
-            sections: ['motors', 'heaters', 'inputs', 'outputs'],
-            motorTypes: [
-              { value: 'generic_motor', label: 'Generic Motor' },
-              { value: 'pump', label: 'Pump Motor' },
-              { value: 'agitator', label: 'Agitator Motor' },
-              { value: 'conveyor', label: 'Conveyor Motor' }
-            ],
-            heaterTypes: [
-              { value: 'generic_heater', label: 'Generic Heater' },
-              { value: 'electric_heater', label: 'Electric Heater' },
-              { value: 'steam_heater', label: 'Steam Heater' }
-            ],
-            inputTypes: [
-              { value: 'generic_input', label: 'Generic Input' },
-              { value: 'temperature', label: 'Temperature Sensor' },
-              { value: 'pressure', label: 'Pressure Sensor' },
-              { value: 'level', label: 'Level Sensor' },
-              { value: 'flow', label: 'Flow Sensor' }
-            ],
-            outputTypes: [
-              { value: 'generic_output', label: 'Generic Output' },
-              { value: 'valve', label: 'Control Valve' },
-              { value: 'relay', label: 'Relay Output' },
-              { value: 'contactor', label: 'Contactor' }
-            ]
-          };
-        }
-      };
-
-      const config = getProductConfig(productCode);
-
-      const handleSelectChange = (section, value) => {
-        if (value) {
-          addItem(section, value);
-          setSelectValues(prev => ({ ...prev, [section]: '' }));
-        }
-      };
-
-      const addItem = (section, type) => {
-        const newItem = {
-          id: Date.now() + Math.random(),
-          type: type,
-          quantity: 1,
-          specifications: '',
-          notes: ''
-        };
-        
-        const updatedConfig = {
-          ...productConfig,
-          [section]: [...(productConfig[section] || []), newItem]
-        };
-        onChange(updatedConfig);
-      };
-
-      const removeItem = (section, id) => {
-        const updatedConfig = {
-          ...productConfig,
-          [section]: (productConfig[section] || []).filter(item => item.id !== id)
-        };
-        onChange(updatedConfig);
-      };
-
-      const updateItem = (section, id, field, value) => {
-        const updatedConfig = {
-          ...productConfig,
-          [section]: (productConfig[section] || []).map(item => 
-            item.id === id ? { ...item, [field]: value } : item
-          )
-        };
-        onChange(updatedConfig);
-      };
-
-      const getTypeLabel = (section, type) => {
-        const types = config && config[typeKeys[section]] ? config[typeKeys[section]] : [];
-        const typeObj = types.find ? types.find(t => t.value === type) : null;
-        return typeObj ? typeObj.label : type;
-      };
-
-      const typeKeys = {
-        motors: 'motorTypes',
-        heaters: 'heaterTypes',
-        inputs: 'inputTypes',
-        outputs: 'outputTypes'
-      };
-
-      const renderSection = (section) => {
-        const items = productConfig[section] || [];
-        const types = config && config[typeKeys[section]] ? config[typeKeys[section]] : [];
-        
-        return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h4 className="text-lg font-semibold capitalize">{section}</h4>
-              <select 
-                className="select text-sm"
-                value={selectValues[section] || ''}
-                onChange={(e) => handleSelectChange(section, e.target.value)}
-              >
-                <option value="">Add {section.slice(0, -1)}...</option>
-                {Array.isArray(types) && types.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
-            
-            {items.length === 0 ? (
-              <div className="text-center text-gray-500 p-6 bg-gray-50 rounded-lg">
-                <p>No {section} configured yet.</p>
-                <p className="text-sm mt-1">Use the dropdown above to add {section}.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {items.map(item => (
-                  <div key={item.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900">
-                          {getTypeLabel(section, item.type)}
-                        </h5>
-                      </div>
-                      <button 
-                        onClick={() => removeItem(section, item.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        title="Remove item"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <label className="label text-sm">Quantity</label>
-                        <input
-                          type="number"
-                          min="1"
-                          className="input text-sm"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(section, item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="label text-sm">Specifications</label>
-                        <input
-                          type="text"
-                          className="input text-sm"
-                          placeholder={`e.g., ${section === 'motors' ? '5HP, 230/460V, 3-phase' : section === 'heaters' ? '36kW, 480V' : section === 'inputs' ? '4-20mA, PT100' : '24VDC solenoid'}`}
-                          value={item.specifications}
-                          onChange={(e) => updateItem(section, item.id, 'specifications', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3">
-                      <label className="label text-sm">Notes</label>
-                      <textarea
-                        className="input text-sm"
-                        rows="2"
-                        placeholder="Additional notes or requirements..."
-                        value={item.notes}
-                        onChange={(e) => updateItem(section, item.id, 'notes', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+    return (
+        <div className="space-y-6 max-w-4xl mx-auto">
+            <h3 className="text-xl font-semibold text-white text-center">Product Configuration</h3>
+            {sections.includes('motors') && (
+                <ItemListManager
+                    title="Motors"
+                    items={config.motors}
+                    setItems={newList => handleUpdateList('motors', newList)}
+                    itemFields={[
+                        { name: "name", label: "Name", type: "text", placeholder: "E.g., Auger Motor" },
+                        { name: "hp", label: "HP", type: "text", placeholder: "1.5" },
+                        { name: "controlType", label: "Control", type: "select", options: [{value: "VFD", label: "VFD"}, {value: "On/Off", label: "On/Off"}] },
+                        { name: "volt", label: "Voltage", type: "text", placeholder: "480V" },
+                        { name: "phase", label: "Phase", type: "text", placeholder: "3-Phase" },
+                    ]}
+                />
             )}
-          </div>
-        );
-      };
+            {sections.includes('heaters') && (
+                <ItemListManager
+                    title="Heaters"
+                    items={config.heaters}
+                    setItems={newList => handleUpdateList('heaters', newList)}
+                    itemFields={[
+                        { name: "name", label: "Name", type: "text", placeholder: "E.g., HLT Element" },
+                        { name: "kw", label: "kW", type: "text", placeholder: "5.5" },
+                        { name: "controlType", label: "Control", type: "select", options: [{value: "SSR", label: "SSR (Modulating)"}, {value: "On/Off", label: "On/Off"}] },
+                    ]}
+                />
+            )}
+            {sections.includes('inputs') && (
+                <ItemListManager
+                    title="Inputs (Sensors, Manual)"
+                    items={config.inputs}
+                    setItems={newList => handleUpdateList('inputs', newList)}
+                    itemFields={[
+                        { name: "name", label: "Name", type: "text", placeholder: "E.g., HLT Level" },
+                        { name: "type", label: "Type", type: "text", placeholder: "Analog (4-20mA)" },
+                    ]}
+                />
+            )}
+            {sections.includes('outputs') && (
+                <ItemListManager
+                    title="Outputs (Valves, etc)"
+                    items={config.outputs}
+                    setItems={newList => handleUpdateList('outputs', newList)}
+                    itemFields={[
+                        { name: "name", label: "Name", type: "text", placeholder: "E.g., Mash Tun Valve" },
+                        { name: "type", label: "Type", type: "text", placeholder: "24VDC Solenoid" },
+                    ]}
+                />
+            )}
+        </div>
+    );
+}
 
-      if (!productCode) {
-        return (
-          <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
-            <h3 className="text-xl font-semibold border-b pb-2 mb-4">Product Configuration</h3>
-            <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">
-              <Info size={32} className="mx-auto mb-2" />
-              <p>Please select a product in Step 1 to configure product-specific options.</p>
-            </div>
-          </div>
-        );
-      }
+// --- Helper for Step 3: ItemListManager ---
+function ItemListManager({ title, items, setItems, itemFields }) {
+    const [editItemId, setEditItemId] = useState(null);
+    const [editItemData, setEditItemData] = useState({});
 
-      return (
-        <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
-          <h3 className="text-xl font-semibold border-b pb-2 mb-4">
-            Product Configuration: {config.name}
-          </h3>
-          
-          {/* Product Info */}
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="font-medium">Product Code: {productCode || 'Not selected'}</span>
-              </div>
-              <div className="text-sm text-gray-600">
-                Motors: {config.motorTypes.length} | Heaters: {config.heaterTypes.length} | 
-                Inputs: {config.inputTypes.length} | Outputs: {config.outputTypes.length}
-              </div>
+    const handleAddItem = () => {
+        const newItem = { id: `item-${Date.now()}`, ...itemFields.reduce((acc, f) => ({...acc, [f.name]: ''}), {}) };
+        setItems([...items, newItem]);
+        setEditItemId(newItem.id);
+        setEditItemData(newItem);
+    };
+
+    const handleEdit = (item) => {
+        setEditItemId(item.id);
+        setEditItemData(item);
+    };
+
+    const handleSave = () => {
+        setItems(items.map(item => item.id === editItemId ? editItemData : item));
+        setEditItemId(null);
+        setEditItemData({});
+    };
+    
+    const handleCancel = () => {
+        setEditItemId(null);
+        setEditItemData({});
+    };
+
+    const handleDelete = (id) => {
+        setItems(items.filter(item => item.id !== id));
+    };
+    
+    const handleFieldChange = (e) => {
+        setEditItemData(prev => ({...prev, [e.target.name]: e.target.value}));
+    };
+    
+    const renderItemRow = (item) => (
+        <div key={item.id} className="p-3 bg-gray-900 rounded-md flex justify-between items-center">
+            <div className="flex-1">
+                <p className="font-medium text-white">{item[itemFields[0].name] || `(New ${title.slice(0, -1)})`}</p>
+                <p className="text-sm text-gray-400">
+                    {itemFields.slice(1).map(f => item[f.name]).filter(Boolean).join(' / ')}
+                </p>
             </div>
-          </div>
-          
-          {/* Section Tabs */}
-          <div className="flex mb-6 border-b border-gray-200">
-            {config.sections.map(section => (
-              <button
-                key={section}
-                onClick={() => setActiveSection(section)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeSection === section
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {section.charAt(0).toUpperCase() + section.slice(1)} ({(productConfig[section] || []).length})
-              </button>
-            ))}
-          </div>
-          
-          {/* Active Section Content */}
-          <div className="min-h-[400px]">
-            {renderSection(activeSection)}
-          </div>
-          
-          {/* Summary */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold mb-2">Configuration Summary</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              {config.sections.map(section => (
-                <div key={section} className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {(productConfig[section] || []).length}
-                  </div>
-                  <div className="text-gray-600 capitalize">{section}</div>
+            <div className="flex gap-2">
+                <button onClick={() => handleEdit(item)} className="btn btn-secondary btn-sm py-1 px-2 text-sm">Edit</button>
+                <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-sm py-1 px-2 text-sm">
+                    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
+                </button>
+            </div>
+        </div>
+    );
+    
+    const renderEditForm = () => (
+        <div className="p-4 bg-gray-900 rounded-md space-y-4">
+            <h4 className="text-lg font-semibold text-white">
+                {items.find(i => i.id === editItemId)?.[itemFields[0].name] ? "Edit" : "Add"} {title.slice(0, -1)}
+            </h4>
+            <div className="form-grid">
+                {itemFields.map(field => (
+                    <div key={field.name}>
+                        <label className="label">{field.label}</label>
+                        {field.type === 'select' ? (
+                            <select name={field.name} value={editItemData[field.name] || ''} onChange={handleFieldChange} className="input-base">
+                                <option value="" disabled>Select...</option>
+                                {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                        ) : (
+                            <input 
+                                type={field.type} 
+                                name={field.name} 
+                                placeholder={field.placeholder}
+                                value={editItemData[field.name] || ''} 
+                                onChange={handleFieldChange}
+                                className="input-base"
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
+            <div className="flex gap-2">
+                <button onClick={handleSave} className="btn btn-primary">Save</button>
+                <button onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="p-4 bg-gray-800 rounded-lg shadow">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-white">{title}</h3>
+                <button onClick={handleAddItem} className="btn btn-secondary btn-sm">
+                    <svg className="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                    Add
+                </button>
+            </div>
+            <div className="space-y-2">
+                {items.map(item => (
+                    editItemId === item.id ? renderEditForm() : renderItemRow(item)
+                ))}
+                {items.length === 0 && <p className="text-gray-400 text-sm">No {title.toLowerCase()} added yet.</p>}
+                {editItemId && !items.some(i => i.id === editItemId) && renderEditForm()}
+            </div>
+        </div>
+    );
+}
+// --- Step 4: BOM Assistance ---
+function BomAssistance({ quote, setQuote }) {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [selectedItems, setSelectedItems] = useState(quote.bom || []);
+    const [showResults, setShowResults] = useState(false);
+
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) return;
+        
+        setIsSearching(true);
+        try {
+            const results = await window.assemblies.search(searchTerm);
+            setSearchResults(results);
+            setShowResults(true);
+        } catch (error) {
+            console.error('Search failed:', error);
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleAddToBom = (item) => {
+        const existing = selectedItems.find(i => i.id === item.id);
+        if (existing) {
+            setSelectedItems(selectedItems.map(i => 
+                i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+            ));
+        } else {
+            setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
+        }
+    };
+
+    const handleUpdateQuantity = (id, quantity) => {
+        if (quantity <= 0) {
+            setSelectedItems(selectedItems.filter(i => i.id !== id));
+        } else {
+            setSelectedItems(selectedItems.map(i => 
+                i.id === id ? { ...i, quantity } : i
+            ));
+        }
+    };
+
+    const handleRemoveFromBom = (id) => {
+        setSelectedItems(selectedItems.filter(i => i.id !== id));
+    };
+
+    // Update quote when selectedItems changes
+    useEffect(() => {
+        setQuote(prev => ({ ...prev, bom: selectedItems }));
+    }, [selectedItems, setQuote]);
+
+    const totalCost = selectedItems.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
+
+    return (
+        <div className="space-y-6 max-w-6xl mx-auto">
+            <h3 className="text-xl font-semibold text-white text-center">BOM Assistance</h3>
+            
+            {/* Search Section */}
+            <div className="p-4 bg-gray-800 rounded-lg shadow">
+                <h4 className="text-lg font-semibold text-white mb-4">Search Assemblies</h4>
+                <div className="flex gap-4">
+                    <input
+                        type="text"
+                        placeholder="Search for assemblies, parts, or components..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        className="input-base flex-1"
+                    />
+                    <button 
+                        onClick={handleSearch} 
+                        disabled={isSearching || !searchTerm.trim()}
+                        className="btn btn-primary"
+                    >
+                        {isSearching ? 'Searching...' : 'Search'}
+                    </button>
                 </div>
-              ))}
+                
+                {showResults && (
+                    <div className="mt-4">
+                        <h5 className="text-white font-medium mb-2">Search Results</h5>
+                        {searchResults.length === 0 ? (
+                            <p className="text-gray-400">No results found.</p>
+                        ) : (
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {searchResults.map(item => (
+                                    <div key={item.id} className="p-3 bg-gray-900 rounded-md flex justify-between items-center">
+                                        <div className="flex-1">
+                                            <p className="font-medium text-white">{item.name}</p>
+                                            <p className="text-sm text-gray-400">{item.description}</p>
+                                            <p className="text-sm text-green-400">${item.cost}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleAddToBom(item)}
+                                            className="btn btn-secondary btn-sm"
+                                        >
+                                            Add to BOM
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
-          </div>
-        </div>
-      );
-    }
 
-    function BomAssistance({ quote, onBOMChange, searchAssemblies }) {
-      return (
-        <div className="p-4 border border-gray-200 rounded-lg bg-white/50">
-          <h3 className="text-xl font-semibold border-b pb-2 mb-4">BOM Assistance</h3>
-          <div className="text-center text-gray-500 p-8 bg-gray-50 rounded-lg">
-            <Package size={32} className="mx-auto mb-2" />
-            <p>BOM assistance and assembly selection will be implemented here.</p>
-          </div>
+            {/* BOM Section */}
+            <div className="p-4 bg-gray-800 rounded-lg shadow">
+                <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-white">Bill of Materials</h4>
+                    <div className="text-right">
+                        <p className="text-sm text-gray-400">Total Cost</p>
+                        <p className="text-xl font-bold text-green-400">${totalCost.toFixed(2)}</p>
+                    </div>
+                </div>
+                
+                {selectedItems.length === 0 ? (
+                    <p className="text-gray-400">No items in BOM. Search and add assemblies above.</p>
+                ) : (
+                    <div className="space-y-2">
+                        {selectedItems.map(item => (
+                            <div key={item.id} className="p-3 bg-gray-900 rounded-md flex justify-between items-center">
+                                <div className="flex-1">
+                                    <p className="font-medium text-white">{item.name}</p>
+                                    <p className="text-sm text-gray-400">{item.description}</p>
+                                    <p className="text-sm text-green-400">${item.cost} each</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                        className="btn btn-secondary btn-sm px-2"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="text-white min-w-[3rem] text-center">{item.quantity}</span>
+                                    <button 
+                                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                        className="btn btn-secondary btn-sm px-2"
+                                    >
+                                        +
+                                    </button>
+                                    <button 
+                                        onClick={() => handleRemoveFromBom(item.id)}
+                                        className="btn btn-danger btn-sm ml-2"
+                                    >
+                                        <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3,6 5,6 21,6"></polyline><path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
-      );
-    }
+    );
+}
 
-    // --- Render App ---
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+        // --- Main App Component ---
+        function App() {
+            const [currentStep, setCurrentStep] = useState(1);
+            const [quote, setQuote] = useState({
+                id: null,
+                projectCodes: { industry: '', product: '', control: '', scope: '' },
+                projectDetails: { name: '', description: '', notes: '' },
+                panelConfiguration: { panels: [] },
+                productConfiguration: { motors: [], heaters: [], inputs: [], outputs: [] },
+                bom: []
+            });
+            const [isLoading, setIsLoading] = useState(false);
+            const [message, setMessage] = useState('');
+            const [generatedNumber, setGeneratedNumber] = useState('');
+            const [schemas, setSchemas] = useState({});
+            const [customers, setCustomers] = useState([]);
+
+            useEffect(() => {
+                const loadData = async () => {
+                    try {
+                        const s = await getSchemas();
+                        const c = await getCustomers();
+                        setSchemas(s);
+                        setCustomers(c);
+                    } catch (error) {
+                        console.error('Error loading data:', error);
+                    }
+                };
+                loadData();
+            }, []);    const steps = [
+        { id: 1, title: 'Project Setup', component: ProjectDetails },
+        { id: 2, title: 'Panel Config', component: PanelConfig },
+        { id: 3, title: 'Product Config', component: ProductConfigurator },
+        { id: 4, title: 'BOM Assistance', component: BomAssistance }
+    ];
+
+    const handleNext = () => {
+        if (currentStep < steps.length) {
+            setCurrentStep(currentStep + 1);
+        }
+    };
+
+    const handlePrev = () => {
+        if (currentStep > 1) {
+            setCurrentStep(currentStep - 1);
+        }
+    };
+
+    const handleSave = async () => {
+        setIsLoading(true);
+        setMessage('');
+        try {
+            const savedQuote = await window.quotes.save(quote);
+            setQuote(savedQuote);
+            setMessage('Quote saved successfully!');
+        } catch (error) {
+            console.error('Save failed:', error);
+            setMessage('Failed to save quote. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLoad = async (quoteId) => {
+        setIsLoading(true);
+        setMessage('');
+        try {
+            const loadedQuote = await window.quotes.get(quoteId);
+            setQuote(loadedQuote);
+            setMessage('Quote loaded successfully!');
+        } catch (error) {
+            console.error('Load failed:', error);
+            setMessage('Failed to load quote. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const currentStepData = steps.find(s => s.id === currentStep);
+    const CurrentComponent = currentStepData.component;
+
+    return (
+        <div className="min-h-screen bg-gray-900 text-white p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-8 text-center">
+                    <h1 className="text-3xl font-bold text-white mb-2">Quote Configurator</h1>
+                    <p className="text-gray-400">Configure quotes for Craft Automation products</p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        {steps.map(step => (
+                            <div key={step.id} className="flex items-center">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                    step.id <= currentStep ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400'
+                                }`}>
+                                    {step.id}
+                                </div>
+                                <span className={`ml-2 text-sm ${step.id <= currentStep ? 'text-white' : 'text-gray-400'}`}>
+                                    {step.title}
+                                </span>
+                                {step.id < steps.length && (
+                                    <div className={`w-12 h-0.5 mx-4 ${
+                                        step.id < currentStep ? 'bg-blue-600' : 'bg-gray-700'
+                                    }`} />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Main Content */}
+                <div className="mb-8">
+                    <CurrentComponent 
+                        quote={quote} 
+                        setQuote={setQuote} 
+                        {...(CurrentComponent === ProjectDetails ? { schemas, customers, generatedNumber, setGeneratedNumber } : {})} 
+                    />
+                </div>
+
+                {/* Navigation */}
+                <div className="flex justify-between items-center">
+                    <button 
+                        onClick={handlePrev} 
+                        disabled={currentStep === 1}
+                        className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Previous
+                    </button>
+                    
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={handleSave} 
+                            disabled={isLoading}
+                            className="btn btn-primary"
+                        >
+                            {isLoading ? 'Saving...' : 'Save Quote'}
+                        </button>
+                        
+                        <button 
+                            onClick={() => handleLoad(prompt('Enter Quote ID:'))}
+                            className="btn btn-secondary"
+                        >
+                            Load Quote
+                        </button>
+                    </div>
+
+                    <button 
+                        onClick={handleNext} 
+                        disabled={currentStep === steps.length}
+                        className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Next
+                    </button>
+                </div>
+
+                {/* Messages */}
+                {message && (
+                    <div className={`mt-4 p-4 rounded-lg text-center ${
+                        message.includes('success') ? 'bg-green-800 text-green-200' : 'bg-red-800 text-red-200'
+                    }`}>
+                        {message}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// --- Render the App ---
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>

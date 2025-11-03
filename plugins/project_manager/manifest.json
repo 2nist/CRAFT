@@ -1,0 +1,9 @@
+{
+  "id": "quote-engine",
+  "name": "Quote & Project Engine",
+  "version": "1.0.0",
+  "description": "Launch the Pipedrive dashboard and manage all quotes.",
+  "entry": "index.html",
+  "icon": "FolderOpen",
+  "author": "Craft Automation"
+}

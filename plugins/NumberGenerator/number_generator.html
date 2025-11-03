@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Generator Plugin</title>
+    <!-- All CDN scripts will be removed by the refactor -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.379.0/dist/lucide-react.js"></script>
+    <style>
+        :root { --plugin-bg: #111827; --plugin-text: #e5e7eb; --plugin-text-light: #9ca3af; --plugin-border: #374151; --plugin-primary: #3b82f6; --plugin-bg-light: #1f2937; }
+        body { background-color: var(--plugin-bg); color: var(--plugin-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Check, Copy } = lucide;
+
+        // --- Mock API Layer ---
+        // This simulates the backend API. The refactor will replace this.
+        const MOCK_CUSTOMERS = [{ id: "035", name: "ABC Brewing" }, { id: "012", name: "XYZ Distilling" }];
+        const MOCK_SCHEMAS = {
+            industry: [{ code: 10, name: "Alcohol" }, { code: 20, name: "Food" }],
+            product: [{ code: 100, name: "Brewhouse" }, { code: 110, name: "Distillery" }],
+            control: [{ code: 1, name: "Automated" }, { code: 2, name: "Manual" }],
+            scope: [{ code: 10, name: "New Build" }, { code: 11, name: "Modification" }],
+        };
+
+        const useMockApi = () => {
+            if (!window.api) {
+                window.api = {
+                    schemas: {
+                        getIndustry: () => new Promise(res => res(MOCK_SCHEMAS.industry)),
+                        getProduct: () => new Promise(res => res(MOCK_SCHEMAS.product)),
+                        getControl: () => new Promise(res => res(MOCK_SCHEMAS.control)),
+                        getScope: () => new Promise(res => res(MOCK_SCHEMAS.scope)),
+                    },
+                    customers: {
+                        getAll: () => new Promise(res => res(MOCK_CUSTOMERS)),
+                    },
+                    calc: {
+                        getQuoteNumber: (data) => new Promise(res => {
+                            const now = new Date();
+                            const yy = now.getFullYear().toString().slice(-2);
+                            const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+                            const dd = now.getDate().toString().padStart(2, '0');
+                            const cust = data.customerCode || "XX";
+                            const seq = "0";
+                            const mainId = `CQ${yy}${mm}${dd}${cust}`;
+                            const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
+                            res({ mainId, fullId });
+                        })
+                    }
+                };
+            }
+        };
+
+        // --- Helper Components ---
+        const SelectCode = ({ label, code, options, onCodeChange }) => (
+            <div>
+                <label className="block text-sm font-medium text-gray-400">{label}</label>
+                <select 
+                    value={code} 
+                    onChange={e => onCodeChange(e.target.value)}
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+                >
+                    <option value="">Select...</option>
+                    {options.map(opt => <option key={opt.code} value={opt.code}>{opt.code} - {opt.name}</option>)}
+                </select>
+            </div>
+        );
+
+        const SelectCustomer = ({ value, onChange }) => {
+            const [customers, setCustomers] = useState([]);
+            useEffect(() => {
+                const load = async () => setCustomers(await window.api.customers.getAll());
+                load();
+            }, []);
+            
+            return (
+                <div>
+                    <label className="block text-sm font-medium text-gray-400">Customer</label>
+                    <select 
+                        value={value} 
+                        onChange={onChange}
+                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+                    >
+                        <option value="">Select Customer...</option>
+                        {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.id})</option>)}
+                    </select>
+                </div>
+            );
+        };
+
+        // --- Main App ---
+        function App() {
+            useMockApi();
+            const [schemas, setSchemas] = useState({ industry: [], product: [], control: [], scope: [] });
+            const [codes, setCodes] = useState({ industry: '', product: '', control: '', scope: '' });
+            const [customer, setCustomer] = useState('');
+            const [generatedNumber, setGeneratedNumber] = useState(null);
+            const [hasCopied, setHasCopied] = useState(false);
+
+            useEffect(() => {
+                const loadSchemas = async () => {
+                    setSchemas({
+                        industry: await window.api.schemas.getIndustry(),
+                        product: await window.api.schemas.getProduct(),
+                        control: await window.api.schemas.getControl(),
+                        scope: await window.api.schemas.getScope(),
+                    });
+                };
+                loadSchemas();
+            }, []);
+
+            const handleCodeChange = (part, value) => {
+                setCodes(prev => ({ ...prev, [part]: value }));
+            };
+
+            const handleGenerateNumber = async () => {
+                const data = { customerCode: customer, ...codes };
+                // This will become window.calc.getQuoteNumber(data)
+                const result = await window.api.calc.getQuoteNumber(data); 
+                setGeneratedNumber(result.fullId);
+                setHasCopied(false);
+            };
+
+            const handleCopy = () => {
+                // A note for the agent: this will need to be replaced 
+                // with the Electron clipboard API (contextBridge)
+                // as document.execCommand or navigator.clipboard
+                // may fail in the final sandboxed component.
+                navigator.clipboard.writeText(generatedNumber).then(() => {
+                    setHasCopied(true);
+                    setTimeout(() => setHasCopied(false), 2000);
+                });
+            };
+
+            return (
+                <div className="p-4 md:p-8 max-w-3xl mx-auto">
+                    <h1 className="text-3xl font-bold text-white mb-6">Quote Number Generator</h1>
+                    <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-4">
+                        <SelectCustomer value={customer} onChange={e => setCustomer(e.target.value)} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <SelectCode label="Industry" code={codes.industry} options={schemas.industry} onCodeChange={val => handleCodeChange('industry', val)} />
+                            <SelectCode label="Product" code={codes.product} options={schemas.product} onCodeChange={val => handleCodeChange('product', val)} />
+                            <SelectCode label="Control" code={codes.control} options={schemas.control} onCodeChange={val => handleCodeChange('control', val)} />
+                            <SelectCode label="Scope" code={codes.scope} options={schemas.scope} onCodeChange={val => handleCodeChange('scope', val)} />
+                        </div>
+                        <button
+                            onClick={handleGenerateNumber}
+                            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Generate Number
+                        </button>
+
+                        {generatedNumber && (
+                            <div className="pt-4">
+                                <label className="block text-sm font-medium text-gray-400">Generated Quote Number:</label>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <input 
+                                        type="text" 
+                                        readOnly 
+                                        value={generatedNumber} 
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-md p-3 text-lg text-green-400 font-mono"
+                                    />
+                                    <button
+                                        onClick={handleCopy}
+                                        className={`flex-shrink-0 px-4 py-3 rounded-md ${hasCopied ? 'bg-green-600' : 'bg-gray-600'} text-white`}
+                                    >
+                                        {hasCopied ? <Check size={20} /> : <Copy size={20} />}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+

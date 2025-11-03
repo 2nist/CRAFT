@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Component Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/papaparse@5/papaparse.min.js"></script>
+  <style>
+    :root {
+      --primary: #c7a783;
+      --secondary: #f0e6d8;
+      --text: #3d2c1d;
+      --bg: #fbf9f6;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 1.5rem;
+    }
+    .input, .select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      background-color: white;
+      transition: border-color 0.2s;
+    }
+    .input:focus, .select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--secondary);
+    }
+    .label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+      color: white;
+      background-color: var(--primary);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
+    .btn-secondary {
+      background-color: #a0aec0;
+    }
+    .btn-danger {
+      background-color: #e53e3e;
+      color: white;
+    }
+    .btn-small {
+       padding: 0.25rem 0.5rem;
+       font-weight: 500;
+    }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      padding: 1rem;
+    }
+    .alert {
+      padding: 0.75rem;
+      border-radius: 0.375rem;
+      margin-bottom: 1rem;
+    }
+    .alert-success {
+      background-color: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .alert-error {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Icon components as inline SVG (no external dependency)
+    const Package = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+        <line x1="12" y1="22.08" x2="12" y2="12"/>
+      </svg>
+    );
+
+    const Upload = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7,10 12,15 17,10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    );
+
+    const Download = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7,10 12,15 17,10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    );
+
+    const CheckCircle = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22,4 12,14.01 9,11.01"/>
+      </svg>
+    );
+
+    const AlertCircle = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    );
+
+    const Search = ({ size = 16, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+    );
+
+    // Template CSV for download
+    const COMPONENT_TEMPLATE_CSV = `Manufacturer PART NUMBER,PART DESCRIPTION & DETAILS,SUB CATEGORY,COST,VENDORCODE,Unit/Qty,Vendor Part Code,PART ABBREV.,LAST PRICE UPDATE,Notes
+EXAMPLE-001,Example Component,Electrical,$10.50,VENDOR001,EA,VP001,EX-001,2025-01-01,Example component for testing
+EXAMPLE-002,Another Example Component,Mechanical,$25.75,VENDOR002,EA,VP002,EX-002,2025-01-01,Another example component`;
+
+    // --- Main App Component ---
+    function App() {
+      const [components, setComponents] = useState([]);
+      const [filteredComponents, setFilteredComponents] = useState([]);
+      const [isLoading, setIsLoading] = useState(true);
+      const [syncStatus, setSyncStatus] = useState({ type: '', message: '' });
+      const [searchTerm, setSearchTerm] = useState('');
+      const [selectedCategory, setSelectedCategory] = useState('');
+      const [selectedVendor, setSelectedVendor] = useState('');
+      const [categories, setCategories] = useState([]);
+      const [vendors, setVendors] = useState([]);
+
+      // Get APIs
+      const { syncFromCsv } = window.components;
+      const { app } = window.app;
+
+      // Load components on mount
+      useEffect(() => {
+        loadComponents();
+      }, []);
+
+      const loadComponents = async () => {
+        setIsLoading(true);
+        try {
+          const data = await window.components.getAll();
+          setComponents(data);
+          setFilteredComponents(data);
+
+          // Load categories and vendors
+          const cats = await window.components.getCategories();
+          const vends = await window.components.getVendors();
+          setCategories(cats);
+          setVendors(vends);
+        } catch (err) {
+          setSyncStatus({ type: 'error', message: 'Failed to load components.' });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      // Filter components based on search and filters
+      useEffect(() => {
+        let filtered = components;
+
+        if (searchTerm) {
+          filtered = filtered.filter(comp =>
+            comp.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            comp.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            comp.vendor?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+
+        if (selectedCategory) {
+          filtered = filtered.filter(comp => comp.category === selectedCategory);
+        }
+
+        if (selectedVendor) {
+          filtered = filtered.filter(comp => comp.vendor === selectedVendor);
+        }
+
+        setFilteredComponents(filtered);
+      }, [components, searchTerm, selectedCategory, selectedVendor]);
+
+      const handleFileUpload = async () => {
+        try {
+          setSyncStatus({ type: '', message: '' });
+
+          // Show open dialog
+          const result = await app.showOpenDialog({
+            properties: ['openFile'],
+            filters: [
+              { name: 'CSV Files', extensions: ['csv'] },
+              { name: 'All Files', extensions: ['*'] }
+            ]
+          });
+
+          if (result.canceled || result.filePaths.length === 0) {
+            return;
+          }
+
+          const filePath = result.filePaths[0];
+
+          // Read the file
+          const csvContent = await app.readFile(filePath);
+
+          // Sync with components
+          const syncResult = await syncFromCsv(csvContent);
+
+          if (syncResult.success) {
+            setSyncStatus({
+              type: 'success',
+              message: `Successfully synced components. Catalog now contains ${syncResult.newCount} items.`
+            });
+            // Reload components to show updates
+            await loadComponents();
+          } else {
+            setSyncStatus({ type: 'error', message: 'Failed to sync components.' });
+          }
+        } catch (err) {
+          setSyncStatus({ type: 'error', message: `Error: ${err.message}` });
+        }
+      };
+
+      const handleDownloadTemplate = () => {
+        const blob = new Blob([COMPONENT_TEMPLATE_CSV], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'component_template.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+
+      return (
+        <div className="container mx-auto max-w-7xl">
+          <header className="mb-6 pb-4 border-b border-gray-300">
+            <h1 className="text-3xl font-bold text-[var(--primary)] flex items-center gap-2">
+              <Package size={32} />
+              Component Manager
+            </h1>
+            <p className="text-lg text-gray-600 mt-2">
+              Manage and sync your component catalog from Smartsheet CSV exports
+            </p>
+          </header>
+
+          {syncStatus.message && (
+            <div className={`alert ${syncStatus.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+              <div className="flex items-center gap-2">
+                {syncStatus.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                <span className="font-semibold">{syncStatus.message}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="mb-6 flex gap-4 flex-wrap">
+            <button className="btn flex items-center gap-2" onClick={handleFileUpload}>
+              <Upload size={18} />
+              Sync from Smartsheet CSV
+            </button>
+            <button className="btn btn-secondary flex items-center gap-2" onClick={handleDownloadTemplate}>
+              <Download size={18} />
+              Download Template
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className="mb-6 card">
+            <h2 className="text-xl font-semibold border-b pb-2 mb-4">Filter Components</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="label">Search</label>
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+                  <input
+                    type="text"
+                    className="input pl-10"
+                    placeholder="Search by SKU, description, or vendor..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">Category</label>
+                <select
+                  className="select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Vendor</label>
+                <select
+                  className="select"
+                  value={selectedVendor}
+                  onChange={(e) => setSelectedVendor(e.target.value)}
+                >
+                  <option value="">All Vendors</option>
+                  {vendors.map(vendor => (
+                    <option key={vendor} value={vendor}>{vendor}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategory('');
+                    setSelectedVendor('');
+                  }}
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Components Table */}
+          <div className="card">
+            <div className="flex justify-between items-center border-b pb-2 mb-4">
+              <h2 className="text-xl font-semibold">
+                Components ({filteredComponents.length} of {components.length})
+              </h2>
+            </div>
+
+            {isLoading ? (
+              <div className="text-center p-8">Loading components...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2 font-semibold">SKU</th>
+                      <th className="text-left p-2 font-semibold">Description</th>
+                      <th className="text-left p-2 font-semibold">Category</th>
+                      <th className="text-left p-2 font-semibold">Vendor</th>
+                      <th className="text-left p-2 font-semibold">Price</th>
+                      <th className="text-left p-2 font-semibold">UOM</th>
+                      <th className="text-left p-2 font-semibold">Last Update</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredComponents.slice(0, 100).map((component, index) => (
+                      <tr key={component.sku || index} className="border-b hover:bg-gray-50">
+                        <td className="p-2 font-mono text-sm">{component.sku}</td>
+                        <td className="p-2">{component.description}</td>
+                        <td className="p-2">{component.category}</td>
+                        <td className="p-2">{component.vendor}</td>
+                        <td className="p-2">${component.price?.toFixed(2)}</td>
+                        <td className="p-2">{component.uom}</td>
+                        <td className="p-2 text-sm text-gray-600">{component.lastPriceUpdate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {filteredComponents.length > 100 && (
+                  <div className="p-4 text-center text-gray-600">
+                    Showing first 100 results. Use filters to narrow down results.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- Render App ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

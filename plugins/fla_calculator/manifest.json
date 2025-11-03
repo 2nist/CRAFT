@@ -1,0 +1,10 @@
+{
+  "id": "fla-calc",
+  "name": "FLA/Heater Calculator",
+  "version": "1.0.0",
+  "description": "Calculate motor and heater FLA ratings.",
+  "author": "Craft Automation",
+  "entry": "index.html",
+  "icon": "Zap",
+  "category": "Calculators"
+}

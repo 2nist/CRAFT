@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Pipedrive Login",
+    "link": "https://pipedrive.com/login",
+    "icon": "Database"
+  },
+  {
+    "title": "Smartsheet (Master)",
+    "link": "https://app.smartsheet.com/",
+    "icon": "Sheet"
+  },
+  {
+    "title": "Vendor Portal (KDL)",
+    "link": "https://www.kendallgroup.com/",
+    "icon": "ShoppingCart"
+  },
+  {
+    "title": "Legacy Projects (NAS)",
+    "link": "file:////YOUR_NAS_SERVER/Projects/Legacy",
+    "icon": "HardDrive"
+  }
+]

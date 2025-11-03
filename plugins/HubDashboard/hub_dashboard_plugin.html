@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craft Tools Hub</title>
+    <!-- All CDN scripts will be removed by the refactor -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.379.0/dist/lucide-react.js"></script>
+    <style>
+        :root { --plugin-bg: #0f172a; --plugin-text: #e2e8f0; --plugin-text-light: #94a3b8; --plugin-border: #334155; --plugin-primary: #3b82f6; --plugin-bg-light: #1e293b; }
+        body { background-color: var(--plugin-bg); color: var(--plugin-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { File, Plus, Database, Sheet, ShoppingCart, HardDrive, HardHat, Link, Book, FileText, ListChecks, BookOpen, Package, PackagePlus, Hash, Zap, Calculator, ClipboardList, Home } = lucide;
+
+        // --- Mock API Layer ---
+        // This simulates the backend API. The refactor will replace this.
+        const useMockApi = () => {
+            if (!window.api) {
+                window.api = {
+                    getPluginRegistry: () => new Promise(res => res([
+                        { "id": "hub-dashboard", "title": "Hub Dashboard", "description": "Main dashboard with widgets and quick access.", "icon": "Home", "file": "plugins/hub_dashboard/index.html" },
+                        { "id": "project-manager", "title": "Project Manager", "description": "Manage quotes, Pipedrive deals, and project configs.", "icon": "Package", "file": "plugins/project_manager/index.html" },
+                        { "id": "quote-configurator", "title": "Quote Configurator", "description": "4-step wizard to build a new quote.", "icon": "ClipboardList", "file": "plugins/quote_configurator/index.html" },
+                        { "id": "assembly-manager", "title": "Assembly Manager", "description": "Build & edit assembly 'kits' from components.", "icon": "PackagePlus", "file": "plugins/assembly_manager/index.html" },
+                        { "id": "number-generator", "title": "Number Generator", "description": "Standalone tool for project and quote numbers.", "icon": "Hash", "file": "plugins/number_generator/index.html" },
+                        { "id": "fla-calc", "title": "FLA Calculator", "description": "Motor (NEC) and heater FLA calculations.", "icon": "Zap", "file": "plugins/fla_calculator/index.html" },
+                        { "id": "margin-calc", "title": "Margin Calculator", "description": "Forward/reverse margin and price calculations.", "icon": "Calculator", "file": "plugins/margin_calculator/index.html" },
+                    ])),
+                    loadPlugin: (file, context) => {
+                        console.log(`MOCK: Loading plugin '${file}'`, context);
+                        alert(`Simulating navigation to: ${file}`);
+                    }
+                };
+            }
+        };
+
+        const Icon = ({ name, ...props }) => {
+            const LucideIcon = lucide[name] || File;
+            return <LucideIcon {...props} />;
+        };
+
+        function App() {
+            useMockApi(); // Initialize mock API
+            const [plugins, setPlugins] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+
+            useEffect(() => {
+                const loadRegistry = async () => {
+                    setIsLoading(true);
+                    // In the refactor, this becomes window.api.getPluginRegistry()
+                    const data = await window.api.getPluginRegistry(); 
+                    setPlugins(data);
+                    setIsLoading(false);
+                };
+                loadRegistry();
+            }, []);
+
+            const handlePluginClick = (plugin) => {
+                // In the refactor, this becomes window.app.loadPlugin(plugin.id, ...)
+                window.api.loadPlugin(plugin.file, { isNew: true });
+            };
+
+            return (
+                <div className="p-4 md:p-8 min-h-screen">
+                    <div className="mb-8">
+                        <h1 className="text-4xl font-bold text-white mb-2">Craft Tools Hub</h1>
+                        <p className="text-lg text-gray-400">Select a tool to begin.</p>
+                    </div>
+
+                    {isLoading ? (
+                        <p className="text-gray-400">Loading tools...</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {plugins.map((plugin) => (
+                                <div 
+                                    key={plugin.id}
+                                    onClick={() => handlePluginClick(plugin)}
+                                    className="bg-gray-800 border border-gray-700 rounded-lg p-6 flex flex-col hover:bg-gray-700 hover:border-blue-500 transition-all cursor-pointer shadow-lg"
+                                >
+                                    <div className="flex-shrink-0 mb-4">
+                                        <Icon name={plugin.icon} className="text-blue-400" size={32} />
+                                    </div>
+                                    <h2 className="text-xl font-semibold text-white mb-2">{plugin.title}</h2>
+                                    <p className="text-gray-400 text-sm flex-grow">{plugin.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+

@@ -1,10 +1,10 @@
 {
-  "id": "product-template-manager",
+  "id": "product-templates",
   "name": "Product Template Manager",
   "version": "1.0.0",
-  "description": "Create and manage product templates for the Quote Configurator",
+  "description": "Define the logic and forms for product types.",
   "author": "Craft Automation",
   "entry": "index.html",
-  "icon": "Settings",
+  "icon": "PackagePlus",
   "category": "Template Tools"
 }

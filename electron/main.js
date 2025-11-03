@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
@@ -6,6 +6,9 @@ import Ajv from 'ajv'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// Determine if running in development mode
+const isDev = !app.isPackaged
 
 let mainWindow
 let dataPath
@@ -364,11 +367,16 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://unpkg.com;",
     },
   })
 
-  // Load from dist folder (built files)
-  mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  // In development, load from Vite dev server; in production, load from dist folder
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+    mainWindow.loadURL('http://localhost:5173')
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  }
   mainWindow.webContents.openDevTools()
 
   mainWindow.on('closed', () => {
@@ -580,6 +588,93 @@ ipcMain.handle('components:getVendors', async () => {
   return vendors.sort()
 })
 
+// Sync components from CSV
+ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
+  try {
+    // Import PapaParse dynamically
+    const Papa = (await import('papaparse')).default;
+    
+    // Path to our master file
+    const catalogPath = path.join(dataPath, 'components', 'component_catalog.json');
+
+    // 1. Read the existing master catalog
+    let masterCatalog = [];
+    try {
+      const masterFileContent = await fs.readFile(catalogPath, 'utf-8');
+      masterCatalog = JSON.parse(masterFileContent);
+    } catch (e) {
+      console.log("No existing catalog found, will create a new one.");
+    }
+
+    // Create a Map for fast lookups
+    const masterCatalogMap = new Map(masterCatalog.map(item => [item.sku, item]));
+
+    // 2. Parse the uploaded CSV
+    const parsed = Papa.parse(csvContent, { header: true });
+
+    let updatedCount = 0;
+    let newCount = 0;
+
+    // 3. Loop through CSV and perform the "Smart Merge"
+    for (const row of parsed.data) {
+      const sku = row['Manufacturer PART NUMBER'];
+      if (!sku) continue; // Skip empty rows
+
+      // Clean the price
+      const price = parseFloat(row['COST']?.replace(/[$,]/g, '')) || 0;
+
+      const existingItem = masterCatalogMap.get(sku);
+
+      if (existingItem) {
+        // ----- IT EXISTS: MERGE UPDATE -----
+        // Only update the Smartsheet-owned fields
+        existingItem.price = price;
+        existingItem.description = row['PART DESCRIPTION & DETAILS'] || existingItem.description;
+        existingItem.category = row['SUB CATEGORY'] || existingItem.category;
+        existingItem.vendor = row['VENDORCODE'] || existingItem.vendor;
+        existingItem.uom = row['Unit/Qty'] || existingItem.uom;
+        existingItem.vndrnum = row['Vendor Part Code'] || existingItem.vndrnum;
+        existingItem.notes = row['Notes'] || existingItem.notes;
+        existingItem.partAbbrev = row['PART ABBREV.'] || existingItem.partAbbrev;
+        existingItem.lastPriceUpdate = row['LAST PRICE UPDATE'] || existingItem.lastPriceUpdate;
+        // We intentionally do NOT touch volt, phase, amps, tags, manualLink
+        updatedCount++;
+      } else {
+        // ----- IT'S NEW: ADD -----
+        const newItem = {
+          sku: sku,
+          price: price,
+          description: row['PART DESCRIPTION & DETAILS'] || '',
+          category: row['SUB CATEGORY'] || '',
+          vendor: row['VENDORCODE'] || '',
+          uom: row['Unit/Qty'] || '',
+          vndrnum: row['Vendor Part Code'] || '',
+          notes: row['Notes'] || '',
+          partAbbrev: row['PART ABBREV.'] || '',
+          lastPriceUpdate: row['LAST PRICE UPDATE'] || '',
+          // Set engineering fields to null (can be filled in later)
+          volt: null,
+          phase: null,
+          amps: null,
+          tags: null,
+          manualLink: null
+        };
+        masterCatalog.push(newItem);
+        masterCatalogMap.set(sku, newItem);
+        newCount++;
+      }
+    }
+
+    // 4. Write the updated catalog back to disk
+    await fs.writeFile(catalogPath, JSON.stringify(masterCatalog, null, 2));
+
+    return { success: true, updated: updatedCount, added: newCount };
+  } catch (error) {
+    console.error('Error in Smart Sync:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Assembly IPC handlers
 
 // Get all assemblies (user data + bundled)
@@ -614,9 +709,9 @@ ipcMain.handle('assemblies:save', async (event, assemblyToSave) => {
     // Load assembly schema
     let assemblySchemaPath
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-      assemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'assemblies', 'assembly-schema.json')
+      assemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'assembly_schema.json')
     } else {
-      assemblySchemaPath = path.join(process.resourcesPath, 'data', 'assemblies', 'assembly-schema.json')
+      assemblySchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'assembly_schema.json')
     }
     
     const schemaData = await fs.readFile(assemblySchemaPath, 'utf-8')
@@ -715,154 +810,6 @@ ipcMain.handle('assemblies:expand', async (event, assemblyId) => {
 ipcMain.handle('assemblies:getCategories', async () => {
   const categories = [...new Set(loadedAssemblies.map(a => a.category).filter(Boolean))]
   return categories.sort()
-})
-
-// Panel IPC handlers (stored in user data, not bundled)
-
-// Load all panels for the current user
-ipcMain.handle('panels:getAll', async () => {
-  try {
-    const panels = await readJSONFile('panels.json') || []
-    return panels
-  } catch (err) {
-    console.error('Error loading panels:', err)
-    return []
-  }
-})
-
-// Save a panel
-ipcMain.handle('panels:save', async (event, panel) => {
-  try {
-    let panels = await readJSONFile('panels.json') || []
-    const existingIndex = panels.findIndex(p => p.panelId === panel.panelId)
-    
-    if (existingIndex >= 0) {
-      panels[existingIndex] = panel
-    } else {
-      panels.push(panel)
-    }
-    
-    await writeJSONFile('panels.json', panels)
-    return { success: true }
-  } catch (err) {
-    console.error('Error saving panel:', err)
-    throw err
-  }
-})
-
-// Delete a panel
-ipcMain.handle('panels:delete', async (event, panelId) => {
-  try {
-    let panels = await readJSONFile('panels.json') || []
-    panels = panels.filter(p => p.panelId !== panelId)
-    await writeJSONFile('panels.json', panels)
-    return { success: true }
-  } catch (err) {
-    console.error('Error deleting panel:', err)
-    throw err
-  }
-})
-
-// Search panels by filters
-ipcMain.handle('panels:search', async (event, filters) => {
-  try {
-    let panels = await readJSONFile('panels.json') || []
-    
-    if (filters.projectId) {
-      panels = panels.filter(p => p.projectId === filters.projectId)
-    }
-    if (filters.panelId) {
-      panels = panels.filter(p => p.panelId?.toLowerCase().includes(filters.panelId.toLowerCase()))
-    }
-    if (filters.description) {
-      panels = panels.filter(p => p.description?.toLowerCase().includes(filters.description.toLowerCase()))
-    }
-    
-    return panels
-  } catch (err) {
-    console.error('Error searching panels:', err)
-    return []
-  }
-})
-
-// Get panel by ID
-ipcMain.handle('panels:getById', async (event, panelId) => {
-  try {
-    const panels = await readJSONFile('panels.json') || []
-    return panels.find(p => p.panelId === panelId) || null
-  } catch (err) {
-    console.error('Error getting panel:', err)
-    return null
-  }
-})
-
-// Expand panel to full BOM (cascades through assemblies to components)
-ipcMain.handle('panels:expand', async (event, panelId) => {
-  try {
-    const panels = await readJSONFile('panels.json') || []
-    const panel = panels.find(p => p.panelId === panelId)
-    if (!panel) return null
-    
-    const bomComponents = []
-    let totalCost = 0
-    let totalLaborHours = 0
-    
-    // Expand assemblies
-    if (panel.assemblies) {
-      for (const pa of panel.assemblies) {
-        const assembly = loadedAssemblies.find(a => a.assemblyId === pa.assemblyId)
-        if (!assembly) continue
-        
-        totalLaborHours += (assembly.estimatedLaborHours || 0) * pa.quantity
-        
-        if (assembly.components) {
-          for (const ac of assembly.components) {
-            const component = loadedComponents.find(c => c.sku === ac.sku)
-            const qty = ac.quantity * pa.quantity
-            const subtotal = component ? (component.price || 0) * qty : 0
-            totalCost += subtotal
-            
-            bomComponents.push({
-              sku: ac.sku,
-              component: component || null,
-              quantity: qty,
-              subtotal,
-              source: `Assembly: ${assembly.description}`,
-              notes: ac.notes
-            })
-          }
-        }
-      }
-    }
-    
-    // Add one-off components
-    if (panel.oneOffComponents) {
-      for (const oc of panel.oneOffComponents) {
-        const component = loadedComponents.find(c => c.sku === oc.sku)
-        const subtotal = component ? (component.price || 0) * oc.quantity : 0
-        totalCost += subtotal
-        
-        bomComponents.push({
-          sku: oc.sku,
-          component: component || null,
-          quantity: oc.quantity,
-          subtotal,
-          source: 'One-off',
-          notes: oc.notes
-        })
-      }
-    }
-    
-    return {
-      ...panel,
-      bom: bomComponents,
-      totalCost,
-      totalLaborHours
-    }
-  } catch (err) {
-    console.error('Error expanding panel:', err)
-    return null
-  }
 })
 
 // Quote IPC handlers
@@ -974,6 +921,51 @@ ipcMain.handle('schemas:getScope', async () => {
   ];
 });
 
+// New schemas handlers with hyphenated names
+const MOCK_INDUSTRY_SCHEMA = [
+  { const: 10, description: "Alcohol: Brewing" },
+  { const: 11, description: "Alcohol: Distillation" },
+  { const: 12, description: "Alcohol: Fermentation" },
+  { const: 20, description: "Food: Food&Bev" },
+  { const: 30, description: "Water: Water Treatment" },
+  { const: 31, description: "Water: Waste Water" },
+  { const: 40, description: "Manufacturing: Material Handling" },
+  { const: 41, description: "Manufacturing: Packaging" },
+  { const: 50, description: "Bio/Chem: Pharma" },
+  { const: 99, description: "General Industry" }
+];
+
+const MOCK_PRODUCT_SCHEMA = [
+  { const: 100, description: "Brewery: Brewhouse" },
+  { const: 101, description: "Brewery: 2 Vessel" },
+  { const: 120, description: "Fermentation: Cellar" },
+  { const: 130, description: "Grain: Grain Handling" },
+  { const: 140, description: "Motor Control: Motor" },
+  { const: 160, description: "Sanitary: CIP" },
+  { const: 999, description: "General Product" }
+];
+
+const MOCK_CONTROL_SCHEMA = [
+  { const: 1, description: "Automated" },
+  { const: 2, description: "Manual" },
+  { const: 3, description: "Termination" },
+  { const: 9, description: "None" }
+];
+
+const MOCK_SCOPE_SCHEMA = [
+  { const: 10, description: "Production: New Build" },
+  { const: 11, description: "Production: Modification" },
+  { const: 20, description: "Field: Commissioning" },
+  { const: 40, description: "Engineering: Engineering (Hard)" },
+  { const: 50, description: "Admin: Warranty" },
+  { const: 99, description: "General Scope" }
+];
+
+ipcMain.handle('schemas:get-industry', () => { return MOCK_INDUSTRY_SCHEMA; });
+ipcMain.handle('schemas:get-product', () => { return MOCK_PRODUCT_SCHEMA; });
+ipcMain.handle('schemas:get-control', () => { return MOCK_CONTROL_SCHEMA; });
+ipcMain.handle('schemas:get-scope', () => { return MOCK_SCOPE_SCHEMA; });
+
 // Customers IPC handlers
 
 ipcMain.handle('customers:getAll', async () => {
@@ -1000,6 +992,14 @@ ipcMain.handle('customers:getAll', async () => {
   }
 });
 
+// New customers handler with hyphenated name
+const MOCK_CUSTOMERS = Object.entries(DEFAULT_CUSTOMER_DATA).map(([id, name]) => ({
+  id: id,
+  name: name
+}));
+
+ipcMain.handle('customers:get-all', () => { return MOCK_CUSTOMERS; });
+
 // Product Templates IPC handlers
 
 // Get product template by product code
@@ -1020,15 +1020,155 @@ ipcMain.handle('product-templates:get', async (event, productCode) => {
 // Save product template
 ipcMain.handle('product-templates:save', async (event, templateObject) => {
   try {
+    // Load product template schema
+    let templateSchemaPath
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      templateSchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'product_template_schema.json')
+    } else {
+      templateSchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'product_template_schema.json')
+    }
+    
+    const schemaData = await fs.readFile(templateSchemaPath, 'utf-8')
+    const templateSchema = JSON.parse(schemaData)
+    const ajv = new Ajv()
+    const validate = ajv.compile(templateSchema)
+    
+    // Validate the template
+    const valid = validate(templateObject)
+    if (!valid) {
+      return { success: false, errors: validate.errors }
+    }
+    
     // Ensure the product-templates directory exists
     const templatesDir = path.join(dataPath, 'product-templates')
     await fs.mkdir(templatesDir, { recursive: true })
     
     const filePath = path.join(templatesDir, `${templateObject.productCode}.json`)
     await fs.writeFile(filePath, JSON.stringify(templateObject, null, 2), 'utf-8')
-    return { success: true }
+    return { success: true, path: filePath }
   } catch (err) {
     console.error('Error saving product template:', err)
     throw err
   }
 })
+
+// File I/O IPC handlers
+
+// Show open dialog
+ipcMain.handle('app:show-open-dialog', async (event, options) => {
+  return dialog.showOpenDialog(options)
+})
+
+// Read file
+ipcMain.handle('app:read-file', async (event, filePath) => {
+  return fs.readFile(filePath, 'utf-8')
+})
+
+// Pipedrive IPC handlers
+
+// TODO: Implement real Pipedrive API call using axios. Requires API key and base URL.
+ipcMain.handle('pipedrive:get-deals', async () => {
+  // Mock data for now - same as in the HTML file
+  const MOCK_PIPEDRIVE_DEALS = [
+    { id: 1001, title: "ABC Brewing - New Brewhouse", org_name: "ABC Brewing", owner_name: "Sales Rep 1", stage: "Lead", value: 50000, add_time: "2025-10-20T10:00:00Z" },
+    { id: 1002, title: "XYZ Distilling - Cellar Expansion", org_name: "XYZ Distilling", owner_name: "Sales Rep 2", stage: "Contact Made", value: 25000, add_time: "2025-10-18T14:30:00Z" },
+    { id: 1003, title: "FoodBev Co - CIP Skid", org_name: "FoodBev Co", owner_name: "Sales Rep 1", stage: "Proposal Sent", value: 15000, add_time: "2025-10-15T09:15:00Z" },
+  ];
+  
+  return MOCK_PIPEDRIVE_DEALS;
+});
+
+// Dashboard API handlers
+
+ipcMain.handle('api:get-recent-quotes', async () => {
+  try {
+    const quotes = await readJSONFile('projects.json') || [];
+    // Sort by createdAt desc and take first 5
+    return quotes
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map(q => ({
+        quoteId: q.quoteNumber,
+        projectName: q.projectNumber,
+        customer: q.customer,
+        status: 'Draft', // TODO: Add status to project schema
+        lastModified: q.createdAt
+      }));
+  } catch (err) {
+    console.error('Error loading recent quotes:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('api:get-plugin-registry', async () => {
+  try {
+    // Read from src/data directory, not user data directory
+    const registryPath = isDev 
+      ? path.join(__dirname, '..', 'src', 'data', 'plugin_registry.json')
+      : path.join(process.resourcesPath, 'app.asar', 'dist', 'plugin_registry.json');
+    console.log('isDev:', isDev);
+    console.log('Reading plugin registry from:', registryPath);
+    const data = await fs.readFile(registryPath, 'utf-8');
+    const registry = JSON.parse(data);
+    console.log('Loaded plugin registry:', registry.length, 'plugins');
+    return registry || [];
+  } catch (err) {
+    console.error('Error loading plugin registry:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('api:get-useful-links', async () => {
+  try {
+    const linksPath = isDev 
+      ? path.join(__dirname, '..', 'src', 'data', 'useful_links.json')
+      : path.join(process.resourcesPath, 'app.asar', 'dist', 'useful_links.json');
+    const data = await fs.readFile(linksPath, 'utf-8');
+    const links = JSON.parse(data);
+    return links || [];
+  } catch (err) {
+    console.error('Error loading useful links:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('api:get-doc-hub-items', async () => {
+  try {
+    const docsPath = isDev 
+      ? path.join(__dirname, '..', 'src', 'data', 'doc_hub_items.json')
+      : path.join(process.resourcesPath, 'app.asar', 'dist', 'doc_hub_items.json');
+    const data = await fs.readFile(docsPath, 'utf-8');
+    const docs = JSON.parse(data);
+    return docs || [];
+  } catch (err) {
+    console.error('Error loading doc hub items:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('api:load-plugin', async (event, pluginId, context) => {
+  return ipcMain.handle('app:load-plugin', event, pluginId, context);
+});
+
+// Shell API handlers
+
+ipcMain.handle('shell:open-external', async (event, url) => {
+  const { shell } = require('electron');
+  shell.openExternal(url);
+  return { success: true };
+});
+
+// Quote Number Generator IPC handler
+ipcMain.handle('calc:get-quote-number', (event, data) => {
+  const now = new Date();
+  const yy = now.getFullYear().toString().slice(-2);
+  const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+  const dd = now.getDate().toString().padStart(2, '0');
+  const cust = data.customerCode || "XX";
+  const seq = "0"; // Sequence number, hardcoded for now
+  
+  const mainId = `CQ${yy}${mm}${dd}${cust}`;
+  const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
+  
+  return { mainId, fullId };
+});

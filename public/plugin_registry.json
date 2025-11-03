@@ -1,0 +1,58 @@
+[
+  {
+    "id": "hub-dashboard",
+    "title": "Hub Dashboard",
+    "path": "/",
+    "description": "Main dashboard with quick access to all tools",
+    "icon": "LayoutDashboard"
+  },
+  {
+    "id": "quote-configurator",
+    "title": "Quote Configurator",
+    "path": "/quote-configurator",
+    "description": "Configure quotes for Craft Automation products",
+    "icon": "FileText"
+  },
+  {
+    "id": "number-generator",
+    "title": "Number Generator",
+    "path": "/number-generator",
+    "description": "Standalone tool for project and quote numbers",
+    "icon": "Hash"
+  },
+  {
+    "id": "assembly-manager",
+    "title": "Assembly Manager",
+    "path": "/assembly-manager",
+    "description": "Build & edit assembly 'kits' from components",
+    "icon": "PackagePlus"
+  },
+  {
+    "id": "product-template-manager",
+    "title": "Product Templates",
+    "path": "/product-template-manager",
+    "description": "Define data fields and logic for Quote Configurator",
+    "icon": "Settings"
+  },
+  {
+    "id": "component-manager",
+    "title": "Component Manager",
+    "path": "/component-manager",
+    "description": "Manage and sync component catalog from Smartsheet",
+    "icon": "Database"
+  },
+  {
+    "id": "fla-calc",
+    "title": "FLA Calculator",
+    "path": "/fla-calc",
+    "description": "Motor (NEC) and heater FLA calculations",
+    "icon": "Zap"
+  },
+  {
+    "id": "margin-calc",
+    "title": "Margin Calculator",
+    "path": "/margin-calc",
+    "description": "Forward/reverse margin and price calculations",
+    "icon": "Calculator"
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "id": "component-sync",
+  "name": "Component Catalog Sync",
+  "version": "1.0.0",
+  "description": "Sync the component catalog with Smartsheet exports.",
+  "entry": "index.html",
+  "icon": "RefreshCw",
+  "author": "Craft Automation"
+}

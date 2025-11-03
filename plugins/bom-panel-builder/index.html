@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOM & Panel Builder</title>
+    <title>BOM Builder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -61,20 +61,19 @@
         const api = {
             components: window.components,
             assemblies: window.assemblies,
-            panels: window.panels
+            quotes: window.quotes
         };
 
-        function PanelEditor() {
+        function BOMBuilder() {
             // Data Libraries
             const [allComponents, setAllComponents] = useState([]);
             const [allAssemblies, setAllAssemblies] = useState([]);
-            const [allPanels, setAllPanels] = useState([]);
+            const [allQuotes, setAllQuotes] = useState([]);
 
-            // Current Panel State
-            const [currentPanel, setCurrentPanel] = useState({
-                panelId: `P-${Date.now().toString().slice(-6)}`,
+            // Current BOM State
+            const [currentBOM, setCurrentBOM] = useState({
+                bomId: `BOM-${Date.now().toString().slice(-6)}`,
                 quoteId: '',
-                projectId: '',
                 description: '',
                 assemblies: [],
                 oneOffComponents: []
@@ -82,15 +81,16 @@
 
             // BOM Expansion Result
             const [expandedBOM, setExpandedBOM] = useState(null);
-            
+
             // Form state
             const [asmAddId, setAsmAddId] = useState('');
             const [compAddSku, setCompAddSku] = useState('');
-            
+
             // Loading state
             const [isSaving, setIsSaving] = useState(false);
             const [isExpanding, setIsExpanding] = useState(false);
-            
+            const [isExporting, setIsExporting] = useState(false);
+
             // Component search modal state
             const [showComponentModal, setShowComponentModal] = useState(false);
             const [searchTerm, setSearchTerm] = useState('');
@@ -107,14 +107,14 @@
             useEffect(() => {
                 const loadData = async () => {
                     try {
-                        const [components, assemblies, panels] = await Promise.all([
+                        const [components, assemblies, quotes] = await Promise.all([
                             api.components.getAll(),
                             api.assemblies.getAll(),
-                            api.panels.getAll()
+                            api.quotes.getAll()
                         ]);
                         setAllComponents(components);
                         setAllAssemblies(assemblies);
-                        setAllPanels(panels);
+                        setAllQuotes(quotes);
                     } catch (err) {
                         console.error('Error loading data:', err);
                     }
@@ -122,18 +122,60 @@
                 loadData();
             }, []);
 
-            // Re-calculate BOM whenever the panel definition changes
+            // Re-calculate BOM whenever the BOM definition changes
             useEffect(() => {
-                const expandPanel = async () => {
-                    if (currentPanel.assemblies.length > 0 || currentPanel.oneOffComponents.length > 0) {
+                const expandBOM = async () => {
+                    if (currentBOM.assemblies.length > 0 || currentBOM.oneOffComponents.length > 0) {
                         try {
                             setIsExpanding(true);
-                            // Save panel first, then expand by ID
-                            await api.panels.save(currentPanel);
-                            const bom = await api.panels.expand(currentPanel.panelId);
-                            setExpandedBOM(bom);
+                            const bomComponents = [];
+
+                            // Expand assemblies
+                            for (const pa of currentBOM.assemblies) {
+                                const assembly = allAssemblies.find(a => a.assemblyId === pa.assemblyId);
+                                if (!assembly) continue;
+
+                                if (assembly.components) {
+                                    for (const ac of assembly.components) {
+                                        const component = allComponents.find(c => c.sku === ac.sku);
+                                        const qty = ac.quantity * pa.quantity;
+                                        const subtotal = component ? (component.price || component.cost || 0) * qty : 0;
+
+                                        bomComponents.push({
+                                            sku: ac.sku,
+                                            component: component || null,
+                                            quantity: qty,
+                                            subtotal,
+                                            source: `Assembly: ${assembly.description}`,
+                                            notes: ac.notes
+                                        });
+                                    }
+                                }
+                            }
+
+                            // Add one-off components
+                            for (const oc of currentBOM.oneOffComponents) {
+                                const component = allComponents.find(c => c.sku === oc.sku);
+                                const subtotal = component ? (component.price || component.cost || 0) * oc.quantity : 0;
+
+                                bomComponents.push({
+                                    sku: oc.sku,
+                                    component: component || null,
+                                    quantity: oc.quantity,
+                                    subtotal,
+                                    source: 'One-off',
+                                    notes: oc.notes
+                                });
+                            }
+
+                            const totalCost = bomComponents.reduce((sum, item) => sum + item.subtotal, 0);
+
+                            setExpandedBOM({
+                                bom: bomComponents,
+                                totalCost
+                            });
                         } catch (err) {
-                            console.error('Error expanding panel:', err);
+                            console.error('Error expanding BOM:', err);
                             setExpandedBOM(null);
                         } finally {
                             setIsExpanding(false);
@@ -142,15 +184,15 @@
                         setExpandedBOM(null);
                     }
                 };
-                
-                // Debounce expansion to avoid too many saves
-                const timeoutId = setTimeout(expandPanel, 500);
-                return () => clearTimeout(timeoutId);
-            }, [currentPanel]);
 
-            const handlePanelInfoChange = (e) => {
+                // Debounce expansion to avoid too many calculations
+                const timeoutId = setTimeout(expandBOM, 500);
+                return () => clearTimeout(timeoutId);
+            }, [currentBOM, allComponents, allAssemblies]);
+
+            const handleBOMInfoChange = (e) => {
                 const { name, value } = e.target;
-                setCurrentPanel(prev => ({ ...prev, [name]: value }));
+                setCurrentBOM(prev => ({ ...prev, [name]: value }));
             };
 
             const handleImportLastQuote = async () => {
@@ -160,20 +202,20 @@
                         alert('Database API not available. This feature requires the Electron app.');
                         return;
                     }
-                    
+
                     // Use whichever API is available
                     const dbAPI = window.db || window.electronAPI.db;
                     const projects = await dbAPI.loadProjects();
-                    
+
                     if (projects && projects.length > 0) {
                         // Sort by creation date and get the most recent
-                        const sortedProjects = projects.sort((a, b) => 
+                        const sortedProjects = projects.sort((a, b) =>
                             new Date(b.createdAt) - new Date(a.createdAt)
                         );
                         const lastQuote = sortedProjects[0].quoteNumber;
-                        
+
                         if (lastQuote) {
-                            setCurrentPanel(prev => ({ ...prev, quoteId: lastQuote }));
+                            setCurrentBOM(prev => ({ ...prev, quoteId: lastQuote }));
                             alert(`Imported: ${lastQuote}`);
                         } else {
                             alert('No quote number found in last project.');
@@ -191,11 +233,11 @@
                 e.preventDefault();
                 if (!asmAddId) return;
 
-                setCurrentPanel(prev => {
+                setCurrentBOM(prev => {
                     const existing = prev.assemblies.find(a => a.assemblyId === asmAddId);
                     let newAssemblies;
                     if (existing) {
-                        newAssemblies = prev.assemblies.map(a => 
+                        newAssemblies = prev.assemblies.map(a =>
                             a.assemblyId === asmAddId ? { ...a, quantity: a.quantity + 1 } : a
                         );
                     } else {
@@ -205,16 +247,16 @@
                 });
                 setAsmAddId(''); // Clear selection
             };
-            
+
             const handleAddComponent = (e) => {
                 e.preventDefault();
                 if (!compAddSku) return;
-                
-                setCurrentPanel(prev => {
+
+                setCurrentBOM(prev => {
                     const existing = prev.oneOffComponents.find(c => c.sku === compAddSku);
                     let newComponents;
                     if (existing) {
-                        newComponents = prev.oneOffComponents.map(c => 
+                        newComponents = prev.oneOffComponents.map(c =>
                             c.sku === compAddSku ? { ...c, quantity: c.quantity + 1 } : c
                         );
                     } else {
@@ -229,18 +271,18 @@
                 const qty = parseInt(newQty, 10);
                 if (isNaN(qty) || qty < 0) return;
 
-                setCurrentPanel(prev => {
+                setCurrentBOM(prev => {
                     if (type === 'assembly') {
-                        const newAssemblies = qty === 0 
+                        const newAssemblies = qty === 0
                             ? prev.assemblies.filter(a => a.assemblyId !== identifier)
-                            : prev.assemblies.map(a => 
+                            : prev.assemblies.map(a =>
                                 a.assemblyId === identifier ? { ...a, quantity: qty } : a
                             );
                         return { ...prev, assemblies: newAssemblies };
                     } else {
                         const newComponents = qty === 0
                             ? prev.oneOffComponents.filter(c => c.sku !== identifier)
-                            : prev.oneOffComponents.map(c => 
+                            : prev.oneOffComponents.map(c =>
                                 c.sku === identifier ? { ...c, quantity: qty } : c
                             );
                         return { ...prev, oneOffComponents: newComponents };
@@ -249,7 +291,7 @@
             };
 
             const handleRemoveItem = (type, identifier) => {
-                setCurrentPanel(prev => {
+                setCurrentBOM(prev => {
                     if (type === 'assembly') {
                         return { ...prev, assemblies: prev.assemblies.filter(a => a.assemblyId !== identifier) };
                     } else {
@@ -258,67 +300,97 @@
                 });
             };
 
-            const handleSavePanel = async () => {
+            const handleSaveBOM = async () => {
                 try {
                     setIsSaving(true);
-                    await api.panels.save(currentPanel);
-                    alert(`Panel ${currentPanel.panelId} saved successfully!`);
-                    // Reload panel list
-                    const panels = await api.panels.getAll();
-                    setAllPanels(panels);
+
+                    // Create quote object with BOM data
+                    const quoteObject = {
+                        quoteId: currentBOM.quoteId || `CQ${Date.now().toString().slice(-6)}`,
+                        description: currentBOM.description,
+                        bomId: currentBOM.bomId,
+                        bom: expandedBOM,
+                        createdAt: new Date().toISOString(),
+                        status: 'draft'
+                    };
+
+                    await api.quotes.save(quoteObject);
+                    alert(`BOM saved to quote ${quoteObject.quoteId} successfully!`);
+
+                    // Reload quotes list
+                    const quotes = await api.quotes.getAll();
+                    setAllQuotes(quotes);
                 } catch (err) {
-                    console.error("Error saving panel:", err);
-                    alert("Error saving panel. Check console for details.");
+                    console.error("Error saving BOM:", err);
+                    alert("Error saving BOM. Check console for details.");
                 } finally {
                     setIsSaving(false);
                 }
             };
-            
-            const handleLoadPanel = async (panel) => {
-                setCurrentPanel(panel);
-                // Expand immediately
+
+            const handleExportBOM = async () => {
                 try {
-                    setIsExpanding(true);
-                    const bom = await api.panels.expand(panel.panelId);
-                    setExpandedBOM(bom);
-                } catch (err) {
-                    console.error('Error expanding loaded panel:', err);
-                    setExpandedBOM(null);
-                } finally {
-                    setIsExpanding(false);
-                }
-            };
-            
-            const handleDeletePanel = async (panelId) => {
-                if (!confirm(`Delete panel ${panelId}? This cannot be undone.`)) return;
-                
-                try {
-                    await api.panels.delete(panelId);
-                    const panels = await api.panels.getAll();
-                    setAllPanels(panels);
-                    
-                    // If deleted panel was loaded, reset to new panel
-                    if (currentPanel.panelId === panelId) {
-                        createNewPanel();
+                    setIsExporting(true);
+
+                    if (!expandedBOM || !expandedBOM.bom) {
+                        alert('No BOM data to export');
+                        return;
                     }
+
+                    // Create CSV content
+                    const csvHeader = 'SKU,Description,Quantity,Unit Cost,Total Cost,Source,Notes\n';
+                    const csvRows = expandedBOM.bom.map(item =>
+                        `"${item.sku}","${item.component?.description || 'Unknown'}",${item.quantity},"$${item.component?.price || item.component?.cost || 0}","$${item.subtotal.toFixed(2)}","${item.source}","${item.notes || ''}"`
+                    ).join('\n');
+
+                    const csvContent = csvHeader + csvRows;
+
+                    // Create and download file
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `BOM_${currentBOM.bomId}_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    alert('BOM exported successfully!');
                 } catch (err) {
-                    console.error('Error deleting panel:', err);
-                    alert('Error deleting panel. Check console for details.');
+                    console.error('Error exporting BOM:', err);
+                    alert('Error exporting BOM. Check console for details.');
+                } finally {
+                    setIsExporting(false);
                 }
             };
-            
-            const createNewPanel = () => {
-                setCurrentPanel({
-                    panelId: `P-${Date.now().toString().slice(-6)}`,
+
+            const handleLoadQuote = async (quote) => {
+                if (quote.bomId && quote.bom) {
+                    setCurrentBOM({
+                        bomId: quote.bomId,
+                        quoteId: quote.quoteId,
+                        description: quote.description || '',
+                        assemblies: [], // Would need to reverse-engineer from BOM
+                        oneOffComponents: [] // Would need to reverse-engineer from BOM
+                    });
+                    setExpandedBOM(quote.bom);
+                } else {
+                    alert('This quote does not contain BOM data');
+                }
+            };
+
+            const createNewBOM = () => {
+                setCurrentBOM({
+                    bomId: `BOM-${Date.now().toString().slice(-6)}`,
                     quoteId: '',
-                    projectId: '',
                     description: '',
                     assemblies: [],
                     oneOffComponents: []
                 });
                 setExpandedBOM(null);
             };
-            
+
             // Get unique categories and vendors for filters
             // Build dropdown options
             const partSkus = React.useMemo(() => {
@@ -368,7 +440,7 @@
                 });
                 return Array.from(s).sort((a, b) => a.localeCompare(b));
             }, [allComponents]);
-            
+
             // Filter components based on search and filters
             const filteredComponents = React.useMemo(() => {
                 const term = (searchTerm || '').trim().toLowerCase();
@@ -443,13 +515,13 @@
                 }
                 return filtered;
             }, [allComponents, searchTerm, selectedPart, selectedAssembly, selectedTag, assemblySkuMap, sortBy, skuToAssemblies, assemblyIdToLabel]);
-            
+
             const handleAddComponentFromModal = (sku) => {
-                setCurrentPanel(prev => {
+                setCurrentBOM(prev => {
                     const existing = prev.oneOffComponents.find(c => c.sku === sku);
                     let newComponents;
                     if (existing) {
-                        newComponents = prev.oneOffComponents.map(c => 
+                        newComponents = prev.oneOffComponents.map(c =>
                             c.sku === sku ? { ...c, quantity: c.quantity + 1 } : c
                         );
                     } else {
@@ -458,7 +530,7 @@
                     return { ...prev, oneOffComponents: newComponents };
                 });
             };
-            
+
             const handleClearFilters = () => {
                 setSearchTerm('');
                 setSelectedPart('');
@@ -481,58 +553,52 @@
 
             return (
                 <div className="flex flex-col min-h-screen space-y-4">
-                    <h1 className="text-2xl font-bold text-accent">BOM & Panel Builder</h1>
-                    
-                    {/* Top Row: Panel List & Actions */}
+                    <h1 className="text-2xl font-bold text-accent">BOM Builder</h1>
+
+                    {/* Top Row: BOM List & Actions */}
                     <div className="flex flex-col lg:flex-row gap-4">
                         <div className="w-full lg:w-1/3 bg-white p-3 rounded-lg shadow-lg">
-                            <h2 className="text-lg font-semibold mb-2 text-accent">Saved Panels</h2>
-                            <button 
-                                onClick={createNewPanel}
+                            <h2 className="text-lg font-semibold mb-2 text-accent">Saved BOMs</h2>
+                            <button
+                                onClick={createNewBOM}
                                 className="w-full bg-accent hover:bg-orange-600 text-white font-bold py-2 px-4 rounded mb-2 transition-colors">
-                                + Create New Panel
+                                + Create New BOM
                             </button>
                             <div className="max-h-48 overflow-y-auto">
-                                {allPanels.length === 0 && <p className="text-gray-400">No panels saved yet.</p>}
-                                {allPanels.map((panel, idx) => (
-                                    <div key={panel.panelId + '-' + idx} 
+                                {allQuotes.filter(q => q.bom).length === 0 && <p className="text-gray-400">No BOMs saved yet.</p>}
+                                {allQuotes.filter(q => q.bom).map((quote, idx) => (
+                                    <div key={quote.quoteId + '-' + idx}
                                          className="p-2 bg-gray-50 hover:bg-gray-100 rounded mb-1 flex justify-between items-center group">
-                                        <div onClick={() => handleLoadPanel(panel)} className="flex-1 cursor-pointer">
-                                            <p className="font-semibold text-accent">{panel.panelId}</p>
-                                            <p className="text-sm text-gray-300">{panel.description || 'No description'}</p>
+                                        <div onClick={() => handleLoadQuote(quote)} className="flex-1 cursor-pointer">
+                                            <p className="font-semibold text-accent">{quote.bomId || quote.quoteId}</p>
+                                            <p className="text-sm text-gray-300">{quote.description || 'No description'}</p>
                                         </div>
-                                        <button 
-                                            onClick={() => handleDeletePanel(panel.panelId)}
-                                            className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400 px-2 transition-opacity"
-                                            title="Delete panel">
-                                            ✕
-                                        </button>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        
+
                         <div className="flex-1 bg-white p-3 rounded-lg shadow-lg">
-                            <h2 className="text-lg font-semibold mb-2 text-accent">Panel Details</h2>
+                            <h2 className="text-lg font-semibold mb-2 text-accent">BOM Details</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 <input
                                     type="text"
-                                    name="panelId"
-                                    value={currentPanel.panelId}
-                                    onChange={handlePanelInfoChange}
-                                    placeholder="Panel ID"
+                                    name="bomId"
+                                    value={currentBOM.bomId}
+                                    onChange={handleBOMInfoChange}
+                                    placeholder="BOM ID"
                                     className="bg-white text-slateish p-2 rounded col-span-1 md:col-span-2 lg:col-span-3 border border-gray-300 focus:border-accent focus:outline-none"
                                 />
                                 <div className="col-span-1 md:col-span-2 flex flex-col sm:flex-row gap-2">
                                     <input
                                         type="text"
                                         name="quoteId"
-                                        value={currentPanel.quoteId || ''}
-                                        onChange={handlePanelInfoChange}
+                                        value={currentBOM.quoteId || ''}
+                                        onChange={handleBOMInfoChange}
                                         placeholder="Quote ID (e.g., CQ25...)"
                                         className="flex-1 bg-[#3d3935] text-[#f5f0ea] p-2 rounded border border-[#4d4945] focus:border-[#ff6f29] focus:outline-none"
                                     />
-                                    <button 
+                                    <button
                                         onClick={handleImportLastQuote}
                                         className="bg-[#4d4945] hover:bg-[#5d5955] text-[#f5f0ea] px-2 py-2 rounded transition-colors whitespace-nowrap w-full sm:w-auto"
                                         aria-label="Import last quote"
@@ -544,26 +610,18 @@
                                 <input
                                     type="text"
                                     name="description"
-                                    value={currentPanel.description}
-                                    onChange={handlePanelInfoChange}
-                                    placeholder="Panel Description (e.g., Main Brewhouse Control)"
+                                    value={currentBOM.description}
+                                    onChange={handleBOMInfoChange}
+                                    placeholder="BOM Description (e.g., Main Control System)"
                                     className="bg-[#3d3935] text-[#f5f0ea] p-2 rounded col-span-1 md:col-span-2 lg:col-span-3 border border-[#4d4945] focus:border-[#ff6f29] focus:outline-none"
                                 />
-                                <input
-                                    type="text"
-                                    name="projectId"
-                                    value={currentPanel.projectId}
-                                    onChange={handlePanelInfoChange}
-                                    placeholder="Project ID (optional, e.g., CA25...) for reference"
-                                    className="bg-[#3d3935] text-[#f5f0ea] p-2 rounded col-span-1 md:col-span-2 lg:col-span-3 border border-[#4d4945] focus:border-[#ff6f29] focus:outline-none text-sm"
-                                />
                             </div>
-                            
-                            {/* Current Panel Contents Preview */}
+
+                            {/* Current BOM Contents Preview */}
                             <div className="mt-3 text-sm">
                                 <p className="text-gray-400 mb-1">
-                                    <span className="font-semibold text-[#ff6f29]">{currentPanel.assemblies.length}</span> assemblies, 
-                                    <span className="font-semibold text-[#ff6f29] ml-1">{currentPanel.oneOffComponents.length}</span> one-off components
+                                    <span className="font-semibold text-[#ff6f29]">{currentBOM.assemblies.length}</span> assemblies,
+                                    <span className="font-semibold text-[#ff6f29] ml-1">{currentBOM.oneOffComponents.length}</span> one-off components
                                 </p>
                             </div>
                         </div>
@@ -573,15 +631,17 @@
                             <p className="text-4xl font-bold text-green-400">
                                 ${expandedBOM ? expandedBOM.totalCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}
                             </p>
-                            <h2 className="text-lg font-semibold mt-2 text-[#ff6f29]">Total Labor</h2>
-                            <p className="text-3xl font-bold text-blue-400">
-                                {expandedBOM && expandedBOM.totalLaborHours ? expandedBOM.totalLaborHours.toFixed(1) : '0.0'} hrs
-                            </p>
-                            <button 
-                                onClick={handleSavePanel}
-                                disabled={isSaving}
+                            <button
+                                onClick={handleSaveBOM}
+                                disabled={isSaving || !expandedBOM}
                                 className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded mt-4 transition-colors">
-                                {isSaving ? 'Saving...' : 'Save Panel'}
+                                {isSaving ? 'Saving...' : 'Save to Quote'}
+                            </button>
+                            <button
+                                onClick={handleExportBOM}
+                                disabled={isExporting || !expandedBOM}
+                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded mt-2 transition-colors">
+                                {isExporting ? 'Exporting...' : 'Export CSV'}
                             </button>
                             <button
                                 onClick={() => document.getElementById('bomSection')?.scrollIntoView({ behavior: 'smooth' })}
@@ -599,7 +659,7 @@
                         <form onSubmit={handleAddAssembly} className="flex-1 bg-[#2d2925] p-3 rounded-lg shadow-lg">
                             <label className="block text-lg font-semibold mb-2 text-[#ff6f29]" htmlFor="asm-select">Add Assembly</label>
                             <div className="flex flex-col sm:flex-row gap-2">
-                                <select 
+                                <select
                                     id="asm-select"
                                     value={asmAddId}
                                     onChange={e => setAsmAddId(e.target.value)}
@@ -612,8 +672,8 @@
                                         </option>
                                     ))}
                                 </select>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     disabled={!asmAddId}
                                     className="bg-[#ff6f29] hover:bg-[#ff8547] disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded transition-colors w-full sm:w-auto">
                                     Add
@@ -625,7 +685,7 @@
                         <form onSubmit={handleAddComponent} className="flex-1 bg-[#2d2925] p-3 rounded-lg shadow-lg">
                             <label className="block text-lg font-semibold mb-2 text-[#ff6f29]" htmlFor="comp-select">Add One-Off Component</label>
                             <div className="flex flex-col sm:flex-row gap-2">
-                                <select 
+                                <select
                                     id="comp-select"
                                     value={compAddSku}
                                     onChange={e => setCompAddSku(e.target.value)}
@@ -634,17 +694,17 @@
                                     <option value="">Select Component...</option>
                                     {allComponents.slice(0, 50).map((comp, idx) => (
                                         <option key={comp.sku + '-' + idx} value={comp.sku}>
-                                            {comp.description} ({comp.sku}) - ${comp.cost}
+                                            {comp.description} ({comp.sku}) - ${comp.cost || comp.price || 0}
                                         </option>
                                     ))}
                                 </select>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={!compAddSku}
                                     className="bg-[#ff6f29] hover:bg-[#ff8547] disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded transition-colors w-full sm:w-auto">
                                     Add
                                 </button>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setShowComponentModal(true)}
                                     className="bg-[#4d4945] hover:bg-[#5d5955] text-[#f5f0ea] font-bold py-2 px-4 rounded transition-colors w-full sm:w-auto">
@@ -667,21 +727,22 @@
                                         <th className="table-cell text-[#ff6f29]">Source</th>
                                         <th className="table-cell text-right text-[#ff6f29]">Unit Cost</th>
                                         <th className="table-cell text-right text-[#ff6f29]">Total Cost</th>
+                                        <th className="table-cell text-[#ff6f29]">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {expandedBOM && expandedBOM.bom && expandedBOM.bom.map((item, index) => (
                                         <tr key={(item.sku || item.assemblyId) + '-' + index} className="hover:bg-[#3d3935] transition-colors">
                                             <td className="table-cell font-mono text-sm">{item.sku}</td>
-                                            <td className="table-cell">{item.description}</td>
+                                            <td className="table-cell">{item.component?.description || 'Unknown Component'}</td>
                                             <td className="table-cell">
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     min="0"
                                                     value={item.quantity}
                                                     onChange={(e) => {
                                                         // Determine if this is from assembly or one-off
-                                                        const isOneOff = currentPanel.oneOffComponents.some(c => c.sku === item.sku);
+                                                        const isOneOff = currentBOM.oneOffComponents.some(c => c.sku === item.sku);
                                                         handleQuantityChange(isOneOff ? 'component' : 'assembly', item.sku || item.assemblyId, e.target.value);
                                                     }}
                                                     className="w-16 bg-[#3d3935] text-[#f5f0ea] p-1 rounded border border-[#4d4945] focus:border-[#ff6f29] focus:outline-none text-center"
@@ -689,24 +750,35 @@
                                             </td>
                                             <td className="table-cell">
                                                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                    item.source === 'Assembly' ? 'bg-purple-600 text-purple-100' : 
-                                                    item.source === 'One-Off' ? 'bg-yellow-600 text-yellow-100' :
+                                                    item.source.startsWith('Assembly') ? 'bg-purple-600 text-purple-100' :
+                                                    item.source === 'One-off' ? 'bg-yellow-600 text-yellow-100' :
                                                     'bg-blue-600 text-blue-100'
                                                 }`}>
                                                     {item.source}
                                                 </span>
                                             </td>
                                             <td className="table-cell text-right font-mono text-sm">
-                                                ${item.unitCost ? item.unitCost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A'}
+                                                ${(item.component?.price || item.component?.cost || 0).toFixed(2)}
                                             </td>
                                             <td className="table-cell text-right font-mono font-semibold">
-                                                ${item.cost ? item.cost.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}
+                                                ${item.subtotal.toFixed(2)}
+                                            </td>
+                                            <td className="table-cell">
+                                                <button
+                                                    onClick={() => {
+                                                        const isOneOff = currentBOM.oneOffComponents.some(c => c.sku === item.sku);
+                                                        handleRemoveItem(isOneOff ? 'component' : 'assembly', item.sku || item.assemblyId);
+                                                    }}
+                                                    className="text-red-400 hover:text-red-300 px-2 py-1 rounded text-sm"
+                                                    title="Remove item">
+                                                    ✕
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                     {(!expandedBOM || !expandedBOM.bom || expandedBOM.bom.length === 0) && (
                                         <tr>
-                                            <td colSpan="6" className="table-cell text-center text-gray-400 py-8">
+                                            <td colSpan="7" className="table-cell text-center text-gray-400 py-8">
                                                 Add assemblies or components to see the BOM.
                                             </td>
                                         </tr>
@@ -715,7 +787,7 @@
                             </table>
                         </div>
                     </div>
-                    
+
                     {/* Component Search Modal */}
                     {showComponentModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowComponentModal(false)}>
@@ -723,14 +795,14 @@
                                 {/* Modal Header */}
                                 <div className="bg-[#1a1614] p-4 border-b border-[#ff6f29] flex justify-between items-center">
                                     <h2 className="text-2xl font-bold text-[#ff6f29]">Component Catalog Browser</h2>
-                                    <button 
+                                    <button
                                         onClick={() => setShowComponentModal(false)}
                                         className="text-[#f5f0ea] hover:text-[#ff6f29] text-3xl leading-none"
                                         aria-label="Close">
                                         ×
                                     </button>
                                 </div>
-                                
+
                                 {/* Search and Filters */}
                                 <div className="p-4 bg-[#3d3935] border-b border-[#4d4945]">
                                     <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
@@ -789,7 +861,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 {/* Component List */}
                                 <div ref={listRef} className="flex-1 overflow-y-auto p-4">
                                     {filteredComponents.length === 0 ? (
@@ -840,7 +912,7 @@
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 {/* Modal Footer */}
                                 <div className="bg-[#3d3935] p-4 border-t border-[#4d4945] flex justify-end">
                                     <button
@@ -857,7 +929,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<PanelEditor />);
+        root.render(<BOMBuilder />);
     </script>
 </body>
 </html>
