@@ -1,0 +1,32 @@
+[
+  {
+    "code": "100",
+    "name": "Brewhouse",
+    "description": "Brewhouse control systems and automation"
+  },
+  {
+    "code": "108",
+    "name": "Brewhouse (Custom)",
+    "description": "Custom brewhouse control panel"
+  },
+  {
+    "code": "200",
+    "name": "CIP System",
+    "description": "Clean-in-place automation systems"
+  },
+  {
+    "code": "300",
+    "name": "Control Panel",
+    "description": "General purpose control panels"
+  },
+  {
+    "code": "400",
+    "name": "Fermentation",
+    "description": "Fermentation control and monitoring"
+  },
+  {
+    "code": "500",
+    "name": "Glycol System",
+    "description": "Glycol cooling system controls"
+  }
+]

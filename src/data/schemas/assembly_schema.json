@@ -16,19 +16,31 @@
       "description": "A standardized category for sorting assemblies.",
       "type": "string",
       "enum": [
-        "Enclosure",
-        "Disconnect",
-        "Fuse",
-        "Branch Breaker",
+        "ENCLOSURE",
+        "DISCONNECT",
+        "FUSE",
+        "BRANCH BREAKER",
         "PWRDST",
-        "Control",
+        "CONTROL",
         "SAFETY",
         "PLC/COM",
         "MOTOR CONTROL/HEATER CONTROL",
         "WIRING",
         "INSTRUMENT",
-        "PNU"
+        "PNU",
+        "Uncategorized"
       ]
+    },
+    "attributes": {
+      "description": "A key-value map of queryable attributes for this assembly.",
+      "type": "object",
+      "properties": {
+        "voltage": { "type": ["number", "string", "null"] },
+        "amps": { "type": ["number", "string", "null"] },
+        "protection": { "type": ["string", "null"] },
+        "type": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
     },
     "components": {
       "description": "A list of components (from the catalog) required for this assembly.",
@@ -62,7 +74,6 @@
   "required": [
     "assemblyId",
     "description",
-    "components",
-    "category"
+    "components"
   ]
 }

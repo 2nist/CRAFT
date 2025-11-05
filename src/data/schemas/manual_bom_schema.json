@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Manual BOM",
+  "description": "A standalone, one-off Bill of Materials, often for service or a quick quote. Supports versioning.",
+  "type": "object",
+  "properties": {
+    "bomId": {
+      "description": "A unique identifier for this BOM (e.g., BOM-20251103-01).",
+      "type": "string"
+    },
+    "name": {
+      "description": "A human-readable name (e.g., 'Big Grove Service Call BOM').",
+      "type": "string"
+    },
+    "description": {
+      "description": "Optional details about this BOM.",
+      "type": "string"
+    },
+    "tags": {
+      "description": "Tags for filtering (e.g., 'Service', 'R&D', 'Customer:BigGrove').",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "version": {
+      "description": "The version number for this BOM.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "parentId": {
+      "description": "If this is a new version, this ID links to the original BOM.",
+      "type": "string"
+    },
+    "createdAt": {
+      "description": "ISO timestamp of when this BOM version was created.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "assemblies": {
+      "description": "A list of assembly 'kits' included in this BOM.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assemblyId": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["assemblyId", "quantity"]
+      }
+    },
+    "components": {
+      "description": "A list of one-off components added to this BOM.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["sku", "quantity"]
+      }
+    },
+    "costData": {
+      "description": "A snapshot of the costing data at the time of save.",
+      "type": "object",
+      "properties": {
+        "totalMaterialCost": { "type": "number" },
+        "marginPercent": { "type": "number" },
+        "finalPrice": { "type": "number" }
+      }
+    }
+  },
+  "required": ["bomId", "name", "version", "createdAt", "assemblies", "components"]
+}

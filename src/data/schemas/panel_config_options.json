@@ -1,0 +1,36 @@
+{
+  "voltage": [
+    { "value": "208", "label": "208V" },
+    { "value": "230", "label": "230/240V" },
+    { "value": "480", "label": "480V" },
+    { "value": "600", "label": "600V" }
+  ],
+  "phase": [
+    { "value": "1", "label": "1-Phase" },
+    { "value": "3", "label": "3-Phase" }
+  ],
+  "enclosureType": [
+    { "value": "NEMA 12", "label": "NEMA 12 (Painted Steel)" },
+    { "value": "NEMA 4", "label": "NEMA 4 (Painted Steel)" },
+    { "value": "NEMA 4X-SS", "label": "NEMA 4X (Stainless Steel)" },
+    { "value": "NEMA 4X-FG", "label": "NEMA 4X (Fiberglass)" }
+  ],
+  "enclosureRating": [
+    { "value": "UL508A", "label": "UL508A Industrial Control Panel" },
+    { "value": "UL698A", "label": "UL698A (Hazardous Location)" },
+    { "value": "none", "label": "None" }
+  ],
+  "hmiSize": [
+    { "value": "7", "label": "7\" Touch Screen" },
+    { "value": "10", "label": "10\" Touch Screen" },
+    { "value": "12", "label": "12\" Touch Screen" },
+    { "value": "15", "label": "15\" Touch Screen" },
+    { "value": "none", "label": "No HMI" }
+  ],
+  "plcPlatform": [
+    { "value": "AB", "label": "Allen-Bradley (CompactLogix)" },
+    { "value": "IDEC", "label": "IDEC (FC6A)" },
+    { "value": "CLICK", "label": "Automation Direct (Click)" },
+    { "value": "none", "label": "No PLC (Relay Logic)" }
+  ]
+}

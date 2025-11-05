@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Download, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 
+// Component Manager - Sync components from Smartsheet CSV
 export default function ComponentManager({ context, onNavigate }) {
   const [components, setComponents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,18 +40,20 @@ export default function ComponentManager({ context, onNavigate }) {
       addLog("Opening file dialog...");
 
       // 1. Show "Open" dialog
-      const filePath = await window.app.showOpenDialog({
+      const result = await window.app.showOpenDialog({
         title: "Select Smartsheet CSV Export",
         buttonLabel: "Import",
-        filters: [{ name: "CSV", extensions: ["csv"] }]
+        filters: [{ name: "CSV", extensions: ["csv"] }],
+        properties: ['openFile']
       });
 
-      if (!filePath) {
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
         addLog("User canceled dialog.", 'warning');
         setIsSyncing(false);
         return;
       }
 
+      const filePath = result.filePaths[0];
       addLog(`Selected file: ${filePath}`);
 
       // 2. Read the file content
@@ -60,19 +63,21 @@ export default function ComponentManager({ context, onNavigate }) {
 
       // 3. Send content to backend for Smart Sync
       addLog("Starting smart sync... This may take a moment.");
-      const result = await window.components.syncFromCsv(csvContent);
+      console.log('[ComponentManager] Calling syncFromCsv with', csvContent.length, 'bytes');
+      const syncResult = await window.components.syncFromCsv(csvContent);
+      console.log('[ComponentManager] syncResult:', syncResult);
 
-      if (result.success) {
+      if (syncResult.success) {
         addLog(`✓ Sync Complete!`, 'success');
-        addLog(`  → ${result.updated} components updated`, 'success');
-        addLog(`  → ${result.added} new components added`, 'success');
-        setSyncResult(result);
+        addLog(`  → ${syncResult.updated} components updated`, 'success');
+        addLog(`  → ${syncResult.added} new components added`, 'success');
+        setSyncResult(syncResult);
         
         // Reload components to show updated data
         await loadComponents();
       } else {
-        addLog(`✗ Sync Failed: ${result.error}`, 'error');
-        setSyncResult(result);
+        addLog(`✗ Sync Failed: ${syncResult.error}`, 'error');
+        setSyncResult(syncResult);
       }
 
     } catch (error) {

@@ -1,0 +1,32 @@
+{
+  "productCode": 100,
+  "productName": "Brewhouse Control Panel",
+  "availableSections": ["DI", "DO", "AI", "AO"],
+  "defaultAssemblies": ["ASM-DISCONNECT-100A", "ASM-PLC-BASIC"],
+  "requiredAssemblies": ["ASM-ENCLOSURE-24x36"],
+  "optionalAssemblies": ["ASM-HMI-10INCH", "ASM-VFD-5HP", "ASM-SAFETY-ESTOP"],
+  "ioDefaults": {
+    "DI": {
+      "min": 0,
+      "max": 64,
+      "default": 16
+    },
+    "DO": {
+      "min": 0,
+      "max": 64,
+      "default": 16
+    },
+    "AI": {
+      "min": 0,
+      "max": 32,
+      "default": 8
+    },
+    "AO": {
+      "min": 0,
+      "max": 32,
+      "default": 4
+    }
+  },
+  "estimatedBaseLaborHours": 40,
+  "notes": "Standard brewhouse configuration with digital and analog I/O for temperature and valve control."
+}

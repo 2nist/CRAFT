@@ -1,0 +1,82 @@
+Hello! We need to wire up our central "hub" plugin, the ProjectManager.jsx. I have provided the complete React code for this plugin (src/plugins/ProjectManager.jsx).
+
+To make this plugin functional, we need to create the new Pipedrive API it calls and ensure the navigation system is correctly passing the onNavigate prop.
+
+Here is the plan:
+
+1. Create the Pipedrive API (in main.js)
+
+Add a new IPC handler for "pipedrive".
+
+For now, this handler can just return mock data. This is fine for Phase 1.
+
+In main.js:
+
+// Add this new handler
+ipcMain.handle('pipedrive:get-deals', async () => {
+  // TODO: Implement real Pipedrive API call
+  // For now, return mock data
+  return [
+    { id: 'deal_1', title: 'Big Grove - New Brewhouse', org_name: 'Big Grove Brewery', owner_name: 'Sales Rep 1', stage: 'Lead In', value: 50000 },
+    { id: 'deal_2', title: 'Tiny Distillery - CIP Skid', org_name: 'Tiny Distillery', owner_name: 'Sales Rep 2', stage: 'Contact Made', value: 15000 },
+    { id: 'deal_3', title: 'XYZ Food & Bev - Controls Upgrade', org_name: 'XYZ Food', owner_name: 'Sales Rep 1', stage: 'Demo Scheduled', value: 35000 },
+  ];
+});
+
+
+2. Expose the New API (in preload.js)
+
+Add the new pipedrive object to the contextBridge:
+
+pipedrive: {
+  getDeals: () => ipcRenderer.invoke('pipedrive:get-deals')
+}
+
+
+3. Verify App.jsx (The "Shell") is passing onNavigate
+
+This is a check, not a new file. Please ensure that the main src/App.jsx (the "shell") is correctly passing the onNavigate function (which changes the currentPlugin state) to the PluginRenderer.
+
+Example App.jsx logic:
+
+// In App.jsx
+const [currentPlugin, setCurrentPlugin] = useState('hub-dashboard');
+
+// This is the function we must pass
+const handleNavigate = (pluginId, context) => {
+  setPluginContext(context);
+  setCurrentPlugin(pluginId);
+};
+
+return (
+  // ...
+  <PluginRenderer pluginId={currentPlugin} onNavigate={handleNavigate} />
+  // ...
+);
+
+
+Example PluginRenderer.jsx logic:
+
+// In PluginRenderer.jsx
+function PluginRenderer({ pluginId, onNavigate }) {
+  const PluginComponent = pluginMap[pluginId];
+  // ...
+  return (
+    <Suspense fallback={...}>
+      {/* We must pass onNavigate down to the plugin */}
+      <PluginComponent onNavigate={onNavigate} />
+    </Suspense>
+  );
+}
+
+
+4. Verify ProjectManager.jsx is in the pluginMap
+
+Please ensure that PluginRenderer.jsx has the project-manager in its pluginMap:
+
+// In PluginRenderer.jsx
+const pluginMap = {
+  'hub-dashboard': React.lazy(() => import('./plugins/HubDashboard.jsx')),
+  'project-manager': React.lazy(() => import('./plugins/ProjectManager.jsx')), // <-- ENSURE THIS EXISTS
+  // ... all other plugins
+};

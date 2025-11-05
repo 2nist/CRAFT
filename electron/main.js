@@ -2,7 +2,10 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
+import fssync from 'fs'
 import Ajv from 'ajv'
+import Papa from 'papaparse'
+import crypto from 'crypto'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -594,16 +597,24 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
     // Import PapaParse dynamically
     const Papa = (await import('papaparse')).default;
     
+    // Ensure components directory exists
+    const componentsDir = path.join(dataPath, 'components');
+    console.log('Creating directory:', componentsDir);
+    await fs.mkdir(componentsDir, { recursive: true });
+    
     // Path to our master file
-    const catalogPath = path.join(dataPath, 'components', 'component_catalog.json');
+    const catalogPath = path.join(componentsDir, 'component_catalog.json');
+    console.log('Catalog path:', catalogPath);
 
     // 1. Read the existing master catalog
     let masterCatalog = [];
     try {
+      console.log('Attempting to read existing catalog...');
       const masterFileContent = await fs.readFile(catalogPath, 'utf-8');
       masterCatalog = JSON.parse(masterFileContent);
+      console.log('Loaded', masterCatalog.length, 'existing components');
     } catch (e) {
-      console.log("No existing catalog found, will create a new one.");
+      console.log("No existing catalog found, will create a new one.", e.code);
     }
 
     // Create a Map for fast lookups
@@ -667,6 +678,9 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
 
     // 4. Write the updated catalog back to disk
     await fs.writeFile(catalogPath, JSON.stringify(masterCatalog, null, 2));
+    
+    // 5. Reload components into memory
+    loadedComponents = masterCatalog;
 
     return { success: true, updated: updatedCount, added: newCount };
   } catch (error) {
@@ -678,29 +692,46 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
 // Assembly IPC handlers
 
 // Get all assemblies (user data + bundled)
-ipcMain.handle('assemblies:getAll', async () => {
+// Helper to get all assemblies (bundled + user)
+async function getAllAssemblies() {
   try {
-    // Load user assemblies from data directory
-    const userAssemblies = await readJSONFile('assemblies.json') || []
+    // Try to load from assemblies subdirectory first (BOM import location)
+    let userAssemblies = null;
+    try {
+      const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
+      const data = await fs.readFile(assembliesPath, 'utf-8');
+      userAssemblies = JSON.parse(data);
+    } catch (err) {
+      // Fall back to root assemblies.json
+      userAssemblies = await readJSONFile('assemblies.json');
+    }
+    
+    userAssemblies = userAssemblies || [];
     
     // Merge with bundled assemblies (user assemblies take precedence)
-    const allAssemblies = [...loadedAssemblies]
+    const allAssemblies = [...loadedAssemblies];
     
     // Add or update with user assemblies
     for (const userAssembly of userAssemblies) {
-      const existingIndex = allAssemblies.findIndex(a => a.assemblyId === userAssembly.assemblyId)
+      const existingIndex = allAssemblies.findIndex(a => a.assemblyId === userAssembly.assemblyId);
       if (existingIndex >= 0) {
-        allAssemblies[existingIndex] = userAssembly
+        allAssemblies[existingIndex] = userAssembly;
       } else {
-        allAssemblies.push(userAssembly)
+        allAssemblies.push(userAssembly);
       }
     }
     
-    return allAssemblies
+    return allAssemblies;
   } catch (err) {
-    console.error('Error loading assemblies:', err)
-    return loadedAssemblies // Fallback to bundled
+    console.error('Error loading assemblies:', err);
+    return loadedAssemblies;
   }
+}
+
+ipcMain.handle('assemblies:getAll', async () => {
+  const assemblies = await getAllAssemblies();
+  console.log(`Total assemblies available: ${assemblies.length}`);
+  return assemblies;
 })
 
 // Save an assembly (validate against schema first)
@@ -762,10 +793,14 @@ ipcMain.handle('assemblies:delete', async (event, assemblyId) => {
 
 // Search assemblies by filters
 ipcMain.handle('assemblies:search', async (event, filters) => {
-  let results = loadedAssemblies
+  const allAssemblies = await getAllAssemblies();
+  let results = allAssemblies;
   
   if (filters.category) {
     results = results.filter(a => a.category?.toLowerCase().includes(filters.category.toLowerCase()))
+  }
+  if (filters.type) {
+    results = results.filter(a => a.attributes?.type?.toLowerCase().includes(filters.type.toLowerCase()))
   }
   if (filters.assemblyId) {
     results = results.filter(a => a.assemblyId?.toLowerCase().includes(filters.assemblyId.toLowerCase()))
@@ -779,12 +814,14 @@ ipcMain.handle('assemblies:search', async (event, filters) => {
 
 // Get assembly by ID
 ipcMain.handle('assemblies:getById', async (event, assemblyId) => {
-  return loadedAssemblies.find(a => a.assemblyId === assemblyId) || null
+  const allAssemblies = await getAllAssemblies();
+  return allAssemblies.find(a => a.assemblyId === assemblyId) || null
 })
 
 // Expand assembly with full component details and calculate total cost
 ipcMain.handle('assemblies:expand', async (event, assemblyId) => {
-  const assembly = loadedAssemblies.find(a => a.assemblyId === assemblyId)
+  const allAssemblies = await getAllAssemblies();
+  const assembly = allAssemblies.find(a => a.assemblyId === assemblyId)
   if (!assembly) return null
   
   const expandedComponents = assembly.components.map(ac => {
@@ -808,7 +845,8 @@ ipcMain.handle('assemblies:expand', async (event, assemblyId) => {
 
 // Get unique assembly categories
 ipcMain.handle('assemblies:getCategories', async () => {
-  const categories = [...new Set(loadedAssemblies.map(a => a.category).filter(Boolean))]
+  const allAssemblies = await getAllAssemblies();
+  const categories = [...new Set(allAssemblies.map(a => a.category).filter(Boolean))]
   return categories.sort()
 })
 
@@ -890,15 +928,29 @@ ipcMain.handle('schemas:getIndustry', async () => {
 });
 
 ipcMain.handle('schemas:getProduct', async () => {
-  return [
-    { const: 100, description: "Brewery: Brewhouse" },
-    { const: 101, description: "Brewery: 2 Vessel" },
-    { const: 120, description: "Fermentation: Cellar" },
-    { const: 130, description: "Grain: Grain Handling" },
-    { const: 140, description: "Motor Control: Motor" },
-    { const: 160, description: "Sanitary: CIP" },
-    { const: 999, description: "General Product" }
-  ];
+  try {
+    let masterListPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      masterListPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'product_master_list.json');
+    } else {
+      masterListPath = path.join(process.resourcesPath, 'data', 'schemas', 'product_master_list.json');
+    }
+    
+    const data = await fs.readFile(masterListPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error loading product master list:', err);
+    // Fallback to default list
+    return [
+      { code: "100", name: "Brewery: Brewhouse" },
+      { code: "101", name: "Brewery: 2 Vessel" },
+      { code: "120", name: "Fermentation: Cellar" },
+      { code: "130", name: "Grain: Grain Handling" },
+      { code: "140", name: "Motor Control: Motor" },
+      { code: "160", name: "Sanitary: CIP" },
+      { code: "999", name: "General Product" }
+    ];
+  }
 });
 
 ipcMain.handle('schemas:getControl', async () => {
@@ -962,9 +1014,77 @@ const MOCK_SCOPE_SCHEMA = [
 ];
 
 ipcMain.handle('schemas:get-industry', () => { return MOCK_INDUSTRY_SCHEMA; });
-ipcMain.handle('schemas:get-product', () => { return MOCK_PRODUCT_SCHEMA; });
+ipcMain.handle('schemas:get-product', async () => {
+  try {
+    let masterListPath;
+    if (app.isPackaged) {
+      masterListPath = path.join(process.resourcesPath, 'data', 'schemas', 'product_master_list.json');
+    } else {
+      masterListPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'product_master_list.json');
+    }
+    const content = await fs.readFile(masterListPath, 'utf-8');
+    const data = JSON.parse(content);
+    
+    // Transform from {code, name, description} to {const, description} format
+    return data.map(item => ({
+      const: parseInt(item.code),
+      description: `${item.name} (${item.code})`
+    }));
+  } catch (err) {
+    console.error('Error reading product_master_list.json:', err);
+    return MOCK_PRODUCT_SCHEMA; // Fallback to mock data
+  }
+});
 ipcMain.handle('schemas:get-control', () => { return MOCK_CONTROL_SCHEMA; });
 ipcMain.handle('schemas:get-scope', () => { return MOCK_SCOPE_SCHEMA; });
+
+// Panel Config Options IPC handler
+ipcMain.handle('schemas:get-panel-options', async () => {
+  try {
+    let panelOptionsPath;
+    if (app.isPackaged) {
+      panelOptionsPath = path.join(process.resourcesPath, 'data', 'schemas', 'panel_config_options.json');
+    } else {
+      panelOptionsPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'panel_config_options.json');
+    }
+    const data = await fs.readFile(panelOptionsPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error loading panel config options:', err);
+    // Return empty structure if file not found
+    return {
+      voltage: [],
+      phase: [],
+      enclosureType: [],
+      enclosureRating: [],
+      hmiSize: [],
+      plcPlatform: []
+    };
+  }
+});
+
+// Default IO Fields IPC handler
+ipcMain.handle('schemas:get-default-io-fields', async () => {
+  try {
+    let defaultFieldsPath;
+    if (app.isPackaged) {
+      defaultFieldsPath = path.join(process.resourcesPath, 'data', 'schemas', 'default_io_fields.json');
+    } else {
+      defaultFieldsPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'default_io_fields.json');
+    }
+    const data = await fs.readFile(defaultFieldsPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error loading default IO fields:', err);
+    // Return empty structure if file not found
+    return {
+      digitalIn: [],
+      analogIn: [],
+      digitalOut: [],
+      analogOut: []
+    };
+  }
+});
 
 // Customers IPC handlers
 
@@ -1005,15 +1125,32 @@ ipcMain.handle('customers:get-all', () => { return MOCK_CUSTOMERS; });
 // Get product template by product code
 ipcMain.handle('product-templates:get', async (event, productCode) => {
   try {
-    const filePath = path.join(dataPath, 'product-templates', `${productCode}.json`)
-    const data = await fs.readFile(filePath, 'utf-8')
-    return JSON.parse(data)
+    // Try source directory first (for built-in templates)
+    let filePath;
+    if (app.isPackaged) {
+      filePath = path.join(process.resourcesPath, 'data', 'product-templates', `${productCode}.json`);
+    } else {
+      filePath = path.join(__dirname, '..', 'src', 'data', 'product-templates', `${productCode}.json`);
+    }
+    
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      return JSON.parse(data);
+    } catch (sourceErr) {
+      // If not in source, try user data directory (for custom templates)
+      if (sourceErr.code === 'ENOENT') {
+        const userFilePath = path.join(dataPath, 'product-templates', `${productCode}.json`);
+        const data = await fs.readFile(userFilePath, 'utf-8');
+        return JSON.parse(data);
+      }
+      throw sourceErr;
+    }
   } catch (err) {
     if (err.code === 'ENOENT') {
-      return null // Template doesn't exist
+      return null; // Template doesn't exist
     }
-    console.error('Error loading product template:', err)
-    throw err
+    console.error('Error loading product template:', err);
+    throw err;
   }
 })
 
@@ -1048,6 +1185,131 @@ ipcMain.handle('product-templates:save', async (event, templateObject) => {
     return { success: true, path: filePath }
   } catch (err) {
     console.error('Error saving product template:', err)
+    throw err
+  }
+})
+
+// ===========================
+// Manual BOM IPC Handlers
+// ===========================
+
+ipcMain.handle('boms:get-all', async () => {
+  try {
+    const bomsPath = path.join(dataPath, 'manual_boms.json')
+    
+    // Check if file exists
+    try {
+      await fs.access(bomsPath)
+    } catch {
+      // File doesn't exist, return empty array
+      return []
+    }
+    
+    const data = await fs.readFile(bomsPath, 'utf-8')
+    return JSON.parse(data)
+  } catch (err) {
+    console.error('Error reading manual BOMs:', err)
+    throw err
+  }
+})
+
+ipcMain.handle('boms:get-by-id', async (event, bomId) => {
+  try {
+    const bomsPath = path.join(dataPath, 'manual_boms.json')
+    
+    try {
+      await fs.access(bomsPath)
+    } catch {
+      return null
+    }
+    
+    const data = await fs.readFile(bomsPath, 'utf-8')
+    const boms = JSON.parse(data)
+    return boms.find(b => b.bomId === bomId) || null
+  } catch (err) {
+    console.error('Error getting BOM by ID:', err)
+    throw err
+  }
+})
+
+ipcMain.handle('boms:save', async (event, bomToSave) => {
+  try {
+    // Load manual BOM schema
+    let bomSchemaPath
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      bomSchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'manual_bom_schema.json')
+    } else {
+      bomSchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'manual_bom_schema.json')
+    }
+    
+    const schemaData = await fs.readFile(bomSchemaPath, 'utf-8')
+    const bomSchema = JSON.parse(schemaData)
+    const ajv = new Ajv()
+    const validate = ajv.compile(bomSchema)
+    
+    // Validate the BOM
+    const valid = validate(bomToSave)
+    if (!valid) {
+      throw new Error(`Validation failed: ${JSON.stringify(validate.errors)}`)
+    }
+    
+    const bomsPath = path.join(dataPath, 'manual_boms.json')
+    
+    // Read existing BOMs
+    let boms = []
+    try {
+      await fs.access(bomsPath)
+      const data = await fs.readFile(bomsPath, 'utf-8')
+      boms = JSON.parse(data)
+    } catch {
+      // File doesn't exist, start with empty array
+      boms = []
+    }
+    
+    // Always add as new entry (versioning)
+    boms.push(bomToSave)
+    
+    // Write back to file
+    await fs.writeFile(bomsPath, JSON.stringify(boms, null, 2), 'utf-8')
+    
+    return { success: true, bom: bomToSave }
+  } catch (err) {
+    console.error('Error saving BOM:', err)
+    throw err
+  }
+})
+
+ipcMain.handle('boms:expand-bom', async (event, { assemblies, components }) => {
+  try {
+    let totalCost = 0
+    
+    // Expand assemblies
+    for (const item of assemblies) {
+      const assemblyId = item.assemblyId
+      const quantity = item.quantity
+      
+      // Use the existing assemblies:expand logic
+      const expansion = await expandAssembly(assemblyId)
+      if (expansion && expansion.componentCost !== undefined) {
+        totalCost += expansion.componentCost * quantity
+      }
+    }
+    
+    // Expand components
+    for (const item of components) {
+      const sku = item.sku
+      const quantity = item.quantity
+      
+      // Get component price
+      const component = await getComponentBySku(sku)
+      if (component && component.price !== undefined) {
+        totalCost += component.price * quantity
+      }
+    }
+    
+    return { success: true, totalMaterialCost: totalCost }
+  } catch (err) {
+    console.error('Error expanding BOM:', err)
     throw err
   }
 })
@@ -1146,6 +1408,66 @@ ipcMain.handle('api:get-doc-hub-items', async () => {
   }
 });
 
+// Dashboard Settings IPC handlers
+ipcMain.handle('api:get-dashboard-settings', async () => {
+  try {
+    const settingsPath = path.join(dataPath, 'dashboard_settings.json');
+    const defaultPath = isDev 
+      ? path.join(__dirname, '..', 'src', 'data', 'dashboard_settings.json')
+      : path.join(process.resourcesPath, 'app.asar', 'dist', 'dashboard_settings.json');
+    
+    let data;
+    try {
+      data = await fs.readFile(settingsPath, 'utf-8');
+    } catch {
+      // Use default if user settings don't exist
+      data = await fs.readFile(defaultPath, 'utf-8');
+    }
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error loading dashboard settings:', err);
+    return {
+      theme: 'slate',
+      layout: { showRecentQuotes: true, showDocumentHub: true, showUsefulLinks: true, showWelcomeMessage: true },
+      welcomeMessage: { enabled: true, title: 'Welcome to Craft Tools Hub', subtitle: 'Your central hub for quotes, projects, and automation tools', showLogo: true },
+      customization: { accentColor: 'blue', borderRadius: 'lg', fontFamily: 'default' }
+    };
+  }
+});
+
+ipcMain.handle('api:save-dashboard-settings', async (event, settings) => {
+  try {
+    const settingsPath = path.join(dataPath, 'dashboard_settings.json');
+    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error('Error saving dashboard settings:', err);
+    throw err;
+  }
+});
+
+ipcMain.handle('api:save-useful-links', async (event, links) => {
+  try {
+    const linksPath = path.join(dataPath, 'useful_links.json');
+    await fs.writeFile(linksPath, JSON.stringify(links, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error('Error saving useful links:', err);
+    throw err;
+  }
+});
+
+ipcMain.handle('api:save-doc-hub-items', async (event, docs) => {
+  try {
+    const docsPath = path.join(dataPath, 'doc_hub_items.json');
+    await fs.writeFile(docsPath, JSON.stringify(docs, null, 2));
+    return { success: true };
+  } catch (err) {
+    console.error('Error saving doc hub items:', err);
+    throw err;
+  }
+});
+
 ipcMain.handle('api:load-plugin', async (event, pluginId, context) => {
   return ipcMain.handle('app:load-plugin', event, pluginId, context);
 });
@@ -1158,17 +1480,275 @@ ipcMain.handle('shell:open-external', async (event, url) => {
   return { success: true };
 });
 
+// Helper function to log number generation to CSV
+async function logNumberGeneration(type, numberData) {
+  try {
+    const outputDir = path.join(app.getPath('userData'), 'OUTPUT');
+    const csvPath = path.join(outputDir, 'number_log.csv');
+    
+    // Ensure OUTPUT directory exists
+    await fs.mkdir(outputDir, { recursive: true });
+    
+    // Create CSV header if file doesn't exist
+    let fileExists = false;
+    try {
+      await fs.access(csvPath);
+      fileExists = true;
+    } catch (error) {
+      // File doesn't exist, will create with header
+    }
+    
+    const timestamp = new Date().toISOString();
+    const row = `"${timestamp}","${type}","${numberData.mainId}","${numberData.fullId}","${numberData.customerCode}","${numberData.customerName || ''}"`;
+    
+    if (!fileExists) {
+      const header = '"Timestamp","Type","Main ID","Full ID","Customer Code","Customer Name"';
+      await fs.writeFile(csvPath, header + '\n' + row + '\n', 'utf8');
+    } else {
+      await fs.appendFile(csvPath, row + '\n', 'utf8');
+    }
+  } catch (error) {
+    console.error('Error logging number generation:', error);
+  }
+}
+
 // Quote Number Generator IPC handler
-ipcMain.handle('calc:get-quote-number', (event, data) => {
+ipcMain.handle('calc:get-quote-number', async (event, data) => {
   const now = new Date();
   const yy = now.getFullYear().toString().slice(-2);
   const mm = (now.getMonth() + 1).toString().padStart(2, '0');
   const dd = now.getDate().toString().padStart(2, '0');
-  const cust = data.customerCode || "XX";
-  const seq = "0"; // Sequence number, hardcoded for now
+  const cust = data.customerCode ? data.customerCode.toString().padStart(3, '0') : "000";
+  const seq = "00"; // Sequence number, hardcoded for now
   
-  const mainId = `CQ${yy}${mm}${dd}${cust}`;
+  const mainId = `CA${yy}${mm}${dd}${cust}`;
   const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
+  
+  // Log to CSV
+  const customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
+  await logNumberGeneration('Quote', { mainId, fullId, customerCode: cust, customerName });
   
   return { mainId, fullId };
 });
+
+ipcMain.handle('calc:get-project-number', async (event, data) => {
+  const now = new Date();
+  const yy = now.getFullYear().toString().slice(-2);
+  const cust = data.customerCode ? data.customerCode.toString().padStart(3, '0') : "000";
+  const po = data.poNumber || "0000"; // 4-digit PO number
+  
+  const mainId = `CA${yy}${po}${cust}`;
+  const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}`;
+  
+  // Log to CSV
+  const customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
+  await logNumberGeneration('Project', { mainId, fullId, customerCode: cust, customerName });
+  
+  return { mainId, fullId };
+});
+
+// BOM Importer IPC handlers
+
+// Smart CSV header detection - finds the header row automatically
+ipcMain.handle('bom-importer:get-csv-headers', async (event, csvContent) => {
+  try {
+    // Parse first 20 rows to find the header
+    const parsed = Papa.parse(csvContent, { preview: 20, header: false });
+    
+    // Helper function to normalize header names for comparison
+    const normalizeHeader = (str) => {
+      return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+    
+    // Find the first row that looks like our header
+    for (let i = 0; i < parsed.data.length; i++) {
+      const row = parsed.data[i];
+      const normalizedRow = row.map(h => normalizeHeader(h));
+      
+      // Check if this row contains the required header fields (case-insensitive, no spaces)
+      const hasProductName = normalizedRow.some(h => h === 'productname');
+      const hasAssemblyName = normalizedRow.some(h => h === 'assemblyname');
+      const hasSku = normalizedRow.some(h => h === 'sku' || h === 'componentsku');
+      const hasQuantity = normalizedRow.some(h => h === 'quantity' || h === 'qty');
+      
+      if (hasProductName && hasAssemblyName && hasSku && hasQuantity) {
+        return { headers: row, headerRowIndex: i };
+      }
+    }
+    
+    // If not found, return empty
+    return { headers: [], headerRowIndex: 0 };
+  } catch (err) {
+    console.error('Error parsing CSV headers:', err);
+    throw err;
+  }
+});
+
+// Process full BOM import with attributes support
+ipcMain.handle('bom-importer:process-import', async (event, { csvContent, headerRowIndex, columnMap, productCodeMap }) => {
+  try {
+    // 1. Slice CSV content to start from header row
+    const lines = csvContent.split('\n');
+    const csvFromHeader = lines.slice(headerRowIndex).join('\n');
+    
+    // Parse the CSV starting from header
+    const parsed = Papa.parse(csvFromHeader, { header: true, skipEmptyLines: true });
+    
+    // 2. Determine paths
+    const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
+    const masterListPath = path.join(dataPath, 'schemas', 'product_master_list.json');
+    const templatesPath = path.join(dataPath, 'product-templates');
+    
+    // Ensure directories exist
+    await fs.mkdir(path.join(dataPath, 'assemblies'), { recursive: true });
+    await fs.mkdir(path.join(dataPath, 'schemas'), { recursive: true });
+    await fs.mkdir(templatesPath, { recursive: true });
+    
+    // 3. Load data files
+    let assemblies = [];
+    try {
+      const assembliesData = fssync.readFileSync(assembliesPath, 'utf-8');
+      assemblies = JSON.parse(assembliesData);
+    } catch (err) {
+      console.log('Creating new assemblies.json');
+      assemblies = [];
+    }
+    
+    let masterList = [];
+    try {
+      const masterData = fssync.readFileSync(masterListPath, 'utf-8');
+      masterList = JSON.parse(masterData);
+    } catch (err) {
+      console.log('Creating new product_master_list.json');
+      masterList = [];
+    }
+    
+    // Load product templates
+    const templates = {};
+    try {
+      const templateFiles = await fs.readdir(templatesPath);
+      for (const file of templateFiles) {
+        if (file.endsWith('.json')) {
+          const templateData = fssync.readFileSync(path.join(templatesPath, file), 'utf-8');
+          const template = JSON.parse(templateData);
+          templates[template.productCode] = template;
+        }
+      }
+    } catch (err) {
+      console.log('No existing templates');
+    }
+    
+    // 4. Create lookup maps
+    const assemblyLookup = new Map(assemblies.map(a => [a.description, a]));
+    
+    // Track stats
+    const initialAssemblyCount = assemblies.length;
+    const updatedProducts = new Set();
+    
+    // 5. Process each row
+    for (const row of parsed.data) {
+      const assemblyName = row[columnMap.assemblyName];
+      const sku = row[columnMap.sku];
+      const quantity = parseInt(row[columnMap.quantity]) || 1;
+      const productName = row[columnMap.productName];
+      
+      // Skip if missing required fields
+      if (!assemblyName || !sku) continue;
+      
+      // Build attributes object from optional columns
+      const attributes = {};
+      if (columnMap.voltage && row[columnMap.voltage]) attributes.voltage = row[columnMap.voltage];
+      if (columnMap.amps && row[columnMap.amps]) attributes.amps = row[columnMap.amps];
+      if (columnMap.protection && row[columnMap.protection]) attributes.protection = row[columnMap.protection];
+      if (columnMap.type && row[columnMap.type]) attributes.type = row[columnMap.type];
+      
+      // 6. Handle product mapping (create new products if needed)
+      let productCode;
+      const mapping = productCodeMap[productName];
+      
+      if (typeof mapping === 'object') {
+        // Create new product
+        productCode = mapping.newCode;
+        if (!masterList.find(p => p.code === productCode)) {
+          masterList.push({
+            code: mapping.newCode,
+            name: mapping.newName,
+            description: `Imported from BOM: ${mapping.newName}`
+          });
+        }
+      } else {
+        productCode = mapping;
+      }
+      
+      // 7. Find or create assembly
+      let assembly = assemblyLookup.get(assemblyName);
+      
+      if (!assembly) {
+        // Create new assembly
+        assembly = {
+          assemblyId: `ASM-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+          description: assemblyName,
+          category: row[columnMap.category] || 'Uncategorized',
+          attributes: {},
+          components: []
+        };
+        assemblies.push(assembly);
+        assemblyLookup.set(assemblyName, assembly);
+      }
+      
+      // 8. Update assembly attributes (merge with existing)
+      Object.assign(assembly.attributes, attributes);
+      
+      // 9. Add component to assembly (check for duplicates)
+      const existingComponent = assembly.components.find(c => c.sku === sku);
+      if (!existingComponent) {
+        assembly.components.push({
+          sku,
+          quantity,
+          notes: row[columnMap.notes] || ''
+        });
+      }
+      
+      // 10. Update product template
+      if (!templates[productCode]) {
+        // Create new product template
+        templates[productCode] = {
+          productCode,
+          productName: masterList.find(p => p.code === productCode)?.name || productName,
+          assemblies: {
+            required: [],
+            optional: []
+          }
+        };
+      }
+      
+      // Add assembly to product template's optional list
+      if (!templates[productCode].assemblies.optional.includes(assembly.assemblyId)) {
+        templates[productCode].assemblies.optional.push(assembly.assemblyId);
+      }
+      
+      updatedProducts.add(productCode);
+    }
+    
+    // 11. Write all updated data back to files
+    await fs.writeFile(assembliesPath, JSON.stringify(assemblies, null, 2));
+    await fs.writeFile(masterListPath, JSON.stringify(masterList, null, 2));
+    
+    // Write updated product templates
+    for (const [code, template] of Object.entries(templates)) {
+      const templatePath = path.join(templatesPath, `${code}.json`);
+      await fs.writeFile(templatePath, JSON.stringify(template, null, 2));
+    }
+    
+    return {
+      success: true,
+      assembliesCreated: assemblies.length - initialAssemblyCount,
+      productsUpdated: updatedProducts.size
+    };
+    
+  } catch (err) {
+    console.error('Error processing BOM import:', err);
+    return { success: false, error: err.message };
+  }
+});
+

@@ -11,6 +11,9 @@ const pluginMap = {
   'number-generator': lazy(() => import('./plugins/NumberGenerator.jsx')),
   'fla-calc': lazy(() => import('./plugins/FlaCalculator.jsx')),
   'margin-calc': lazy(() => import('./plugins/MarginCalculator.jsx')),
+  'bom-importer': lazy(() => import('./plugins/LegacyBomImporter.jsx')),
+  'manual-bom-builder': lazy(() => import('./plugins/ManualBomBuilder.jsx')),
+  'settings': lazy(() => import('./Settings.jsx')),
 };
 
 /**

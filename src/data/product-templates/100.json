@@ -1,31 +1,48 @@
 {
   "productCode": 100,
   "productName": "Brewhouse Control Panel",
-  "availableSections": ["DI", "DO", "AI", "AO"],
-  "defaultAssemblies": ["ASM-DISCONNECT-100A", "ASM-PLC-BASIC"],
-  "requiredAssemblies": ["ASM-ENCLOSURE-24x36"],
-  "optionalAssemblies": ["ASM-HMI-10INCH", "ASM-VFD-5HP", "ASM-SAFETY-ESTOP"],
-  "ioDefaults": {
-    "DI": {
-      "min": 0,
-      "max": 64,
-      "default": 16
-    },
-    "DO": {
-      "min": 0,
-      "max": 64,
-      "default": 16
-    },
-    "AI": {
-      "min": 0,
-      "max": 32,
-      "default": 8
-    },
-    "AO": {
-      "min": 0,
-      "max": 32,
-      "default": 4
-    }
+  "fields": {
+    "digitalIn": [
+      {
+        "fieldName": "Digital Inputs (DI)",
+        "fieldType": "Number",
+        "defaultValue": 16,
+        "min": 0,
+        "max": 64
+      }
+    ],
+    "digitalOut": [
+      {
+        "fieldName": "Digital Outputs (DO)",
+        "fieldType": "Number",
+        "defaultValue": 16,
+        "min": 0,
+        "max": 64
+      }
+    ],
+    "analogIn": [
+      {
+        "fieldName": "Analog Inputs (AI)",
+        "fieldType": "Number",
+        "defaultValue": 8,
+        "min": 0,
+        "max": 32
+      }
+    ],
+    "analogOut": [
+      {
+        "fieldName": "Analog Outputs (AO)",
+        "fieldType": "Number",
+        "defaultValue": 4,
+        "min": 0,
+        "max": 32
+      }
+    ]
+  },
+  "assemblies": {
+    "required": ["ASM-ENCLOSURE-24x36"],
+    "recommended": ["ASM-DISCONNECT-100A", "ASM-PLC-BASIC"],
+    "optional": ["ASM-HMI-10INCH", "ASM-VFD-5HP", "ASM-SAFETY-ESTOP"]
   },
   "estimatedBaseLaborHours": 40,
   "notes": "Standard brewhouse configuration with digital and analog I/O for temperature and valve control."

@@ -1,0 +1,123 @@
+{
+  "productCode": 108,
+  "productName": "Brewhouse Control Panel",
+  "fields": {
+    "digitalIn": [
+      {
+        "fieldName": "Level Switch",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "DI-CARD" }
+      },
+      {
+        "fieldName": "Flow Switch",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "DI-CARD" }
+      },
+      {
+        "fieldName": "Proximity Switch",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "DI-CARD" }
+      },
+      {
+        "fieldName": "Pushbutton / E-Stop",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "CONTROL", "type": "PILOT" }
+      }
+    ],
+    "digitalOut": [
+      {
+        "fieldName": "Motor",
+        "fieldType": "List",
+        "listOptions": [
+          { "value": "VFD", "label": "VFD", "bomLogic": { "category": "MOTOR CONTROL", "type": "VFD" } },
+          { "value": "CONTACTOR", "label": "On/Off Contactor", "bomLogic": { "category": "MOTOR CONTROL", "type": "CONTACTOR" } }
+        ],
+        "bomLogic": {}
+      },
+      {
+        "fieldName": "Heater",
+        "fieldType": "List",
+        "listOptions": [
+          { "value": "SSR", "label": "Solid State Relay (PID)", "bomLogic": { "category": "HEATER CONTROL", "type": "SSR" } },
+          { "value": "CONTACTOR", "label": "On/Off Contactor", "bomLogic": { "category": "HEATER CONTROL", "type": "CONTACTOR" } }
+        ],
+        "bomLogic": {}
+      },
+      {
+        "fieldName": "Solenoid Valve (On/Off)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "DO-CARD" }
+      }
+    ],
+    "analogIn": [
+      {
+        "fieldName": "Temp Sensor (RTD)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "RTD-CARD" }
+      },
+      {
+        "fieldName": "Temp Sensor (TC)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "TC-CARD" }
+      },
+      {
+        "fieldName": "Pressure Transmitter (4-20mA)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "AI-CARD" }
+      },
+      {
+        "fieldName": "Level Transmitter (4-20mA)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "AI-CARD" }
+      },
+      {
+        "fieldName": "Flow Meter (4-20mA)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "AI-CARD" }
+      },
+      {
+        "fieldName": "Flow Meter (Pulse)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "HSC-CARD" }
+      },
+      {
+        "fieldName": "Load Cell (4-20mA)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "AI-CARD" }
+      }
+    ],
+    "analogOut": [
+      {
+        "fieldName": "Modulating Valve (4-20mA)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "AO-CARD" }
+      },
+      {
+        "fieldName": "VFD Speed Reference (4-20mA)",
+        "fieldType": "Boolean",
+        "listOptions": [],
+        "bomLogic": { "category": "PLC/COM", "type": "AO-CARD" }
+      }
+    ]
+  },
+  "assemblies": {
+    "required": [],
+    "recommended": [],
+    "optional": []
+  },
+  "estimatedBaseLaborHours": 40,
+  "notes": "Brewhouse control panel with digital and analog I/O for temperature, valve, and motor control."
+}

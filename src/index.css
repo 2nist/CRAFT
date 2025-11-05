@@ -24,8 +24,9 @@
     --secondary-foreground: 0 0% 9%;
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --accent-hsl: 217 91% 60%; /* Default blue accent */
+    --accent: var(--accent-hsl); /* Use accent-hsl for accent color */
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
@@ -38,7 +39,71 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
-  .dark {
+  
+  /* Theme variations - slate (default) */
+  .dark.theme-slate, .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: var(--accent-hsl);
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+  
+  .dark.theme-zinc {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: var(--accent-hsl);
+    --accent-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+  
+  .dark.theme-stone {
+    --background: 20 14.3% 4.1%;
+    --foreground: 60 9.1% 97.8%;
+    --card: 20 14.3% 4.1%;
+    --card-foreground: 60 9.1% 97.8%;
+    --popover: 20 14.3% 4.1%;
+    --popover-foreground: 60 9.1% 97.8%;
+    --primary: 60 9.1% 97.8%;
+    --primary-foreground: 24 9.8% 10%;
+    --secondary: 12 6.5% 15.1%;
+    --secondary-foreground: 60 9.1% 97.8%;
+    --muted: 12 6.5% 15.1%;
+    --muted-foreground: 24 5.4% 63.9%;
+    --accent: var(--accent-hsl);
+    --accent-foreground: 60 9.1% 97.8%;
+    --border: 12 6.5% 15.1%;
+    --input: 12 6.5% 15.1%;
+    --ring: 24 5.7% 82.9%;
+  }
+  
+  .dark.theme-gray {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
     --card: 0 0% 3.9%;
@@ -51,19 +116,61 @@
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
+    --accent: var(--accent-hsl);
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
   }
+  
+  .dark.theme-neutral {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 64.9%;
+    --accent: var(--accent-hsl);
+    --accent-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 82.9%;
+  }
+}
+
+/* Accent color overrides - apply custom accent color to blue classes */
+.text-blue-600, .text-blue-500, .text-blue-400 {
+  color: hsl(var(--accent-hsl)) !important;
+}
+
+.bg-blue-600, .bg-blue-500 {
+  background-color: hsl(var(--accent-hsl)) !important;
+}
+
+.bg-blue-50 {
+  background-color: hsl(var(--accent-hsl) / 0.1) !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: hsl(var(--accent-hsl) / 0.15) !important;
+}
+
+.border-blue-600, .border-blue-500, .border-blue-400 {
+  border-color: hsl(var(--accent-hsl)) !important;
+}
+
+.hover\:bg-blue-600:hover, .hover\:bg-blue-700:hover {
+  background-color: hsl(var(--accent-hsl) / 0.9) !important;
+}
+
+.hover\:border-blue-500:hover {
+  border-color: hsl(var(--accent-hsl)) !important;
 }
 
 /* Background watermark/logo overlay - commented out due to missing file */
@@ -90,7 +197,11 @@
 
 @layer components {
   .ca-input {
-    @apply w-full px-[0.4rem] py-[0.4rem] bg-white border border-gray-300 rounded-xs2 text-basec text-slateish transition focus:outline-none focus:border-accent focus:ring-2 focus:ring-[rgba(214,127,92,0.2)];
+    @apply w-full px-[0.4rem] py-[0.4rem] bg-white border border-gray-300 rounded-xs2 text-basec text-slateish transition focus:outline-none focus:border-accent focus:ring-2;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  .ca-input:focus {
+    box-shadow: 0 0 0 2px hsl(var(--accent-hsl) / 0.2);
   }
   .ca-select { @apply ca-input; }
   .ca-label { @apply block mb-[0.1rem] text-sm font-medium text-slateish; }
@@ -98,7 +209,7 @@
   .ca-stat {
     @apply bg-white px-[0.75rem] py-[0.4rem] rounded-sm2 shadow-card flex flex-col justify-center transition;
   }
-  .ca-stat-title { @apply text-xs2 font-medium uppercase tracking-wider text-slateish; }
+  .ca-stat-title { @apply font-medium tracking-wider uppercase text-xs2 text-slateish; }
   .ca-stat-value { @apply text-base font-bold text-accent mt-[0.1rem] break-words; }
 
   .ca-tabs { @apply border-b-2 border-tea mb-[-2px]; }
@@ -108,7 +219,7 @@
   .ca-tab:not(.active):hover { @apply bg-eggshell text-accent; }
   .ca-tab.active {
     @apply text-accent bg-eggshell;
-    border-bottom: 3px solid #D67F5C;
+    border-bottom: 3px solid hsl(var(--accent-hsl));
   }
   .ca-tab-panel { @apply bg-eggshell p-[0.75rem] rounded-sm2 shadow-panel; }
 
@@ -118,15 +229,22 @@
   .ca-price-hero { @apply text-lgp; }
 
   .ca-btn {
-    @apply bg-accent text-white font-semibold rounded-xs2 px-4 py-2 text-sm shadow-sm transition-colors;
+    @apply px-4 py-2 text-sm font-semibold text-white transition-colors shadow-sm bg-accent rounded-xs2;
   }
-  .ca-btn:focus { @apply outline-none ring-2 ring-[rgba(214,127,92,0.2)] ring-offset-2; }
-  .ca-btn:hover { background-color: #c66d4d; }
+  .ca-btn:focus { 
+    @apply outline-none ring-offset-2;
+    box-shadow: 0 0 0 2px hsl(var(--accent-hsl) / 0.2);
+  }
+  .ca-btn:hover { 
+    background-color: hsl(var(--accent-hsl) / 0.85);
+  }
 
   .ca-btn-outline {
-    @apply bg-transparent text-accent border border-accent rounded-xs2 px-4 py-2 text-sm transition-colors;
+    @apply px-4 py-2 text-sm transition-colors bg-transparent border text-accent border-accent rounded-xs2;
   }
-  .ca-btn-outline:hover { background-color: rgba(214,127,92,0.08); }
+  .ca-btn-outline:hover { 
+    background-color: hsl(var(--accent-hsl) / 0.08);
+  }
 }
 
 input[type="number"] {

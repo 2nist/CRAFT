@@ -73,7 +73,9 @@ contextBridge.exposeInMainWorld('schemas', {
   getIndustry: () => ipcRenderer.invoke('schemas:get-industry'),
   getProduct: () => ipcRenderer.invoke('schemas:get-product'),
   getControl: () => ipcRenderer.invoke('schemas:get-control'),
-  getScope: () => ipcRenderer.invoke('schemas:get-scope')
+  getScope: () => ipcRenderer.invoke('schemas:get-scope'),
+  getPanelOptions: () => ipcRenderer.invoke('schemas:get-panel-options'),
+  getDefaultIoFields: () => ipcRenderer.invoke('schemas:get-default-io-fields')
 })
 
 // Expose customers API
@@ -83,13 +85,22 @@ contextBridge.exposeInMainWorld('customers', {
 
 // Expose calculator API
 contextBridge.exposeInMainWorld('calc', {
-  getQuoteNumber: (data) => ipcRenderer.invoke('calc:get-quote-number', data)
+  getQuoteNumber: (data) => ipcRenderer.invoke('calc:get-quote-number', data),
+  getProjectNumber: (data) => ipcRenderer.invoke('calc:get-project-number', data)
 })
 
 // Expose product templates API
 contextBridge.exposeInMainWorld('productTemplates', {
   get: (productCode) => ipcRenderer.invoke('product-templates:get', productCode),
   save: (template) => ipcRenderer.invoke('product-templates:save', template),
+})
+
+// Expose manual BOMs API
+contextBridge.exposeInMainWorld('boms', {
+  getAll: () => ipcRenderer.invoke('boms:get-all'),
+  getById: (bomId) => ipcRenderer.invoke('boms:get-by-id', bomId),
+  save: (bomObj) => ipcRenderer.invoke('boms:save', bomObj),
+  expand: (bomData) => ipcRenderer.invoke('boms:expand-bom', bomData)
 })
 
 // Expose app API for file I/O
@@ -119,5 +130,15 @@ contextBridge.exposeInMainWorld('api', {
   getUsefulLinks: () => ipcRenderer.invoke('api:get-useful-links'),
   getDocHubItems: () => ipcRenderer.invoke('api:get-doc-hub-items'),
   getPluginRegistry: () => ipcRenderer.invoke('api:get-plugin-registry'),
-  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url)
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  getDashboardSettings: () => ipcRenderer.invoke('api:get-dashboard-settings'),
+  saveDashboardSettings: (settings) => ipcRenderer.invoke('api:save-dashboard-settings', settings),
+  saveUsefulLinks: (links) => ipcRenderer.invoke('api:save-useful-links', links),
+  saveDocHubItems: (docs) => ipcRenderer.invoke('api:save-doc-hub-items', docs)
+})
+
+// Expose BOM Importer API
+contextBridge.exposeInMainWorld('bomImporter', {
+  getCsvHeaders: (csvContent) => ipcRenderer.invoke('bom-importer:get-csv-headers', csvContent),
+  processImport: (data) => ipcRenderer.invoke('bom-importer:process-import', data)
 })

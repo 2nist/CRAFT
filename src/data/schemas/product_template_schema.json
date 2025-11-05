@@ -1,93 +1,105 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Product Template",
-  "description": "Configuration template for a specific product type, defining which I/O sections and assemblies are available.",
+  "description": "Defines the configurable 'smart' form and logic for a specific Product Code.",
   "type": "object",
   "properties": {
     "productCode": {
-      "description": "The Product Code this template applies to (e.g., 100, 140).",
+      "description": "The Product Code this template is for (e.g., 100, 108).",
       "type": "number"
     },
     "productName": {
-      "description": "The name of the product (e.g., 'Brewhouse', 'Motor Control').",
+      "description": "The human-readable name of the product (e.g., 'Brewhouse Control Panel').",
       "type": "string"
     },
-    "availableSections": {
-      "description": "Which of the 4 main I/O sections are enabled for this product.",
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": ["DI", "DO", "AI", "AO"]
-      }
-    },
-    "defaultAssemblies": {
-      "description": "A list of assembly IDs that should be pre-selected for this product type.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "requiredAssemblies": {
-      "description": "A list of assembly IDs that are always required (cannot be removed).",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "optionalAssemblies": {
-      "description": "A list of assembly IDs that can be optionally added.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "ioDefaults": {
-      "description": "Default I/O counts for each section.",
-      "type": "object",
-      "properties": {
-        "DI": {
-          "type": "object",
-          "properties": {
-            "min": { "type": "number", "minimum": 0 },
-            "max": { "type": "number", "minimum": 0 },
-            "default": { "type": "number", "minimum": 0 }
-          }
-        },
-        "DO": {
-          "type": "object",
-          "properties": {
-            "min": { "type": "number", "minimum": 0 },
-            "max": { "type": "number", "minimum": 0 },
-            "default": { "type": "number", "minimum": 0 }
-          }
-        },
-        "AI": {
-          "type": "object",
-          "properties": {
-            "min": { "type": "number", "minimum": 0 },
-            "max": { "type": "number", "minimum": 0 },
-            "default": { "type": "number", "minimum": 0 }
-          }
-        },
-        "AO": {
-          "type": "object",
-          "properties": {
-            "min": { "type": "number", "minimum": 0 },
-            "max": { "type": "number", "minimum": 0 },
-            "default": { "type": "number", "minimum": 0 }
-          }
-        }
-      }
-    },
     "estimatedBaseLaborHours": {
-      "description": "Base labor hours for this product type (before assemblies).",
+      "description": "The default starting labor hours for this product, before assemblies.",
       "type": "number",
       "minimum": 0
     },
     "notes": {
-      "description": "Additional configuration notes or instructions.",
+      "description": "Internal engineering notes about this product template.",
       "type": "string"
+    },
+    "fields": {
+      "description": "The dynamic form fields for each I/O section.",
+      "type": "object",
+      "properties": {
+        "digitalIn": { "$ref": "#/definitions/fieldArray" },
+        "analogIn": { "$ref": "#/definitions/fieldArray" },
+        "digitalOut": { "$ref": "#/definitions/fieldArray" },
+        "analogOut": { "$ref": "#/definitions/fieldArray" }
+      }
+    },
+    "assemblies": {
+      "description": "Assembly requirements for this product.",
+      "type": "object",
+      "properties": {
+        "required": {
+          "description": "Assemblies that are *always* added to the BOM.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "recommended": {
+          "description": "Assemblies recommended but not required.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "optional": {
+          "description": "Assemblies available to be added.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
     }
   },
-  "required": ["productCode", "productName", "availableSections"]
+  "required": ["productCode", "productName", "fields", "assemblies"],
+  "definitions": {
+    "fieldArray": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fieldName": { "type": "string" },
+          "fieldType": { "type": "string", "enum": ["Text", "Number", "Boolean", "List"] },
+          "defaultValue": { 
+            "description": "Default value for the field",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" }
+            ]
+          },
+          "min": { 
+            "type": "number",
+            "description": "Minimum value for Number fields"
+          },
+          "max": { 
+            "type": "number",
+            "description": "Maximum value for Number fields"
+          },
+          "listOptions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "bomLogic": {
+                  "type": "object",
+                  "description": "The search query to find a matching assembly.",
+                  "properties": {
+                    "category": { "type": "string" },
+                    "description": { "type": "string" },
+                    "amps": { "type": "number" }
+                  }
+                }
+              },
+              "required": ["name"]
+            }
+          }
+        },
+        "required": ["fieldName", "fieldType"]
+      }
+    }
+  }
 }

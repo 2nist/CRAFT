@@ -1,0 +1,188 @@
+{
+  "digitalIn": [
+    {
+      "fieldName": "E-Stop P-Button",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "SAFETY", "type": "E-Stop" }
+    },
+    {
+      "fieldName": "Level Switch (High)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "INSTRUMENT", "type": "Level Switch" }
+    },
+    {
+      "fieldName": "Level Switch (Low)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "INSTRUMENT", "type": "Level Switch" }
+    },
+    {
+      "fieldName": "Bin Level Switch (Rotary)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "INSTRUMENT", "type": "Bin Level" }
+    },
+    {
+      "fieldName": "Flow Switch",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "INSTRUMENT", "type": "Flow Switch" }
+    },
+    {
+      "fieldName": "Pressure Switch",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "INSTRUMENT", "type": "Pressure Switch" }
+    },
+    {
+      "fieldName": "Proximity Switch",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "INSTRUMENT", "type": "Proximity" }
+    },
+    {
+      "fieldName": "Selector Switch (Hand/Off/Auto)",
+      "fieldType": "List",
+      "listOptions": [
+        { "value": "Hand", "label": "Hand", "bomLogic": { "category": "CONTROL", "type": "Switch-3Pos" } },
+        { "value": "Off", "label": "Off", "bomLogic": null },
+        { "value": "Auto", "label": "Auto", "bomLogic": null }
+      ],
+      "bomLogic": {}
+    },
+    {
+      "fieldName": "Push-Button (Start)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "CONTROL", "type": "P-Button-Green" }
+    },
+    {
+      "fieldName": "Push-Button (Stop)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "CONTROL", "type": "P-Button-Red" }
+    }
+  ],
+  "analogIn": [
+    {
+      "fieldName": "Temp Sensor (RTD)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-RTD-Card" }
+    },
+    {
+      "fieldName": "Temp Sensor (Thermocouple)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-TC-Card" }
+    },
+    {
+      "fieldName": "Level Transmitter (4-20mA)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+    },
+    {
+      "fieldName": "Pressure Transmitter (4-20mA)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+    },
+    {
+      "fieldName": "Bin Level Sensor (Analog)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+    },
+    {
+      "fieldName": "Flow Meter (Pulse)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "DI-HighSpeed-Card" }
+    },
+    {
+      "fieldName": "Flow Meter (Analog/Mag)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+    },
+    {
+      "fieldName": "Load Cell",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-LoadCell-Card" }
+    },
+    {
+      "fieldName": "Conductivity Sensor (Analog)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+    },
+    {
+      "fieldName": "pH Sensor (Analog)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+    }
+  ],
+  "digitalOut": [
+    {
+      "fieldName": "Motor (On/Off)",
+      "fieldType": "Number",
+      "listOptions": [],
+      "bomLogic": { "category": "MOTOR CONTROL", "type": "CONTACTOR" }
+    },
+    {
+      "fieldName": "Motor (VFD)",
+      "fieldType": "Number",
+      "listOptions": [],
+      "bomLogic": { "category": "MOTOR CONTROL", "type": "VFD" }
+    },
+    {
+      "fieldName": "Heater (On/Off)",
+      "fieldType": "Number",
+      "listOptions": [],
+      "bomLogic": { "category": "HEATER CONTROL", "type": "CONTACTOR" }
+    },
+    {
+      "fieldName": "Heater (SSR)",
+      "fieldType": "Number",
+      "listOptions": [],
+      "bomLogic": { "category": "HEATER CONTROL", "type": "SSR" }
+    },
+    {
+      "fieldName": "Solenoid Valve (On/Off)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "CONTROL", "type": "DO-Relay-Output" }
+    },
+    {
+      "fieldName": "Pneumatic Valve (On/Off)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PNU", "type": "Solenoid-Bank" }
+    },
+    {
+      "fieldName": "Indicator Light (Pilot)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "CONTROL", "type": "Pilot-Light" }
+    }
+  ],
+  "analogOut": [
+    {
+      "fieldName": "Modulating Valve (4-20mA)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AO-4-20-Card" }
+    },
+    {
+      "fieldName": "VFD Speed Control (4-20mA)",
+      "fieldType": "Boolean",
+      "listOptions": [],
+      "bomLogic": { "category": "PLC/COM", "type": "AO-4-20-Card" }
+    }
+  ]
+}

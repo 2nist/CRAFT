@@ -1,0 +1,21 @@
+{
+  "theme": "slate",
+  "layout": {
+    "showRecentQuotes": true,
+    "showDocumentHub": true,
+    "showUsefulLinks": true,
+    "showWelcomeMessage": true,
+    "columns": "3"
+  },
+  "welcomeMessage": {
+    "enabled": true,
+    "title": "Welcome to Craft Tools Hub",
+    "subtitle": "Your central hub for quotes, projects, and automation tools",
+    "showLogo": true
+  },
+  "customization": {
+    "accentColor": "blue",
+    "borderRadius": "lg",
+    "fontFamily": "default"
+  }
+}
