@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
@@ -19,6 +19,7 @@ let pluginsPath
 let loadedPlugins = []
 let loadedComponents = []
 let loadedAssemblies = []
+let cachedAllAssemblies = [] // New: Cache for all assemblies
 let quoteSchema
 let quoteValidate
 
@@ -279,21 +280,33 @@ async function loadPlugins() {
 // Load component catalog from bundled data
 async function loadComponents() {
   try {
-    // In development, use src/data; in production, use bundled resources
-    let componentsPath
-    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-      componentsPath = path.join(__dirname, '..', 'src', 'data', 'components', 'component_catalog.json')
-    } else {
-      componentsPath = path.join(process.resourcesPath, 'data', 'components', 'component_catalog.json')
+    // First, try to load from synced data (user's uploaded CSV)
+    const syncedPath = path.join(dataPath, 'components', 'component_catalog.json');
+    
+    try {
+      const syncedData = await fs.readFile(syncedPath, 'utf-8');
+      loadedComponents = JSON.parse(syncedData);
+      console.log(`Loaded ${loadedComponents.length} components from synced catalog`);
+      return loadedComponents;
+    } catch (syncErr) {
+      console.log('No synced catalog found, loading bundled catalog...');
     }
     
-    const data = await fs.readFile(componentsPath, 'utf-8')
-    loadedComponents = JSON.parse(data)
-    console.log(`Loaded ${loadedComponents.length} components from catalog`)
-    return loadedComponents
+    // Fallback to bundled data
+    let componentsPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      componentsPath = path.join(__dirname, '..', 'src', 'data', 'components', 'component_catalog.json');
+    } else {
+      componentsPath = path.join(process.resourcesPath, 'data', 'components', 'component_catalog.json');
+    }
+    
+    const data = await fs.readFile(componentsPath, 'utf-8');
+    loadedComponents = JSON.parse(data);
+    console.log(`Loaded ${loadedComponents.length} components from bundled catalog`);
+    return loadedComponents;
   } catch (err) {
-    console.error('Error loading components:', err)
-    return []
+    console.error('Error loading components:', err);
+    return [];
   }
 }
 
@@ -387,6 +400,62 @@ function createWindow() {
   })
 }
 
+function createMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Search Components...',
+          accelerator: 'CmdOrCtrl+K',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('open-component-search');
+            }
+          }
+        },
+        { type: 'separator' },
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 app.whenReady().then(async () => {
   await initDataStorage()
   await initPluginsDirectory()
@@ -406,37 +475,42 @@ app.whenReady().then(async () => {
   const ajv = new Ajv()
   quoteValidate = ajv.compile(quoteSchema)
   
+  // Populate cachedAllAssemblies after initial loads
+  cachedAllAssemblies = await getAllAssemblies();
+  console.log(`Cached ${cachedAllAssemblies.length} assemblies.`);
+  
+  createMenu();
   createWindow()
-
+  
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
     }
   })
 })
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-// Database IPC handlers (using JSON file storage)
-
-// Plugin IPC handlers
-
-// Get list of all loaded plugins
-ipcMain.handle('plugins:getAll', async () => {
-  return loadedPlugins.map(plugin => ({
-    id: plugin.id,
-    name: plugin.name,
-    version: plugin.version,
-    description: plugin.description,
-    icon: plugin.icon,
-    author: plugin.author
-  }))
-})
-
+  
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
+  })
+  
+  // Database IPC handlers (using JSON file storage)
+  
+  // Plugin IPC handlers
+  
+  // Get list of all loaded plugins
+  ipcMain.handle('plugins:getAll', async () => {
+    return loadedPlugins.map(plugin => ({
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      description: plugin.description,
+      icon: plugin.icon,
+      author: plugin.author
+    }))
+  })
+  
 // Get HTML content for a specific plugin
 ipcMain.handle('plugins:getHTML', async (event, pluginId) => {
   try {
@@ -551,6 +625,13 @@ ipcMain.handle('components:getAll', async () => {
   return loadedComponents
 })
 
+// Open global component search modal
+ipcMain.on('components:openGlobalSearch', () => {
+  if (mainWindow) {
+    mainWindow.webContents.send('open-component-search');
+  }
+})
+
 // Search components by filters
 ipcMain.handle('components:search', async (event, filters) => {
   let results = loadedComponents
@@ -628,8 +709,20 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
 
     // 3. Loop through CSV and perform the "Smart Merge"
     for (const row of parsed.data) {
-      const sku = row['Manufacturer PART NUMBER'];
-      if (!sku) continue; // Skip empty rows
+      // Try multiple possible SKU columns
+      let sku = row['Manufacturer PART NUMBER'] || 
+                row['SKU'] || 
+                row['PART NUMBER'] || 
+                row['Part Number'] ||
+                row['Vendor Part Code'];
+      
+      // Trim whitespace from SKU
+      sku = sku?.trim();
+      
+      if (!sku) {
+        console.log('Skipping row with no SKU:', row);
+        continue; // Skip empty rows
+      }
 
       // Clean the price
       const price = parseFloat(row['COST']?.replace(/[$,]/g, '')) || 0;
@@ -793,9 +886,8 @@ ipcMain.handle('assemblies:delete', async (event, assemblyId) => {
 
 // Search assemblies by filters
 ipcMain.handle('assemblies:search', async (event, filters) => {
-  const allAssemblies = await getAllAssemblies();
-  let results = allAssemblies;
-  
+  let results = cachedAllAssemblies;
+
   if (filters.category) {
     results = results.filter(a => a.category?.toLowerCase().includes(filters.category.toLowerCase()))
   }
@@ -808,9 +900,33 @@ ipcMain.handle('assemblies:search', async (event, filters) => {
   if (filters.description) {
     results = results.filter(a => a.description?.toLowerCase().includes(filters.description.toLowerCase()))
   }
-  
+
   return results
 })
+ipcMain.handle('assemblies:searchMany', async (event, filtersArray) => {
+  const matchingAssemblyIds = new Set();
+
+  for (const filters of filtersArray) {
+    let results = cachedAllAssemblies;
+
+    if (filters.category) {
+      results = results.filter(a => a.category?.toLowerCase().includes(filters.category.toLowerCase()))
+    }
+    if (filters.type) {
+      results = results.filter(a => a.attributes?.type?.toLowerCase().includes(filters.type.toLowerCase()))
+    }
+    if (filters.assemblyId) {
+      results = results.filter(a => a.assemblyId?.toLowerCase().includes(filters.assemblyId.toLowerCase()))
+    }
+    if (filters.description) {
+      results = results.filter(a => a.description?.toLowerCase().includes(filters.description.toLowerCase()))
+    }
+
+    results.forEach(asm => matchingAssemblyIds.add(asm.assemblyId));
+  }
+
+  return Array.from(matchingAssemblyIds);
+});
 
 // Get assembly by ID
 ipcMain.handle('assemblies:getById', async (event, assemblyId) => {
@@ -825,9 +941,12 @@ ipcMain.handle('assemblies:expand', async (event, assemblyId) => {
   if (!assembly) return null
   
   const expandedComponents = assembly.components.map(ac => {
-    const component = loadedComponents.find(c => c.sku === ac.sku)
+    // Trim SKU to handle whitespace issues
+    const trimmedSku = ac.sku?.trim();
+    const component = loadedComponents.find(c => c.sku === trimmedSku);
     return {
       ...ac,
+      sku: trimmedSku, // Use trimmed SKU
       component: component || null,
       subtotal: component ? (component.price || 0) * ac.quantity : 0
     }
@@ -1326,6 +1445,12 @@ ipcMain.handle('app:read-file', async (event, filePath) => {
   return fs.readFile(filePath, 'utf-8')
 })
 
+// Write file
+ipcMain.handle('app:write-file', async (event, filePath, content) => {
+  const fullPath = path.join(__dirname, '..', filePath)
+  return fs.writeFile(fullPath, content, 'utf-8')
+})
+
 // Pipedrive IPC handlers
 
 // TODO: Implement real Pipedrive API call using axios. Requires API key and base URL.
@@ -1684,9 +1809,11 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
       let assembly = assemblyLookup.get(assemblyName);
       
       if (!assembly) {
-        // Create new assembly
+        // Create new assembly with random ID
+        const randomId = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+        
         assembly = {
-          assemblyId: `ASM-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+          assemblyId: `ASM-${randomId}`,
           description: assemblyName,
           category: row[columnMap.category] || 'Uncategorized',
           attributes: {},

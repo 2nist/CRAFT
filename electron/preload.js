@@ -106,7 +106,8 @@ contextBridge.exposeInMainWorld('boms', {
 // Expose app API for file I/O
 contextBridge.exposeInMainWorld('app', {
   showOpenDialog: (options) => ipcRenderer.invoke('app:show-open-dialog', options),
-  readFile: (filePath) => ipcRenderer.invoke('app:read-file', filePath)
+  readFile: (filePath) => ipcRenderer.invoke('app:read-file', filePath),
+  writeFile: (filePath, content) => ipcRenderer.invoke('app:write-file', filePath, content)
 })
 
 // Expose pipedrive API
@@ -134,7 +135,14 @@ contextBridge.exposeInMainWorld('api', {
   getDashboardSettings: () => ipcRenderer.invoke('api:get-dashboard-settings'),
   saveDashboardSettings: (settings) => ipcRenderer.invoke('api:save-dashboard-settings', settings),
   saveUsefulLinks: (links) => ipcRenderer.invoke('api:save-useful-links', links),
-  saveDocHubItems: (docs) => ipcRenderer.invoke('api:save-doc-hub-items', docs)
+  saveDocHubItems: (docs) => ipcRenderer.invoke('api:save-doc-hub-items', docs),
+  // Global Component Search
+  onOpenComponentSearch: (callback) => {
+    ipcRenderer.on('open-component-search', () => callback());
+  },
+  removeOpenComponentSearchListener: () => {
+    ipcRenderer.removeAllListeners('open-component-search');
+  }
 })
 
 // Expose BOM Importer API
