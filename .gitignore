@@ -7,11 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-electron
-release
+release/*.exe
+release/*.dmg
+release/*.AppImage
+release/win-unpacked
+
+# Environment
 *.local
+.env
 
 # Editor directories and files
 .vscode/*
@@ -23,3 +32,16 @@ release
 *.njsproj
 *.sln
 *.sw?
+
+# Test and temporary files
+TEST/
+OUTPUT/
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Archive (keep for reference but don't track changes)
+# ARCHIVE/

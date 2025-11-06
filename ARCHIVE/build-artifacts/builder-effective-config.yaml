@@ -1,0 +1,13 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.electron.app
+productName: Electron Vite React App
+files:
+  - filter:
+      - dist/**/*
+      - dist-electron/**/*
+win:
+  target:
+    - dir
+electronVersion: 28.3.3
