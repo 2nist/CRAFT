@@ -245,6 +245,11 @@ export default function ProductTemplateManager({ context, onNavigate }) {
         if (existingTemplate.fields?.analogIn?.length > 0) convertedTemplate.availableSections.push('AI');
         if (existingTemplate.fields?.analogOut?.length > 0) convertedTemplate.availableSections.push('AO');
         
+        // If no sections enabled, default to all sections
+        if (convertedTemplate.availableSections.length === 0) {
+          convertedTemplate.availableSections = ['DI', 'DO', 'AI', 'AO'];
+        }
+        
         setTemplate(convertedTemplate);
       } else {
         // Create new template with default IO fields "starter pack"

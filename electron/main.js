@@ -1430,25 +1430,26 @@ ipcMain.handle('customers:get-all', () => { return MOCK_CUSTOMERS; });
 // Get product template by product code
 ipcMain.handle('product-templates:get', async (event, productCode) => {
   try {
-    // Try source directory first (for built-in templates)
-    let filePath;
-    if (app.isPackaged) {
-      filePath = path.join(process.resourcesPath, 'data', 'product-templates', `${productCode}.json`);
-    } else {
-      filePath = path.join(__dirname, '..', 'src', 'data', 'product-templates', `${productCode}.json`);
-    }
+    // Try user data directory FIRST (for custom/modified templates)
+    const userFilePath = path.join(dataPath, 'product-templates', `${productCode}.json`);
     
     try {
-      const data = await fs.readFile(filePath, 'utf-8');
+      const data = await fs.readFile(userFilePath, 'utf-8');
       return JSON.parse(data);
-    } catch (sourceErr) {
-      // If not in source, try user data directory (for custom templates)
-      if (sourceErr.code === 'ENOENT') {
-        const userFilePath = path.join(dataPath, 'product-templates', `${productCode}.json`);
-        const data = await fs.readFile(userFilePath, 'utf-8');
+    } catch (userErr) {
+      // If not in user data, try source directory (for built-in templates)
+      if (userErr.code === 'ENOENT') {
+        let filePath;
+        if (app.isPackaged) {
+          filePath = path.join(process.resourcesPath, 'data', 'product-templates', `${productCode}.json`);
+        } else {
+          filePath = path.join(__dirname, '..', 'src', 'data', 'product-templates', `${productCode}.json`);
+        }
+        
+        const data = await fs.readFile(filePath, 'utf-8');
         return JSON.parse(data);
       }
-      throw sourceErr;
+      throw userErr;
     }
   } catch (err) {
     if (err.code === 'ENOENT') {
@@ -1843,6 +1844,144 @@ ipcMain.handle('shell:open-external', async (event, url) => {
   const { shell } = require('electron');
   shell.openExternal(url);
   return { success: true };
+});
+
+// Manual Management System
+const MANUALS_DIR = path.join(app.getPath('userData'), 'ComponentManuals');
+const MANUALS_INDEX = path.join(app.getPath('userData'), 'data', 'manual_index.json');
+
+// Ensure manuals directory exists
+async function ensureManualsDir() {
+  try {
+    await fs.mkdir(MANUALS_DIR, { recursive: true });
+    await fs.mkdir(path.dirname(MANUALS_INDEX), { recursive: true });
+  } catch (error) {
+    console.error('Error creating manuals directory:', error);
+  }
+}
+
+// Load manual index
+async function loadManualIndex() {
+  try {
+    const data = await fs.readFile(MANUALS_INDEX, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    return {}; // Return empty index if file doesn't exist
+  }
+}
+
+// Save manual index
+async function saveManualIndex(index) {
+  await ensureManualsDir();
+  await fs.writeFile(MANUALS_INDEX, JSON.stringify(index, null, 2), 'utf8');
+}
+
+// Generate smart search URLs for manufacturers
+function generateSearchUrls(component) {
+  const { sku, manufacturer, vndrnum, description } = component;
+  const man = (manufacturer || '').toLowerCase();
+  
+  // Manufacturer-specific search URLs
+  const manufacturerUrls = {
+    'allen bradley': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${sku || vndrnum}/en-us.pdf`,
+    'rockwell': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${sku || vndrnum}/en-us.pdf`,
+    'siemens': `https://support.industry.siemens.com/cs/ww/en/ps/${sku || vndrnum}/man`,
+    'schneider': `https://www.se.com/ww/en/search.html?q=${sku || vndrnum}+manual`,
+    'abb': `https://search.abb.com/library/Download.aspx?DocumentID=${sku || vndrnum}`,
+    'endress+hauser': `https://portal.endress.com/wa001/dla/5000000/${sku || vndrnum}.pdf`,
+    'endress hauser': `https://portal.endress.com/wa001/dla/5000000/${sku || vndrnum}.pdf`,
+    'festo': `https://www.festo.com/cat/${sku || vndrnum}`,
+  };
+  
+  // Check if we have a specific manufacturer URL
+  for (const [key, url] of Object.entries(manufacturerUrls)) {
+    if (man.includes(key)) {
+      return url;
+    }
+  }
+  
+  // Fallback to Google search with specific terms
+  const searchTerm = encodeURIComponent(`${manufacturer} ${sku || vndrnum} manual pdf`);
+  return `https://www.google.com/search?q=${searchTerm}`;
+}
+
+// Manual System IPC Handlers
+
+ipcMain.handle('manuals:check-local', async (event, component) => {
+  try {
+    await ensureManualsDir();
+    const index = await loadManualIndex();
+    
+    const key = component.sku || component.id;
+    if (index[key] && index[key].localPath) {
+      // Check if file actually exists
+      try {
+        await fs.access(index[key].localPath);
+        return { found: true, path: index[key].localPath };
+      } catch {
+        // File was deleted, remove from index
+        delete index[key];
+        await saveManualIndex(index);
+      }
+    }
+    
+    return { found: false };
+  } catch (error) {
+    console.error('Error checking local manual:', error);
+    return { found: false };
+  }
+});
+
+ipcMain.handle('manuals:open-local', async (event, filePath) => {
+  const { shell } = require('electron');
+  try {
+    await shell.openPath(filePath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening manual:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('manuals:smart-search', async (event, component) => {
+  try {
+    const url = generateSearchUrls(component);
+    return { url };
+  } catch (error) {
+    console.error('Error generating search URL:', error);
+    return { url: null };
+  }
+});
+
+ipcMain.handle('manuals:save-reference', async (event, data) => {
+  try {
+    await ensureManualsDir();
+    const index = await loadManualIndex();
+    
+    const key = data.sku;
+    index[key] = {
+      manufacturer: data.manufacturer,
+      manualUrl: data.manualUrl,
+      savedDate: data.savedDate,
+      // Future: could store actual PDF path here when we implement download
+      localPath: null
+    };
+    
+    await saveManualIndex(index);
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving manual reference:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('manuals:get-index', async () => {
+  try {
+    return await loadManualIndex();
+  } catch (error) {
+    console.error('Error loading manual index:', error);
+    return {};
+  }
 });
 
 // Helper function to log number generation to CSV

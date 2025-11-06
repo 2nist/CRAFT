@@ -554,7 +554,15 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
 
   // Get available sections from template or use defaults
   const availableSections = currentTemplate.availableSections || ['digitalIn', 'analogIn', 'digitalOut', 'analogOut'];
-  const fields = currentTemplate.fields || {};
+  
+  // Use template fields, but fall back to default I/O fields if template fields are empty
+  let fields = currentTemplate.fields || {};
+  const hasAnyFields = Object.values(fields).some(arr => arr && arr.length > 0);
+  
+  if (!hasAnyFields) {
+    // Template has no custom fields, use default I/O fields
+    fields = defaultIOFields;
+  }
 
   // Map section keys to display titles
   const sectionTitles = {
@@ -1212,7 +1220,7 @@ function AssemblySelection({ currentTemplate, productConfiguration, selectedAsse
 
 // Main Component
 export default function QuoteConfigurator({ context }) {
-  const [currentStep, setCurrentStep] = useState(4); // Start at Step 4 for testing
+  const [currentStep, setCurrentStep] = useState(1);
   const [quote, setQuote] = useState({
     id: null,
     quoteId: '',
@@ -1322,13 +1330,17 @@ export default function QuoteConfigurator({ context }) {
         if (template) {
           setCurrentTemplate(template);
           
-          // Initialize productConfiguration with labour hours from template
+          // Initialize productConfiguration with ALL data from template
           setQuote(prev => ({
             ...prev,
             productConfiguration: {
+              ...prev.productConfiguration,
               engineeringHours: template.engineeringHours || 0,
               programmingHours: template.programmingHours || 0,
-              productionHours: template.productionHours || 0
+              productionHours: template.productionHours || 0,
+              fields: template.fields || {},
+              assemblies: template.assemblies || { required: [], recommended: [], optional: [] },
+              notes: template.notes || ''
             }
           }));
         } else {

@@ -150,3 +150,12 @@ contextBridge.exposeInMainWorld('bomImporter', {
   getCsvHeaders: (csvContent) => ipcRenderer.invoke('bom-importer:get-csv-headers', csvContent),
   processImport: (data) => ipcRenderer.invoke('bom-importer:process-import', data)
 })
+
+// Expose Manual Management API
+contextBridge.exposeInMainWorld('manuals', {
+  checkLocal: (component) => ipcRenderer.invoke('manuals:check-local', component),
+  openLocal: (filePath) => ipcRenderer.invoke('manuals:open-local', filePath),
+  smartSearch: (component) => ipcRenderer.invoke('manuals:smart-search', component),
+  saveReference: (data) => ipcRenderer.invoke('manuals:save-reference', data),
+  getIndex: () => ipcRenderer.invoke('manuals:get-index')
+})

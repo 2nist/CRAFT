@@ -396,8 +396,9 @@ Access Settings via the **⚙️ icon** in the left sidebar.
    - Category
    - Manufacturer
    - Part Abbreviation
-4. Click result to **select component**
-5. Component auto-fills into active form
+4. Click result to **view component details**
+5. Click **Use Component** to auto-fill into active form
+6. Click **View Manual** to access component documentation
 
 **Search Tips**:
 - Search is **case-insensitive**
@@ -405,6 +406,42 @@ Access Settings via the **⚙️ icon** in the left sidebar.
 - Results update **as you type**
 - Shows **100 most relevant** results
 - **Drag and resize** the search window
+- Press **ESC** to close search
+
+**Component Details Dialog**:
+- View full component specifications
+- **Copy Data**: Copy component info to clipboard
+- **View Manual**: Smart manual lookup (see below)
+- **Use Component**: Insert into active form
+
+**Smart Manual System** 🎯:
+1. Click **View Manual** on any component
+2. System checks if manual is already cached
+3. If cached: Opens manual instantly
+4. If not cached:
+   - Automatically searches manufacturer website
+   - Opens browser with search results
+   - Prompts you to confirm if correct manual
+   - Click **Save Reference** to cache for next time
+5. Next time: Opens directly (zero wait!)
+
+**Supported Manufacturers**:
+- Allen Bradley / Rockwell Automation
+- Siemens
+- Schneider Electric
+- ABB
+- Endress+Hauser
+- Festo
+- Others (via Google search)
+
+**Manual Benefits**:
+- ✅ No upfront manual collection needed
+- ✅ Builds library organically as you use it
+- ✅ Self-correcting (you validate each manual)
+- ✅ Works immediately with smart search
+- ✅ Future: Will download and store PDFs locally
+
+For detailed manual system documentation, see `MANUAL_SYSTEM.md`.
 
 ### Quick Navigation
 

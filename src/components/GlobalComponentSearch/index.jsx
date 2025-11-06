@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
-import { Search, X, Package, Info, Copy, CheckCircle } from 'lucide-react';
+import { Search, X, Package, Info, Copy, CheckCircle, BookOpen, Download, ExternalLink } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { searchService } from '../../services/SearchService';
 import { eventBus, EVENTS } from '../../services/EventBus';
@@ -17,6 +17,8 @@ export default function GlobalComponentSearch() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [manualStatus, setManualStatus] = useState(null); // 'checking', 'found', 'searching', 'confirm-save'
+  const [manualUrl, setManualUrl] = useState(null);
   const searchInputRef = useRef(null);
   const resultsContainerRef = useRef(null);
 
@@ -115,6 +117,89 @@ export default function GlobalComponentSearch() {
     if (selectedComponent) {
       const data = JSON.stringify(selectedComponent, null, 2);
       navigator.clipboard.writeText(data);
+    }
+  };
+
+  // Smart Manual Handler - Check local, then search, then save
+  const handleViewManual = async () => {
+    if (!selectedComponent) return;
+    
+    // Check if manual API is available
+    if (!window.manuals) {
+      alert('Manual system not available. Please restart the application.');
+      return;
+    }
+    
+    setManualStatus('checking');
+    
+    try {
+      // Step 1: Check if manual exists locally
+      const localCheck = await window.manuals.checkLocal({
+        sku: selectedComponent.sku,
+        manufacturer: selectedComponent.manufacturer || selectedComponent.vendor,
+        description: selectedComponent.description
+      });
+      
+      if (localCheck.found) {
+        // Manual exists - open it
+        setManualStatus('found');
+        await window.manuals.openLocal(localCheck.path);
+        setTimeout(() => setManualStatus(null), 2000);
+        return;
+      }
+      
+      // Step 2: Manual not found - do smart search
+      setManualStatus('searching');
+      const searchResult = await window.manuals.smartSearch({
+        sku: selectedComponent.sku,
+        manufacturer: selectedComponent.manufacturer || selectedComponent.vendor,
+        vndrnum: selectedComponent.vndrnum,
+        description: selectedComponent.description
+      });
+      
+      if (searchResult.url) {
+        // Open browser with search results
+        setManualUrl(searchResult.url);
+        setManualStatus('confirm-save');
+        await window.api.openExternal(searchResult.url);
+      } else {
+        setManualStatus(null);
+        alert('Could not find manual online. Please search manually.');
+      }
+      
+    } catch (error) {
+      console.error('Manual handler error:', error);
+      setManualStatus(null);
+      alert('Error accessing manual system.');
+    }
+  };
+
+  // Confirm and save manual
+  const handleSaveManual = async (confirmed) => {
+    if (!confirmed || !selectedComponent) {
+      setManualStatus(null);
+      setManualUrl(null);
+      return;
+    }
+    
+    try {
+      // User confirmed - save the manual URL/info
+      await window.manuals.saveManualReference({
+        sku: selectedComponent.sku,
+        manufacturer: selectedComponent.manufacturer || selectedComponent.vendor,
+        manualUrl: manualUrl,
+        savedDate: new Date().toISOString()
+      });
+      
+      setManualStatus('found');
+      setTimeout(() => {
+        setManualStatus(null);
+        setManualUrl(null);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Save manual error:', error);
+      setManualStatus(null);
     }
   };
 
@@ -404,13 +489,45 @@ export default function GlobalComponentSearch() {
 
             {/* Dialog Actions */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-t border-gray-700">
-              <button
-                onClick={handleCopyComponent}
-                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center gap-2"
-              >
-                <Copy size={16} />
-                Copy Data
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopyComponent}
+                  className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center gap-2"
+                >
+                  <Copy size={16} />
+                  Copy Data
+                </button>
+                <button
+                  onClick={handleViewManual}
+                  disabled={manualStatus === 'checking' || manualStatus === 'searching'}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {manualStatus === 'checking' && (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Checking...
+                    </>
+                  )}
+                  {manualStatus === 'searching' && (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Searching...
+                    </>
+                  )}
+                  {manualStatus === 'found' && (
+                    <>
+                      <CheckCircle size={16} />
+                      Found!
+                    </>
+                  )}
+                  {!manualStatus && (
+                    <>
+                      <BookOpen size={16} />
+                      View Manual
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDetailDialog(false)}
@@ -426,6 +543,49 @@ export default function GlobalComponentSearch() {
                   Use Component
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Save Confirmation Dialog */}
+      {manualStatus === 'confirm-save' && (
+        <div className="fixed inset-0 flex items-center justify-center z-[10001]">
+          <div className="absolute inset-0 bg-black/80" />
+          <div className="relative bg-gray-800 rounded-lg shadow-2xl border border-gray-700 max-w-md w-full mx-4">
+            <div className="px-6 py-4 bg-gray-900 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Download size={20} className="text-green-400" />
+                Manual Found - Confirm to Save
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-300 mb-4">
+                I opened a browser with search results for <span className="font-mono text-blue-400">{selectedComponent?.sku}</span>.
+              </p>
+              <p className="text-gray-400 text-sm mb-4">
+                Is this the correct manual? Click <strong>Save Reference</strong> to remember this location for next time.
+              </p>
+              <div className="bg-blue-900/20 border border-blue-700 rounded p-3 mb-4">
+                <p className="text-xs text-blue-300">
+                  💡 Next time you click "View Manual" for this component, it will open directly!
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4 bg-gray-900 border-t border-gray-700">
+              <button
+                onClick={() => handleSaveManual(false)}
+                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+              >
+                Not the Right Manual
+              </button>
+              <button
+                onClick={() => handleSaveManual(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <CheckCircle size={16} />
+                Save Reference
+              </button>
             </div>
           </div>
         </div>

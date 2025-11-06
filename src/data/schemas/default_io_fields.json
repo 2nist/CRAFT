@@ -46,9 +46,9 @@
       "fieldName": "Selector Switch (Hand/Off/Auto)",
       "fieldType": "List",
       "listOptions": [
-        { "value": "Hand", "label": "Hand", "bomLogic": { "category": "CONTROL", "type": "Switch-3Pos" } },
-        { "value": "Off", "label": "Off", "bomLogic": null },
-        { "value": "Auto", "label": "Auto", "bomLogic": null }
+        { "name": "Hand", "bomLogic": { "category": "CONTROL", "type": "Switch-3Pos" } },
+        { "name": "Off", "bomLogic": {} },
+        { "name": "Auto", "bomLogic": {} }
       ],
       "bomLogic": {}
     },
