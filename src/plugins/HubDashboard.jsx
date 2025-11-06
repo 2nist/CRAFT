@@ -41,7 +41,7 @@ export default function HubDashboard({ context }) {
   return (
     <div className="container mx-auto max-w-7xl">
       {settings.layout.showWelcomeMessage && settings.welcomeMessage.enabled && (
-        <div className="mb-8 p-8 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-2xl border border-blue-700/50">
+        <div className="mb-8 p-8 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-2xl border border-blue-700/50 backdrop-blur-sm">
           {settings.welcomeMessage.showLogo && (
             <div className="mb-4">
               <img src="/Craft_Logo.png" alt="Craft Automation" className="h-16" />

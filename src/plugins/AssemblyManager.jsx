@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Edit, Trash2, Search, Save, X, AlertCircle, Loader } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, Save, X, AlertCircle, Loader, RotateCcw } from 'lucide-react';
 
 export default function AssemblyManager({ context, onNavigate }) {
   const [assemblies, setAssemblies] = useState([]);
@@ -13,20 +13,23 @@ export default function AssemblyManager({ context, onNavigate }) {
   const [expandedAssembly, setExpandedAssembly] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [componentSearchTerm, setComponentSearchTerm] = useState('');
+  const [showComponentSearch, setShowComponentSearch] = useState(null); // index of component being searched
 
   const CATEGORIES = [
-    "Enclosure",
-    "Disconnect",
-    "Fuse",
-    "Branch Breaker",
+    "ENCLOSURE",
+    "DISCONNECT",
+    "FUSE",
+    "BRANCH BREAKER",
     "PWRDST",
-    "Control",
+    "CONTROL",
     "SAFETY",
     "PLC/COM",
     "MOTOR CONTROL/HEATER CONTROL",
     "WIRING",
     "INSTRUMENT",
-    "PNU"
+    "PNU",
+    "Uncategorized"
   ];
 
   useEffect(() => {
@@ -132,6 +135,31 @@ export default function AssemblyManager({ context, onNavigate }) {
     });
   };
 
+  const handleSelectComponent = (index, component) => {
+    const updatedComponents = [...editingAssembly.components];
+    updatedComponents[index] = {
+      ...updatedComponents[index],
+      sku: component.sku
+    };
+    setEditingAssembly({
+      ...editingAssembly,
+      components: updatedComponents
+    });
+    setShowComponentSearch(null);
+    setComponentSearchTerm('');
+  };
+
+  const getFilteredComponents = () => {
+    if (!componentSearchTerm) return components.slice(0, 50);
+    
+    const term = componentSearchTerm.toLowerCase();
+    return components.filter(c => 
+      c.sku?.toLowerCase().includes(term) ||
+      c.description?.toLowerCase().includes(term) ||
+      c.quantity?.toString().includes(term)
+    ).slice(0, 50);
+  };
+
   const handleUpdateComponent = (index, field, value) => {
     const updatedComponents = [...editingAssembly.components];
     updatedComponents[index] = {
@@ -190,13 +218,23 @@ export default function AssemblyManager({ context, onNavigate }) {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-white">Assembly Manager</h1>
-          <button
-            onClick={handleCreateNew}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={18} />
-            New Assembly
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={loadData}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+              title="Refresh assemblies"
+            >
+              <RotateCcw size={18} />
+              Refresh
+            </button>
+            <button
+              onClick={handleCreateNew}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={18} />
+              New Assembly
+            </button>
+          </div>
         </div>
 
         {/* Alerts */}
@@ -316,24 +354,82 @@ export default function AssemblyManager({ context, onNavigate }) {
                   </div>
 
                   <div className="space-y-3">
-                    {editingAssembly.components.map((comp, index) => (
+                    {editingAssembly.components.map((comp, index) => {
+                      const selectedComponent = components.find(c => c.sku === comp.sku);
+                      return (
                       <div key={index} className="flex gap-3 items-start bg-gray-700/50 p-3 rounded-md">
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">SKU *</label>
-                            <input
-                              type="text"
-                              value={comp.sku}
-                              onChange={(e) => handleUpdateComponent(index, 'sku', e.target.value)}
-                              placeholder="Component SKU"
-                              list={`component-list-${index}`}
-                              className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                            <datalist id={`component-list-${index}`}>
-                              {components.slice(0, 100).map(c => (
-                                <option key={c.sku} value={c.sku}>{c.description}</option>
-                              ))}
-                            </datalist>
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_100px_1fr] gap-3">
+                          <div className="relative">
+                            <label className="block text-xs text-gray-400 mb-1">Description *</label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={selectedComponent?.description || comp.sku}
+                                onChange={(e) => handleUpdateComponent(index, 'sku', e.target.value)}
+                                onFocus={() => setShowComponentSearch(index)}
+                                placeholder="Search component..."
+                                className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                readOnly
+                              />
+                              <button
+                                onClick={() => setShowComponentSearch(showComponentSearch === index ? null : index)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                              >
+                                <Search size={16} />
+                              </button>
+                            </div>
+                            
+                            {/* Component Search Dropdown */}
+                            {showComponentSearch === index && (
+                              <div className="absolute z-50 mt-1 w-full md:w-96 bg-gray-800 border border-gray-600 rounded-lg shadow-xl max-h-80 overflow-hidden">
+                                {/* Search Input */}
+                                <div className="p-2 border-b border-gray-700 sticky top-0 bg-gray-800">
+                                  <input
+                                    type="text"
+                                    value={componentSearchTerm}
+                                    onChange={(e) => setComponentSearchTerm(e.target.value)}
+                                    placeholder="Search by SKU, Description, or Qty..."
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    autoFocus
+                                  />
+                                </div>
+                                
+                                {/* Results */}
+                                <div className="overflow-y-auto max-h-64">
+                                  {getFilteredComponents().map((component, cIndex) => (
+                                    <button
+                                      key={cIndex}
+                                      onClick={() => handleSelectComponent(index, component)}
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-700 border-b border-gray-700/50 transition-colors"
+                                    >
+                                      <div className="font-mono text-sm text-white">{component.sku}</div>
+                                      <div className="text-xs text-gray-400 truncate">{component.description}</div>
+                                      {component.quantity && (
+                                        <div className="text-xs text-blue-400 mt-0.5">Qty: {component.quantity}</div>
+                                      )}
+                                    </button>
+                                  ))}
+                                  {getFilteredComponents().length === 0 && (
+                                    <div className="p-4 text-center text-gray-500 text-sm">
+                                      No components found
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Close button */}
+                                <div className="p-2 border-t border-gray-700 bg-gray-800">
+                                  <button
+                                    onClick={() => {
+                                      setShowComponentSearch(null);
+                                      setComponentSearchTerm('');
+                                    }}
+                                    className="w-full px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                                  >
+                                    Close
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <div>
@@ -366,7 +462,8 @@ export default function AssemblyManager({ context, onNavigate }) {
                           <Trash2 size={18} />
                         </button>
                       </div>
-                    ))}
+                    );
+                    })}
 
                     {editingAssembly.components.length === 0 && (
                       <p className="text-center text-gray-500 py-4">
@@ -441,14 +538,14 @@ export default function AssemblyManager({ context, onNavigate }) {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-white font-mono">
-                          {assembly.assemblyId}
+                        <h3 className="text-lg font-semibold text-white">
+                          {assembly.description}
                         </h3>
                         <span className="px-2 py-1 bg-blue-900/50 text-blue-300 text-xs rounded-full border border-blue-700">
                           {assembly.category}
                         </span>
                       </div>
-                      <p className="text-gray-300 mb-2">{assembly.description}</p>
+                      <p className="text-sm text-gray-500 mb-2 font-mono">{assembly.assemblyId}</p>
                       <div className="flex gap-4 text-sm text-gray-400">
                         <span>{assembly.components.length} components</span>
                         {assembly.estimatedLaborHours > 0 && (

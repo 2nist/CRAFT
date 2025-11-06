@@ -1215,69 +1215,29 @@ export default function QuoteConfigurator({ context }) {
   const [currentStep, setCurrentStep] = useState(4); // Start at Step 4 for testing
   const [quote, setQuote] = useState({
     id: null,
-    quoteId: 'TEST-2025-001',
-    customer: 'Test Customer',
-    projectName: 'Test Project',
-    salesRep: 'Test Rep',
+    quoteId: '',
+    customer: '',
+    projectName: '',
+    salesRep: '',
     status: 'Draft',
     projectCodes: { 
-      industry: 'WAT', 
-      product: 'CONV', 
-      control: 'BAS', 
-      scope: 'SUP' 
+      industry: null, 
+      product: null, 
+      control: null, 
+      scope: null 
     },
     controlPanelConfig: {
-      voltage: '480',
-      phase: '3',
-      enclosureType: 'Free-Standing',
-      enclosureRating: 'NEMA 4X',
-      hmiSize: '12"',
-      plcPlatform: 'Allen-Bradley CompactLogix'
+      voltage: '',
+      phase: '',
+      enclosureType: '',
+      enclosureRating: '',
+      hmiSize: '',
+      plcPlatform: ''
     },
-    productConfiguration: {
-      engineeringHours: 8,
-      programmingHours: 16,
-      productionHours: 24,
-      'Digital Input Count': 3,
-      'Analog Input Count': 1,
-      'Digital Output Count': 2,
-      'Analog Output Count': 1
-    },
+    productConfiguration: {},
     bom: []
   });
-  const [currentTemplate, setCurrentTemplate] = useState({
-    productCode: 'CONV',
-    productName: 'Conveyor System (Test Template)',
-    fields: {
-      digitalIn: [
-        { fieldName: 'Digital Input Count', fieldType: 'Number', defaultValue: 3 },
-        { fieldName: 'Start Button', fieldType: 'Text', defaultValue: 'Start PB' },
-        { fieldName: 'Stop Button', fieldType: 'Text', defaultValue: 'Stop PB' },
-        { fieldName: 'E-Stop', fieldType: 'Text', defaultValue: 'Emergency Stop' }
-      ],
-      analogIn: [
-        { fieldName: 'Analog Input Count', fieldType: 'Number', defaultValue: 1 },
-        { fieldName: 'Speed Control', fieldType: 'Text', defaultValue: 'Speed Pot' }
-      ],
-      digitalOut: [
-        { fieldName: 'Digital Output Count', fieldType: 'Number', defaultValue: 2 },
-        { fieldName: 'Motor Starter', fieldType: 'Text', defaultValue: 'M1 Starter' },
-        { fieldName: 'Run Light', fieldType: 'Text', defaultValue: 'Run Indicator' }
-      ],
-      analogOut: [
-        { fieldName: 'Analog Output Count', fieldType: 'Number', defaultValue: 1 },
-        { fieldName: 'VFD Control', fieldType: 'Text', defaultValue: 'VFD Speed Signal' }
-      ]
-    },
-    assemblies: {
-      required: [],
-      recommended: []
-    },
-    availableSections: ['digitalIn', 'analogIn', 'digitalOut', 'analogOut'],
-    engineeringHours: 8,
-    programmingHours: 16,
-    productionHours: 24
-  });
+  const [currentTemplate, setCurrentTemplate] = useState(null);
   const [selectedAssemblies, setSelectedAssemblies] = useState([]);
   const [assemblyQuantities, setAssemblyQuantities] = useState({});
   const [assemblyNotes, setAssemblyNotes] = useState({});

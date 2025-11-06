@@ -3,11 +3,14 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import TopTabBar from './components/TopTabBar';
 import LeftSidebar from './components/LeftSidebar';
 import PluginRenderer from './PluginRenderer';
+import GlobalComponentSearch from './components/GlobalComponentSearch';
+import { useAppContext } from './context/AppContext';
 
 export default function App() {
   const [plugins, setPlugins] = useState([]);
   const [activeTab, setActiveTab] = useState('QUOTING');
   const [themeSettings, setThemeSettings] = useState(null);
+  const { openSearchModal } = useAppContext();
 
   // Plugin categories
   const pluginCategories = {
@@ -90,6 +93,34 @@ export default function App() {
     pluginCategories[activeTab]?.includes(plugin.id)
   );
 
+  // Listen for IPC event to open search modal
+  useEffect(() => {
+    const handleOpenSearch = () => {
+      openSearchModal();
+    };
+
+    // Listen for IPC message from Electron menu
+    window.api?.onOpenComponentSearch?.(handleOpenSearch);
+
+    return () => {
+      // Cleanup if API provides removal
+      window.api?.removeOpenComponentSearchListener?.();
+    };
+  }, [openSearchModal]);
+
+  // Global keyboard shortcut (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openSearchModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [openSearchModal]);
+
   return (
     <HashRouter>
       <div className="flex flex-col h-screen antialiased text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900">
@@ -112,6 +143,9 @@ export default function App() {
             </Routes>
           </main>
         </div>
+        
+        {/* Global Component Search Modal */}
+        <GlobalComponentSearch />
       </div>
     </HashRouter>
   );

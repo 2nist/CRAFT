@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename)
 const isDev = !app.isPackaged
 
 let mainWindow
+let splashWindow
 let dataPath
 let pluginsPath
 let loadedPlugins = []
@@ -373,10 +374,98 @@ async function appendProjectToCSV(project) {
   await fs.appendFile(csvPath, row, 'utf-8')
 }
 
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 500,
+    height: 300,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    }
+  });
+
+  // Create a simple HTML splash screen
+  const splashHTML = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+          }
+          .splash {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+          .logo {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+          }
+          .title {
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 30px;
+          }
+          .loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(59, 130, 246, 0.2);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          .status {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="splash">
+          <div class="logo">⚙️</div>
+          <div class="title">Craft Tools Hub</div>
+          <div class="loader"></div>
+          <div class="status">Loading workspace...</div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(splashHTML));
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false, // Don't show until ready
     webPreferences: {
       // Use CommonJS preload bundle
       preload: path.join(__dirname, 'preload.cjs'),
@@ -394,6 +483,17 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
   mainWindow.webContents.openDevTools()
+
+  // Show main window and close splash when ready
+  mainWindow.once('ready-to-show', () => {
+    setTimeout(() => {
+      if (splashWindow) {
+        splashWindow.close();
+        splashWindow = null;
+      }
+      mainWindow.show();
+    }, 1000); // Show for at least 1 second
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -457,6 +557,9 @@ function createMenu() {
 }
 
 app.whenReady().then(async () => {
+  // Show splash screen first
+  createSplashWindow();
+  
   await initDataStorage()
   await initPluginsDirectory()
   await loadPlugins()
@@ -788,18 +891,10 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
 // Helper to get all assemblies (bundled + user)
 async function getAllAssemblies() {
   try {
-    // Try to load from assemblies subdirectory first (BOM import location)
-    let userAssemblies = null;
-    try {
-      const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
-      const data = await fs.readFile(assembliesPath, 'utf-8');
-      userAssemblies = JSON.parse(data);
-    } catch (err) {
-      // Fall back to root assemblies.json
-      userAssemblies = await readJSONFile('assemblies.json');
-    }
-    
-    userAssemblies = userAssemblies || [];
+    // Load from root assemblies.json (where save writes to)
+    let userAssemblies = await readJSONFile('assemblies.json') || [];
+    const assembliesPath = path.join(dataPath, 'assemblies.json');
+    console.log(`Loaded ${userAssemblies.length} user assemblies from: ${assembliesPath}`);
     
     // Merge with bundled assemblies (user assemblies take precedence)
     const allAssemblies = [...loadedAssemblies];
@@ -814,6 +909,7 @@ async function getAllAssemblies() {
       }
     }
     
+    console.log(`Total assemblies after merge: ${allAssemblies.length} (${loadedAssemblies.length} bundled + ${userAssemblies.length} user)`);
     return allAssemblies;
   } catch (err) {
     console.error('Error loading assemblies:', err);
@@ -822,9 +918,12 @@ async function getAllAssemblies() {
 }
 
 ipcMain.handle('assemblies:getAll', async () => {
-  const assemblies = await getAllAssemblies();
-  console.log(`Total assemblies available: ${assemblies.length}`);
-  return assemblies;
+  // Return cached assemblies for performance, or rebuild if cache is empty
+  if (cachedAllAssemblies.length === 0) {
+    cachedAllAssemblies = await getAllAssemblies();
+  }
+  console.log(`Returning ${cachedAllAssemblies.length} cached assemblies`);
+  return cachedAllAssemblies;
 })
 
 // Save an assembly (validate against schema first)
@@ -861,7 +960,17 @@ ipcMain.handle('assemblies:save', async (event, assemblyToSave) => {
     }
     
     // Save back to file
+    const savePath = path.join(dataPath, 'assemblies.json')
     await writeJSONFile('assemblies.json', userAssemblies)
+    console.log(`✓ Assembly saved to: ${savePath}`)
+    console.log(`  - Assembly ID: ${assemblyToSave.assemblyId}`)
+    console.log(`  - Description: ${assemblyToSave.description}`)
+    console.log(`  - Category: ${assemblyToSave.category}`)
+    console.log(`  - Total assemblies in file: ${userAssemblies.length}`)
+    
+    // Refresh the cache
+    cachedAllAssemblies = await getAllAssemblies()
+    console.log(`✓ Cache refreshed with ${cachedAllAssemblies.length} assemblies`)
     
     return { success: true, data: assemblyToSave }
   } catch (err) {
@@ -877,6 +986,11 @@ ipcMain.handle('assemblies:delete', async (event, assemblyId) => {
     const initialLength = userAssemblies.length
     userAssemblies = userAssemblies.filter(a => a.assemblyId !== assemblyId)
     await writeJSONFile('assemblies.json', userAssemblies)
+    
+    // Refresh the cache
+    cachedAllAssemblies = await getAllAssemblies()
+    console.log(`Assembly deleted and cache refreshed: ${assemblyId}`)
+    
     return { success: true, changes: initialLength - userAssemblies.length }
   } catch (err) {
     console.error('Error deleting assembly:', err)
@@ -1032,64 +1146,132 @@ ipcMain.handle('quote:delete', async (event, quoteId) => {
 // Schemas IPC handlers
 
 ipcMain.handle('schemas:getIndustry', async () => {
-  return [
-    { const: 10, description: "Alcohol: Brewing" },
-    { const: 11, description: "Alcohol: Distillation" },
-    { const: 12, description: "Alcohol: Fermentation" },
-    { const: 20, description: "Food: Food&Bev" },
-    { const: 30, description: "Water: Water Treatment" },
-    { const: 31, description: "Water: Waste Water" },
-    { const: 40, description: "Manufacturing: Material Handling" },
-    { const: 41, description: "Manufacturing: Packaging" },
-    { const: 50, description: "Bio/Chem: Pharma" },
-    { const: 99, description: "General Industry" }
-  ];
+  try {
+    let schemaPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
+    } else {
+      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+    }
+    
+    const data = await fs.readFile(schemaPath, 'utf-8');
+    const schema = JSON.parse(data);
+    
+    // Extract industry codes from the schema
+    const industryCodes = schema.properties?.projectCodes?.properties?.industry?.oneOf || [];
+    
+    return industryCodes.map(item => ({
+      const: item.const,
+      description: item.description
+    }));
+  } catch (err) {
+    console.error('Error loading industry schema:', err);
+    return [
+      { const: 10, description: "Chemical & Pharmaceutical Industries" },
+      { const: 20, description: "Food & Beverage Industries" },
+      { const: 30, description: "Utilities & Infrastructure" },
+      { const: 40, description: "Manufacturing Industries" },
+      { const: 99, description: "Other (Not Categorized)" }
+    ];
+  }
 });
 
 ipcMain.handle('schemas:getProduct', async () => {
   try {
-    let masterListPath;
+    let schemaPath;
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-      masterListPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'product_master_list.json');
+      schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      masterListPath = path.join(process.resourcesPath, 'data', 'schemas', 'product_master_list.json');
+      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
     }
     
-    const data = await fs.readFile(masterListPath, 'utf-8');
-    return JSON.parse(data);
+    console.log('Loading product schema from:', schemaPath);
+    const data = await fs.readFile(schemaPath, 'utf-8');
+    const schema = JSON.parse(data);
+    
+    // Extract product codes from the schema
+    const productCodes = schema.properties?.projectCodes?.properties?.product?.oneOf || [];
+    
+    console.log('Loaded product codes:', productCodes.length, 'products');
+    console.log('First 3 products:', productCodes.slice(0, 3));
+    
+    // Convert to expected format: { const: number, description: string }
+    return productCodes.map(item => ({
+      const: item.const,
+      description: item.description
+    }));
   } catch (err) {
-    console.error('Error loading product master list:', err);
-    // Fallback to default list
+    console.error('Error loading product schema:', err);
+    // Fallback to minimal list
     return [
-      { code: "100", name: "Brewery: Brewhouse" },
-      { code: "101", name: "Brewery: 2 Vessel" },
-      { code: "120", name: "Fermentation: Cellar" },
-      { code: "130", name: "Grain: Grain Handling" },
-      { code: "140", name: "Motor Control: Motor" },
-      { code: "160", name: "Sanitary: CIP" },
-      { code: "999", name: "General Product" }
+      { const: 100, description: "Field Instrument - General" },
+      { const: 200, description: "Control Valve - General" },
+      { const: 300, description: "Analyzer - General" },
+      { const: 400, description: "Panel/Enclosure - General" }
     ];
   }
 });
 
 ipcMain.handle('schemas:getControl', async () => {
-  return [
-    { const: 1, description: "Automated" },
-    { const: 2, description: "Manual" },
-    { const: 3, description: "Termination" },
-    { const: 9, description: "None" }
-  ];
+  try {
+    let schemaPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
+    } else {
+      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+    }
+    
+    const data = await fs.readFile(schemaPath, 'utf-8');
+    const schema = JSON.parse(data);
+    
+    // Extract control codes from the schema
+    const controlCodes = schema.properties?.projectCodes?.properties?.control?.oneOf || [];
+    
+    return controlCodes.map(item => ({
+      const: item.const,
+      description: item.description
+    }));
+  } catch (err) {
+    console.error('Error loading control schema:', err);
+    return [
+      { const: 1, description: "Pneumatic Control" },
+      { const: 2, description: "Electronic Control" },
+      { const: 3, description: "Digital Control" },
+      { const: 4, description: "Hybrid Control" }
+    ];
+  }
 });
 
 ipcMain.handle('schemas:getScope', async () => {
-  return [
-    { const: 10, description: "Production: New Build" },
-    { const: 11, description: "Production: Modification" },
-    { const: 20, description: "Field: Commissioning" },
-    { const: 40, description: "Engineering: Engineering (Hard)" },
-    { const: 50, description: "Admin: Warranty" },
-    { const: 99, description: "General Scope" }
-  ];
+  try {
+    let schemaPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
+    } else {
+      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+    }
+    
+    const data = await fs.readFile(schemaPath, 'utf-8');
+    const schema = JSON.parse(data);
+    
+    // Extract scope codes from the schema
+    const scopeCodes = schema.properties?.projectCodes?.properties?.scope?.oneOf || [];
+    
+    return scopeCodes.map(item => ({
+      const: item.const,
+      description: item.description
+    }));
+  } catch (err) {
+    console.error('Error loading scope schema:', err);
+    return [
+      { const: 10, description: "Design Only" },
+      { const: 20, description: "Supply Only" },
+      { const: 30, description: "Install Only" },
+      { const: 70, description: "Design, Supply & Install" },
+      { const: 90, description: "Service & Maintenance" },
+      { const: 99, description: "Other (Custom Scope)" }
+    ];
+  }
 });
 
 // New schemas handlers with hyphenated names
@@ -1135,22 +1317,26 @@ const MOCK_SCOPE_SCHEMA = [
 ipcMain.handle('schemas:get-industry', () => { return MOCK_INDUSTRY_SCHEMA; });
 ipcMain.handle('schemas:get-product', async () => {
   try {
-    let masterListPath;
-    if (app.isPackaged) {
-      masterListPath = path.join(process.resourcesPath, 'data', 'schemas', 'product_master_list.json');
+    let schemaPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      masterListPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'product_master_list.json');
+      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
     }
-    const content = await fs.readFile(masterListPath, 'utf-8');
-    const data = JSON.parse(content);
     
-    // Transform from {code, name, description} to {const, description} format
-    return data.map(item => ({
-      const: parseInt(item.code),
-      description: `${item.name} (${item.code})`
+    const data = await fs.readFile(schemaPath, 'utf-8');
+    const schema = JSON.parse(data);
+    
+    // Extract product codes from the schema
+    const productCodes = schema.properties?.projectCodes?.properties?.product?.oneOf || [];
+    
+    // Convert to expected format: { const: number, description: string }
+    return productCodes.map(item => ({
+      const: item.const,
+      description: item.description
     }));
   } catch (err) {
-    console.error('Error reading product_master_list.json:', err);
+    console.error('Error reading product schema:', err);
     return MOCK_PRODUCT_SCHEMA; // Fallback to mock data
   }
 });
@@ -1507,10 +1693,21 @@ ipcMain.handle('api:get-plugin-registry', async () => {
 
 ipcMain.handle('api:get-useful-links', async () => {
   try {
-    const linksPath = isDev 
+    const userLinksPath = path.join(dataPath, 'useful_links.json');
+    const defaultPath = isDev 
       ? path.join(__dirname, '..', 'src', 'data', 'useful_links.json')
       : path.join(process.resourcesPath, 'app.asar', 'dist', 'useful_links.json');
-    const data = await fs.readFile(linksPath, 'utf-8');
+    
+    let data;
+    try {
+      // Try to read from user data first
+      data = await fs.readFile(userLinksPath, 'utf-8');
+      console.log('Loaded useful links from user data');
+    } catch {
+      // Fallback to defaults if user file doesn't exist
+      data = await fs.readFile(defaultPath, 'utf-8');
+      console.log('Loaded useful links from defaults');
+    }
     const links = JSON.parse(data);
     return links || [];
   } catch (err) {
@@ -1521,10 +1718,21 @@ ipcMain.handle('api:get-useful-links', async () => {
 
 ipcMain.handle('api:get-doc-hub-items', async () => {
   try {
-    const docsPath = isDev 
+    const userDocsPath = path.join(dataPath, 'doc_hub_items.json');
+    const defaultPath = isDev 
       ? path.join(__dirname, '..', 'src', 'data', 'doc_hub_items.json')
       : path.join(process.resourcesPath, 'app.asar', 'dist', 'doc_hub_items.json');
-    const data = await fs.readFile(docsPath, 'utf-8');
+    
+    let data;
+    try {
+      // Try to read from user data first
+      data = await fs.readFile(userDocsPath, 'utf-8');
+      console.log('Loaded doc hub items from user data');
+    } catch {
+      // Fallback to defaults if user file doesn't exist
+      data = await fs.readFile(defaultPath, 'utf-8');
+      console.log('Loaded doc hub items from defaults');
+    }
     const docs = JSON.parse(data);
     return docs || [];
   } catch (err) {
@@ -1553,17 +1761,35 @@ ipcMain.handle('api:get-dashboard-settings', async () => {
     console.error('Error loading dashboard settings:', err);
     return {
       theme: 'slate',
-      layout: { showRecentQuotes: true, showDocumentHub: true, showUsefulLinks: true, showWelcomeMessage: true },
+      layout: { 
+        showRecentQuotes: true, 
+        showDocumentHub: true, 
+        showUsefulLinks: true, 
+        showWelcomeMessage: true,
+        cardStyle: 'expanded'
+      },
       welcomeMessage: { enabled: true, title: 'Welcome to Craft Tools Hub', subtitle: 'Your central hub for quotes, projects, and automation tools', showLogo: true },
-      customization: { accentColor: 'blue', borderRadius: 'lg', fontFamily: 'default' }
+      customization: { accentColor: 'blue', borderRadius: 'lg', fontFamily: 'default' },
+      export: {
+        defaultPath: '',
+        defaultFormat: 'CSV',
+        includeTimestamp: true
+      }
     };
   }
 });
 
 ipcMain.handle('api:save-dashboard-settings', async (event, settings) => {
   try {
+    if (!dataPath) {
+      throw new Error('Data path not initialized');
+    }
+    // Ensure data directory exists
+    await fs.mkdir(dataPath, { recursive: true });
     const settingsPath = path.join(dataPath, 'dashboard_settings.json');
+    console.log('Saving dashboard settings to:', settingsPath);
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+    console.log('Dashboard settings saved successfully');
     return { success: true };
   } catch (err) {
     console.error('Error saving dashboard settings:', err);
@@ -1573,8 +1799,15 @@ ipcMain.handle('api:save-dashboard-settings', async (event, settings) => {
 
 ipcMain.handle('api:save-useful-links', async (event, links) => {
   try {
+    if (!dataPath) {
+      throw new Error('Data path not initialized');
+    }
+    // Ensure data directory exists
+    await fs.mkdir(dataPath, { recursive: true });
     const linksPath = path.join(dataPath, 'useful_links.json');
+    console.log('Saving useful links to:', linksPath);
     await fs.writeFile(linksPath, JSON.stringify(links, null, 2));
+    console.log('Useful links saved successfully');
     return { success: true };
   } catch (err) {
     console.error('Error saving useful links:', err);
@@ -1584,8 +1817,15 @@ ipcMain.handle('api:save-useful-links', async (event, links) => {
 
 ipcMain.handle('api:save-doc-hub-items', async (event, docs) => {
   try {
+    if (!dataPath) {
+      throw new Error('Data path not initialized');
+    }
+    // Ensure data directory exists
+    await fs.mkdir(dataPath, { recursive: true });
     const docsPath = path.join(dataPath, 'doc_hub_items.json');
+    console.log('Saving doc hub items to:', docsPath);
     await fs.writeFile(docsPath, JSON.stringify(docs, null, 2));
+    console.log('Doc hub items saved successfully');
     return { success: true };
   } catch (err) {
     console.error('Error saving doc hub items:', err);
@@ -1712,20 +1952,24 @@ ipcMain.handle('bom-importer:get-csv-headers', async (event, csvContent) => {
 // Process full BOM import with attributes support
 ipcMain.handle('bom-importer:process-import', async (event, { csvContent, headerRowIndex, columnMap, productCodeMap }) => {
   try {
+    console.log('=== BOM Import Process Started ===');
+    console.log('Column Map:', columnMap);
+    console.log('Product Code Map:', productCodeMap);
+    
     // 1. Slice CSV content to start from header row
     const lines = csvContent.split('\n');
     const csvFromHeader = lines.slice(headerRowIndex).join('\n');
     
     // Parse the CSV starting from header
     const parsed = Papa.parse(csvFromHeader, { header: true, skipEmptyLines: true });
+    console.log(`Parsed ${parsed.data.length} rows from CSV`);
     
-    // 2. Determine paths
-    const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
+    // 2. Determine paths - assemblies.json is in root dataPath, not assemblies subfolder
+    const assembliesPath = path.join(dataPath, 'assemblies.json');
     const masterListPath = path.join(dataPath, 'schemas', 'product_master_list.json');
     const templatesPath = path.join(dataPath, 'product-templates');
     
     // Ensure directories exist
-    await fs.mkdir(path.join(dataPath, 'assemblies'), { recursive: true });
     await fs.mkdir(path.join(dataPath, 'schemas'), { recursive: true });
     await fs.mkdir(templatesPath, { recursive: true });
     
@@ -1763,8 +2007,8 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
       console.log('No existing templates');
     }
     
-    // 4. Create lookup maps
-    const assemblyLookup = new Map(assemblies.map(a => [a.description, a]));
+    // 4. Create lookup maps - track assemblies by a unique key combining product and assembly name
+    const assemblyLookup = new Map();
     
     // Track stats
     const initialAssemblyCount = assemblies.length;
@@ -1778,7 +2022,12 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
       const productName = row[columnMap.productName];
       
       // Skip if missing required fields
-      if (!assemblyName || !sku) continue;
+      if (!assemblyName || !sku) {
+        console.log('Skipping row - missing required fields:', { assemblyName, sku });
+        continue;
+      }
+      
+      console.log(`Processing: Product="${productName}", Assembly="${assemblyName}", SKU="${sku}"`);
       
       // Build attributes object from optional columns
       const attributes = {};
@@ -1805,22 +2054,28 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
         productCode = mapping;
       }
       
-      // 7. Find or create assembly
-      let assembly = assemblyLookup.get(assemblyName);
+      // 7. Find or create assembly - use product+assembly name as unique key
+      const assemblyKey = `${productName}::${assemblyName}`;
+      let assembly = assemblyLookup.get(assemblyKey);
       
       if (!assembly) {
         // Create new assembly with random ID
         const randomId = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
         
+        // Use assemblyDescription if provided, otherwise use assemblyName
+        const assemblyDesc = (columnMap.assemblyDescription && row[columnMap.assemblyDescription]) 
+          ? row[columnMap.assemblyDescription] 
+          : assemblyName;
+        
         assembly = {
           assemblyId: `ASM-${randomId}`,
-          description: assemblyName,
+          description: assemblyDesc,
           category: row[columnMap.category] || 'Uncategorized',
           attributes: {},
           components: []
         };
         assemblies.push(assembly);
-        assemblyLookup.set(assemblyName, assembly);
+        assemblyLookup.set(assemblyKey, assembly);
       }
       
       // 8. Update assembly attributes (merge with existing)
@@ -1858,20 +2113,31 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     }
     
     // 11. Write all updated data back to files
+    console.log(`Writing ${assemblies.length} assemblies to file: ${assembliesPath}`);
     await fs.writeFile(assembliesPath, JSON.stringify(assemblies, null, 2));
+    console.log(`Successfully wrote assemblies to: ${assembliesPath}`);
+    console.log(`Writing ${masterList.length} products to master list...`);
     await fs.writeFile(masterListPath, JSON.stringify(masterList, null, 2));
     
     // Write updated product templates
     for (const [code, template] of Object.entries(templates)) {
       const templatePath = path.join(templatesPath, `${code}.json`);
+      console.log(`Writing template for product ${code}...`);
       await fs.writeFile(templatePath, JSON.stringify(template, null, 2));
     }
     
-    return {
+    const result = {
       success: true,
       assembliesCreated: assemblies.length - initialAssemblyCount,
       productsUpdated: updatedProducts.size
     };
+    console.log('=== BOM Import Complete ===', result);
+    
+    // Invalidate the assembly cache so Assembly Manager sees the new assemblies
+    cachedAllAssemblies = await getAllAssemblies();
+    console.log(`Cache refreshed with ${cachedAllAssemblies.length} assemblies`);
+    
+    return result;
     
   } catch (err) {
     console.error('Error processing BOM import:', err);

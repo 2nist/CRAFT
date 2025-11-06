@@ -27,7 +27,8 @@
         "MOTOR CONTROL/HEATER CONTROL",
         "WIRING",
         "INSTRUMENT",
-        "PNU"
+        "PNU",
+        "Uncategorized"
       ]
     },
     "components": {

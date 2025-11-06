@@ -5,7 +5,8 @@
     "showDocumentHub": true,
     "showUsefulLinks": true,
     "showWelcomeMessage": true,
-    "columns": "3"
+    "columns": "3",
+    "cardStyle": "expanded"
   },
   "welcomeMessage": {
     "enabled": true,
@@ -17,5 +18,10 @@
     "accentColor": "blue",
     "borderRadius": "lg",
     "fontFamily": "default"
+  },
+  "export": {
+    "defaultPath": "",
+    "defaultFormat": "CSV",
+    "includeTimestamp": true
   }
 }

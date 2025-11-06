@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wrench, Box, FileText } from 'lucide-react';
+import { Wrench, Box, FileText, Search } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
 
 export default function TopTabBar({ activeTab, setActiveTab }) {
   const navigate = useNavigate();
+  const { openSearchModal } = useAppContext();
   
   const tabs = [
     { id: 'TOOLS', label: 'TOOLS', icon: Wrench },
@@ -51,6 +53,16 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Search Button */}
+        <button
+          onClick={openSearchModal}
+          className="flex items-center gap-2 px-4 py-2 mr-4 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+          title="Search Components (Ctrl+K)"
+        >
+          <Search size={16} />
+          Search
+        </button>
 
         {/* Optional: User/Settings area */}
         <div className="flex items-center space-x-4">

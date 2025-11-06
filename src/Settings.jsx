@@ -60,15 +60,23 @@ export default function Settings() {
     setSaving(true);
     setMessage(null);
     try {
-      await Promise.all([
+      console.log('Attempting to save settings...');
+      console.log('Settings:', settings);
+      console.log('Links:', usefulLinks);
+      console.log('Docs:', docHubItems);
+      
+      const results = await Promise.all([
         window.api.saveDashboardSettings(settings),
         window.api.saveUsefulLinks(usefulLinks),
         window.api.saveDocHubItems(docHubItems)
       ]);
+      
+      console.log('Save results:', results);
       setMessage({ type: 'success', text: 'Settings saved successfully! Refresh to see changes.' });
     } catch (error) {
       console.error('Failed to save settings:', error);
-      setMessage({ type: 'error', text: 'Failed to save settings' });
+      console.error('Error details:', error.message, error.stack);
+      setMessage({ type: 'error', text: `Failed to save settings: ${error.message}` });
     } finally {
       setSaving(false);
     }
@@ -132,12 +140,8 @@ export default function Settings() {
         </Alert>
       )}
 
-      <Tabs defaultValue="appearance" className="space-y-6">
+      <Tabs defaultValue="layout" className="space-y-6">
         <TabsList className="bg-gray-800 border border-gray-700">
-          <TabsTrigger value="appearance" className="data-[state=active]:bg-gray-700">
-            <Palette className="h-4 w-4 mr-2" />
-            Appearance
-          </TabsTrigger>
           <TabsTrigger value="layout" className="data-[state=active]:bg-gray-700">
             <Layout className="h-4 w-4 mr-2" />
             Layout
@@ -151,101 +155,6 @@ export default function Settings() {
             Documents
           </TabsTrigger>
         </TabsList>
-
-        {/* Appearance Tab */}
-        <TabsContent value="appearance" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Theme & Colors</CardTitle>
-              <CardDescription>Choose your preferred color scheme and accents</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <Label className="text-gray-300 mb-3 block">Base Theme</Label>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {THEMES.map(theme => (
-                    <button
-                      key={theme.value}
-                      onClick={() => setSettings({ ...settings, theme: theme.value })}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        settings?.theme === theme.value
-                          ? 'border-blue-500 bg-gray-700'
-                          : 'border-gray-600 bg-gray-900 hover:border-gray-500'
-                      }`}
-                    >
-                      <div className={`w-full h-12 rounded ${theme.colors} mb-2`}></div>
-                      <p className="text-sm text-gray-300">{theme.label}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-gray-300 mb-3 block">Accent Color</Label>
-                <div className="grid grid-cols-5 gap-3">
-                  {ACCENT_COLORS.map(color => (
-                    <button
-                      key={color.value}
-                      onClick={() => setSettings({
-                        ...settings,
-                        customization: { ...settings.customization, accentColor: color.value }
-                      })}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        settings?.customization?.accentColor === color.value
-                          ? 'border-white'
-                          : 'border-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      <div className={`w-full h-12 rounded ${color.class}`}></div>
-                      <p className="text-xs text-gray-300 mt-2">{color.label}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Welcome Message</CardTitle>
-              <CardDescription>Customize the landing page welcome message</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-gray-300">Show Welcome Message</Label>
-                <Switch
-                  checked={settings?.welcomeMessage?.enabled}
-                  onCheckedChange={(checked) => setSettings({
-                    ...settings,
-                    welcomeMessage: { ...settings.welcomeMessage, enabled: checked }
-                  })}
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300">Title</Label>
-                <Input
-                  value={settings?.welcomeMessage?.title || ''}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    welcomeMessage: { ...settings.welcomeMessage, title: e.target.value }
-                  })}
-                  className="bg-gray-700 border-gray-600 text-white mt-2"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300">Subtitle</Label>
-                <Input
-                  value={settings?.welcomeMessage?.subtitle || ''}
-                  onChange={(e) => setSettings({
-                    ...settings,
-                    welcomeMessage: { ...settings.welcomeMessage, subtitle: e.target.value }
-                  })}
-                  className="bg-gray-700 border-gray-600 text-white mt-2"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Layout Tab */}
         <TabsContent value="layout" className="space-y-6">
@@ -275,6 +184,124 @@ export default function Settings() {
                   />
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">Display Preferences</CardTitle>
+              <CardDescription>Customize how information is displayed</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-gray-300 mb-2 block">Card Layout</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setSettings({
+                      ...settings,
+                      layout: { ...settings.layout, cardStyle: 'compact' }
+                    })}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      settings?.layout?.cardStyle === 'compact'
+                        ? 'border-blue-500 bg-gray-700'
+                        : 'border-gray-600 bg-gray-900 hover:border-gray-500'
+                    }`}
+                  >
+                    <p className="font-medium text-white mb-1">Compact</p>
+                    <p className="text-xs text-gray-400">Dense, more items visible</p>
+                  </button>
+                  <button
+                    onClick={() => setSettings({
+                      ...settings,
+                      layout: { ...settings.layout, cardStyle: 'expanded' }
+                    })}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      settings?.layout?.cardStyle === 'expanded'
+                        ? 'border-blue-500 bg-gray-700'
+                        : 'border-gray-600 bg-gray-900 hover:border-gray-500'
+                    }`}
+                  >
+                    <p className="font-medium text-white mb-1">Expanded</p>
+                    <p className="text-xs text-gray-400">Spacious, easier to read</p>
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">Export Settings</CardTitle>
+              <CardDescription>Configure default export behavior</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-gray-300 mb-2 block">Default Export Location</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={settings?.export?.defaultPath || ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      export: { ...settings.export, defaultPath: e.target.value }
+                    })}
+                    placeholder="C:\Users\YourName\Documents\Exports"
+                    className="bg-gray-700 border-gray-600 text-white flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    className="border-gray-600"
+                    onClick={async () => {
+                      const result = await window.app.showOpenDialog({
+                        properties: ['openDirectory']
+                      });
+                      if (result && result[0]) {
+                        setSettings({
+                          ...settings,
+                          export: { ...settings.export, defaultPath: result[0] }
+                        });
+                      }
+                    }}
+                  >
+                    Browse
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-gray-300 mb-2 block">Default Export Format</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {['CSV', 'Excel', 'PDF'].map(format => (
+                    <button
+                      key={format}
+                      onClick={() => setSettings({
+                        ...settings,
+                        export: { ...settings.export, defaultFormat: format }
+                      })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        settings?.export?.defaultFormat === format
+                          ? 'border-blue-500 bg-gray-700'
+                          : 'border-gray-600 bg-gray-900 hover:border-gray-500'
+                      }`}
+                    >
+                      <p className="font-medium text-white">{format}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                <div>
+                  <Label className="text-gray-300">Include timestamps in filenames</Label>
+                  <p className="text-sm text-gray-500">e.g., BOM_2025-11-06_14-30-00.csv</p>
+                </div>
+                <Switch
+                  checked={settings?.export?.includeTimestamp ?? true}
+                  onCheckedChange={(checked) => setSettings({
+                    ...settings,
+                    export: { ...settings.export, includeTimestamp: checked }
+                  })}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

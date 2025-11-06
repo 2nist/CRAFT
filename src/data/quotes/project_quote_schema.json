@@ -36,12 +36,108 @@
       "description": "The 4-pillar classification codes for this project.",
       "type": "object",
       "properties": {
-        "industryCode": { "type": "integer" },
-        "productCode": { "type": "integer" },
-        "controlCode": { "type": "integer" },
-        "scopeCode": { "type": "integer" }
+        "industry": {
+          "oneOf": [
+            { "const": 10, "description": "Chemical & Pharmaceutical Industries" },
+            { "const": 11, "description": "General Chemical" },
+            { "const": 12, "description": "Pharmaceutical" },
+            { "const": 13, "description": "Biotech" },
+            { "const": 19, "description": "Other Chem & Pharm" },
+            { "const": 20, "description": "Food & Beverage Industries" },
+            { "const": 21, "description": "Brewery & Distilling" },
+            { "const": 22, "description": "Food Processing" },
+            { "const": 29, "description": "Other Food & Beverage" },
+            { "const": 30, "description": "Utilities & Infrastructure" },
+            { "const": 31, "description": "Water & Wastewater" },
+            { "const": 32, "description": "Power Generation" },
+            { "const": 33, "description": "Grain Processing" },
+            { "const": 39, "description": "Other Utilities" },
+            { "const": 40, "description": "Manufacturing Industries" },
+            { "const": 41, "description": "General Manufacturing" },
+            { "const": 42, "description": "Automotive" },
+            { "const": 49, "description": "Other Manufacturing" },
+            { "const": 50, "description": "Pharma & Biotech (Expanded)" },
+            { "const": 51, "description": "Pharma" },
+            { "const": 52, "description": "Biotech" },
+            { "const": 59, "description": "Other Pharma/Biotech" },
+            { "const": 90, "description": "Commercial" },
+            { "const": 99, "description": "Other (Not Categorized)" }
+          ]
+        },
+        "product": {
+          "oneOf": [
+            { "const": 100, "description": "Brewhouse" },
+            { "const": 101, "description": "Vessel" },
+            { "const": 149, "description": "Brewery General" },
+            { "const": 150, "description": "Distilling" },
+            { "const": 151, "description": "Batch" },
+            { "const": 152, "description": "Chamber" },
+            { "const": 153, "description": "Continuous" },
+            { "const": 199, "description": "Distillery General" },
+            { "const": 200, "description": "Cellar" },
+            { "const": 201, "description": "Single Tank Simple" },
+            { "const": 202, "description": "Single Tank Advanced" },
+            { "const": 203, "description": "Glycol Monitoring" },
+            { "const": 249, "description": "Fermentation General" },
+            { "const": 250, "description": "Grain Handling" },
+            { "const": 251, "description": "Flow Scale" },
+            { "const": 252, "description": "Loadcell" },
+            { "const": 253, "description": "Spent Grain" },
+            { "const": 299, "description": "Grain General" },
+            { "const": 300, "description": "Motor" },
+            { "const": 301, "description": "Non-Fused Switch" },
+            { "const": 302, "description": "Non-Fused VFD" },
+            { "const": 303, "description": "Fused Switch" },
+            { "const": 304, "description": "Fused VFD" },
+            { "const": 349, "description": "Motor Control General" },
+            { "const": 400, "description": "Pneumatic" },
+            { "const": 401, "description": "Switch" },
+            { "const": 402, "description": "Keyed Switch" },
+            { "const": 449, "description": "Pneumatics General" },
+            { "const": 450, "description": "CIP" },
+            { "const": 451, "description": "Keg Washer" },
+            { "const": 499, "description": "Sanitary General" },
+            { "const": 500, "description": "Remote" },
+            { "const": 549, "description": "Remote General" },
+            { "const": 550, "description": "Heater Control" },
+            { "const": 599, "description": "Heating General" },
+            { "const": 990, "description": "General" }
+          ]
+        },
+        "control": {
+          "oneOf": [
+            { "const": 1, "description": "Pneumatic Control" },
+            { "const": 2, "description": "Electronic Control" },
+            { "const": 3, "description": "Digital Control" },
+            { "const": 4, "description": "Hybrid Control" }
+          ]
+        },
+        "scope": {
+          "oneOf": [
+            { "const": 10, "description": "Design Only" },
+            { "const": 20, "description": "Supply Only" },
+            { "const": 30, "description": "Install Only" },
+            { "const": 40, "description": "Design & Supply" },
+            { "const": 50, "description": "Design & Install" },
+            { "const": 60, "description": "Supply & Install" },
+            { "const": 70, "description": "Design, Supply & Install" },
+            { "const": 80, "description": "Commissioning Only" },
+            { "const": 81, "description": "FAT Only" },
+            { "const": 82, "description": "SAT Only" },
+            { "const": 83, "description": "FAT & SAT" },
+            { "const": 84, "description": "IQ Only" },
+            { "const": 85, "description": "OQ Only" },
+            { "const": 86, "description": "PQ Only" },
+            { "const": 87, "description": "IQ/OQ" },
+            { "const": 88, "description": "OQ/PQ" },
+            { "const": 89, "description": "IQ/OQ/PQ (Full Validation)" },
+            { "const": 90, "description": "Service & Maintenance" },
+            { "const": 95, "description": "Consulting Only" },
+            { "const": 99, "description": "Other (Custom Scope)" }
+          ]
+        }
       },
-      "required": ["industryCode", "productCode", "controlCode", "scopeCode"]
+      "required": ["industry", "product", "control", "scope"]
     },
     "controlPanelConfig": {
       "description": "Base configuration for the main control panel.",

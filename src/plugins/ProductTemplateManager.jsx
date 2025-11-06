@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { FileCode, Plus, Edit, Save, X, AlertCircle, Loader, Trash2, Settings, Eye } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FileCode, Plus, Edit, Save, X, AlertCircle, Loader, Trash2, Settings, Eye, Search, Filter, CheckCircle, Circle, Package, Beer, Martini, Wine, Wheat, Cog, Gauge, Droplets, Airplay, Flame, Layers } from 'lucide-react';
 
 export default function ProductTemplateManager({ context, onNavigate }) {
   const [productSchema, setProductSchema] = useState([]);
   const [assemblies, setAssemblies] = useState([]);
+  const [existingTemplates, setExistingTemplates] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProductCode, setSelectedProductCode] = useState(null);
   const [template, setTemplate] = useState(null);
@@ -14,6 +15,11 @@ export default function ProductTemplateManager({ context, onNavigate }) {
   const [editingField, setEditingField] = useState(null);
   const [showFieldEditor, setShowFieldEditor] = useState(false);
   const [activeFieldSection, setActiveFieldSection] = useState('digitalIn');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'configured', 'unconfigured'
+  const [selectedProductLine, setSelectedProductLine] = useState(null); // null shows categories, number shows products in that category
+  const [viewMode, setViewMode] = useState('categories'); // 'categories' or 'products'
+  const [selectedAvailableNumber, setSelectedAvailableNumber] = useState('');
 
   const IO_SECTIONS = ['DI', 'DO', 'AI', 'AO'];
   const SECTION_MAP = {
@@ -38,12 +44,174 @@ export default function ProductTemplateManager({ context, onNavigate }) {
       // Products is now a simple array of { const, description }
       setProductSchema(products || []);
       setAssemblies(assembliesData || []);
+      
+      // Load all existing templates to show configured status
+      await loadExistingTemplates(products || []);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError(`Failed to load data: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadExistingTemplates = async (products) => {
+    try {
+      const templates = {};
+      // Try to load template for each product
+      for (const prod of products) {
+        try {
+          const template = await window.productTemplates.get(prod.const);
+          if (template) {
+            templates[prod.const] = template;
+          }
+        } catch (err) {
+          // Template doesn't exist, skip
+        }
+      }
+      setExistingTemplates(templates);
+    } catch (err) {
+      console.error('Failed to load existing templates:', err);
+    }
+  };
+
+  // Group products by product line (custom ranges)
+  const productLines = useMemo(() => {
+    const categoryRanges = [
+      { min: 100, max: 149, name: 'Brewery', code: 100 },
+      { min: 150, max: 199, name: 'Distillery', code: 150 },
+      { min: 200, max: 249, name: 'Fermentation', code: 200 },
+      { min: 250, max: 299, name: 'Grain', code: 250 },
+      { min: 300, max: 349, name: 'Motor Control', code: 300 },
+      { min: 400, max: 449, name: 'Pneumatics', code: 400 },
+      { min: 450, max: 499, name: 'Sanitary', code: 450 },
+      { min: 500, max: 549, name: 'Remote', code: 500 },
+      { min: 550, max: 599, name: 'Heating', code: 550 },
+      { min: 990, max: 999, name: 'General', code: 990 }
+    ];
+
+    const lines = {};
+    
+    productSchema.forEach(prod => {
+      const category = categoryRanges.find(cat => prod.const >= cat.min && prod.const <= cat.max);
+      if (category) {
+        if (!lines[category.code]) {
+          lines[category.code] = {
+            code: category.code,
+            name: category.name,
+            products: []
+          };
+        }
+        lines[category.code].products.push(prod);
+      }
+    });
+    
+    return Object.values(lines).sort((a, b) => a.code - b.code);
+  }, [productSchema]);
+
+  // Filter and search products
+  const filteredProducts = useMemo(() => {
+    if (!selectedProductLine) return [];
+    
+    let filtered = productSchema.filter(p => 
+      Math.floor(p.const / 100) * 100 === selectedProductLine
+    );
+
+    // Filter by configuration status
+    if (filterStatus === 'configured') {
+      filtered = filtered.filter(p => existingTemplates[p.const]);
+    } else if (filterStatus === 'unconfigured') {
+      filtered = filtered.filter(p => !existingTemplates[p.const]);
+    }
+
+    return filtered.sort((a, b) => a.const - b.const);
+  }, [productSchema, selectedProductLine, filterStatus, existingTemplates]);
+
+  // Get available (unused) product numbers in the selected category
+  const availableNumbers = useMemo(() => {
+    if (!selectedProductLine) return [];
+    
+    const categoryRanges = [
+      { min: 100, max: 149, code: 100 },
+      { min: 150, max: 199, code: 150 },
+      { min: 200, max: 249, code: 200 },
+      { min: 250, max: 299, code: 250 },
+      { min: 300, max: 349, code: 300 },
+      { min: 400, max: 449, code: 400 },
+      { min: 450, max: 499, code: 450 },
+      { min: 500, max: 549, code: 500 },
+      { min: 550, max: 599, code: 550 },
+      { min: 990, max: 999, code: 990 }
+    ];
+    
+    const category = categoryRanges.find(cat => cat.code === selectedProductLine);
+    if (!category) return [];
+    
+    const usedNumbers = new Set(productSchema.map(p => p.const));
+    const available = [];
+    
+    for (let i = category.min; i <= category.max; i++) {
+      if (!usedNumbers.has(i)) {
+        available.push(i);
+      }
+    }
+    
+    return available;
+  }, [selectedProductLine, productSchema]);
+
+  const handleCreateCustomProduct = async (productCode) => {
+    const productName = prompt(`Enter a name for product ${productCode}:`);
+    if (!productName || !productName.trim()) return;
+    
+    // Create a new product entry in the schema (this would need backend support)
+    // For now, we'll create a template directly
+    const defaultFields = await window.schemas.getDefaultIoFields();
+    
+    setTemplate({
+      productCode: productCode,
+      productName: productName.trim(),
+      availableSections: ['DI', 'DO', 'AI', 'AO'],
+      defaultAssemblies: [],
+      requiredAssemblies: [],
+      optionalAssemblies: [],
+      engineeringHours: 0,
+      programmingHours: 0,
+      productionHours: 0,
+      notes: '',
+      prePopulatedFields: defaultFields
+    });
+    setSelectedProductCode(productCode);
+    setIsEditing(true);
+  };
+
+  // Get icon for category
+  const getCategoryIcon = (code) => {
+    switch(code) {
+      case 100: return Beer;
+      case 150: return Martini;
+      case 200: return Wine;
+      case 250: return Wheat;
+      case 300: return Cog;
+      case 400: return Gauge;
+      case 450: return Droplets;
+      case 500: return Airplay;
+      case 550: return Flame;
+      case 990: return Layers;
+      default: return Package;
+    }
+  };
+
+  const handleSelectCategory = (lineCode) => {
+    setSelectedProductLine(lineCode);
+    setViewMode('products');
+    setSelectedAvailableNumber('');
+  };
+
+  const handleBackToCategories = () => {
+    setSelectedProductLine(null);
+    setViewMode('categories');
+    setFilterStatus('all');
+    setSelectedAvailableNumber('');
   };
 
   const handleSelectProduct = async (productCode) => {
@@ -64,7 +232,9 @@ export default function ProductTemplateManager({ context, onNavigate }) {
           defaultAssemblies: existingTemplate.assemblies?.recommended || [],
           requiredAssemblies: existingTemplate.assemblies?.required || [],
           optionalAssemblies: existingTemplate.assemblies?.optional || [],
-          estimatedBaseLaborHours: existingTemplate.estimatedBaseLaborHours || 0,
+          engineeringHours: existingTemplate.engineeringHours || 0,
+          programmingHours: existingTemplate.programmingHours || 0,
+          productionHours: existingTemplate.productionHours || 0,
           notes: existingTemplate.notes || '',
           prePopulatedFields: existingTemplate.fields || { digitalIn: [], digitalOut: [], analogIn: [], analogOut: [] }
         };
@@ -88,7 +258,9 @@ export default function ProductTemplateManager({ context, onNavigate }) {
           defaultAssemblies: [],
           requiredAssemblies: [],
           optionalAssemblies: [],
-          estimatedBaseLaborHours: 0,
+          engineeringHours: 0,
+          programmingHours: 0,
+          productionHours: 0,
           notes: '',
           prePopulatedFields: defaultFields // Store default fields for later use
         });
@@ -133,8 +305,10 @@ export default function ProductTemplateManager({ context, onNavigate }) {
           recommended: template.defaultAssemblies || [],
           optional: template.optionalAssemblies || []
         },
-        estimatedBaseLaborHours: template.estimatedBaseLaborHours || 0,
-        notes: template.notes || ''
+        engineeringHours: template.engineeringHours || 0,
+        programmingHours: template.programmingHours || 0,
+        productionHours: template.productionHours || 0,
+        notes: template.notes || '',
       };
       
       // Use prePopulatedFields for all fields (both new and existing templates)
@@ -195,6 +369,8 @@ export default function ProductTemplateManager({ context, onNavigate }) {
     setSuccess(null);
     setShowFieldEditor(false);
     setEditingField(null);
+    // Reload templates to refresh configured status
+    loadExistingTemplates(productSchema);
   };
 
   // Field management functions
@@ -351,44 +527,204 @@ export default function ProductTemplateManager({ context, onNavigate }) {
       <div className="max-w-7xl mx-auto">
         {!isEditing ? (
           <>
-            {/* Product Selection View */}
-            <h1 className="text-3xl font-bold text-white mb-6">Product Template Manager</h1>
-            
-            <div className="mb-6 bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-400 mb-2">About Product Templates</h3>
-              <p className="text-sm text-blue-300">
-                Product templates define the configuration options for the Quote Configurator.
-                Select a product to configure its available I/O sections, default assemblies, and other settings.
+            {/* Product Selection View - Compact Overview */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-white mb-2">Product Template Manager</h1>
+              <p className="text-gray-400">
+                {viewMode === 'categories' 
+                  ? `Select a product category • ${productLines.length} categories • ${Object.keys(existingTemplates).length}/${productSchema.length} configured`
+                  : `${productLines.find(l => l.code === selectedProductLine)?.name || ''} • ${filteredProducts.length} products`
+                }
               </p>
             </div>
 
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Select a Product to Configure
-              </h2>
-              
-              {productSchema.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">No products found</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {productSchema.map(prod => (
+            {/* Category View */}
+            {viewMode === 'categories' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {productLines.map(line => {
+                  const configuredCount = line.products.filter(p => existingTemplates[p.const]).length;
+                  const totalCount = line.products.length;
+                  const percentage = Math.round((configuredCount / totalCount) * 100);
+                  const IconComponent = getCategoryIcon(line.code);
+                  
+                  return (
                     <button
-                      key={prod.const}
-                      onClick={() => handleSelectProduct(prod.const)}
-                      className="p-4 bg-gray-700 rounded-lg text-left hover:bg-gray-600 transition-colors border border-gray-600 hover:border-blue-500"
+                      key={line.code}
+                      onClick={() => handleSelectCategory(line.code)}
+                      className="p-5 bg-gray-800 rounded-lg text-left hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-blue-500 group"
                     >
-                      <div className="flex items-center gap-3 mb-2">
-                        <FileCode className="text-blue-400" size={24} />
-                        <h3 className="text-lg font-semibold text-white font-mono">
-                          {prod.const}
-                        </h3>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-blue-900/30 rounded-lg group-hover:bg-blue-900/50 transition-colors">
+                            <IconComponent className="text-blue-400" size={48} />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-white font-mono">{line.code}s</h3>
+                            <p className="text-sm text-gray-400">{totalCount} products</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-400">{configuredCount}</div>
+                          <div className="text-xs text-gray-500">configured</div>
+                        </div>
                       </div>
-                      <p className="text-gray-300 text-sm">{prod.description}</p>
+                      
+                      <h4 className="text-base font-semibold text-gray-200 mb-2">{line.name}</h4>
+                      
+                      {/* Progress Bar */}
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            percentage === 100 ? 'bg-green-500' : 
+                            percentage > 50 ? 'bg-blue-500' : 
+                            percentage > 0 ? 'bg-yellow-500' : 'bg-gray-600'
+                          }`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">{percentage}% complete</p>
                     </button>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Products View */}
+            {viewMode === 'products' && (
+              <>
+                {/* Back Button and Available Number Dropdown */}
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={handleBackToCategories}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-md border border-gray-700"
+                  >
+                    <X size={18} />
+                    Back to Categories
+                  </button>
+                  
+                  {availableNumbers.length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-400">Create template for:</label>
+                      <select
+                        value={selectedAvailableNumber}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value) {
+                            handleCreateCustomProduct(parseInt(value));
+                            setSelectedAvailableNumber('');
+                          }
+                        }}
+                        className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Available numbers ({availableNumbers.length})</option>
+                        {availableNumbers.map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Product Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProducts.map(prod => {
+                    const isConfigured = !!existingTemplates[prod.const];
+                    const template = existingTemplates[prod.const];
+                    
+                    return (
+                      <div
+                        key={prod.const}
+                        className={`relative p-4 rounded-lg transition-all border-2 ${
+                          isConfigured
+                            ? 'bg-gray-800/50 border-green-700/50 hover:border-green-500'
+                            : 'bg-gray-800/30 border-gray-700/50 hover:border-blue-500'
+                        }`}
+                      >
+                        {/* Status Badge */}
+                        <div className="absolute top-3 right-3">
+                          {isConfigured ? (
+                            <CheckCircle className="text-green-400" size={20} />
+                          ) : (
+                            <Circle className="text-gray-500" size={20} />
+                          )}
+                        </div>
+
+                        <div className="flex items-start gap-3 mb-3">
+                          <FileCode className={isConfigured ? 'text-green-400' : 'text-blue-400'} size={24} />
+                          <div className="flex-1 pr-6">
+                            <h3 className="text-lg font-semibold text-white font-mono mb-1">
+                              {prod.const}
+                            </h3>
+                            <p className="text-gray-300 text-sm leading-tight">{prod.description}</p>
+                          </div>
+                        </div>
+
+                        {/* Template Info */}
+                        {isConfigured && template && (
+                          <div className="mb-3 p-2 bg-gray-900/50 rounded text-xs space-y-1">
+                            <div className="flex justify-between text-gray-400">
+                              <span>I/O Sections:</span>
+                              <span className="text-gray-300">
+                                {template.fields ? Object.values(template.fields).filter(f => f?.length > 0).length : 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-gray-400">
+                              <span>Assemblies:</span>
+                              <span className="text-gray-300">
+                                {(template.assemblies?.required?.length || 0) + 
+                                 (template.assemblies?.recommended?.length || 0) + 
+                                 (template.assemblies?.optional?.length || 0)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-gray-400">
+                              <span>Labor Hours:</span>
+                              <span className="text-gray-300">
+                                {((template.engineeringHours || 0) + 
+                                  (template.programmingHours || 0) + 
+                                  (template.productionHours || 0)).toFixed(1)}h
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSelectProduct(prod.const)}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                              isConfigured
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            {isConfigured ? (
+                              <>
+                                <Edit size={16} />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Plus size={16} />
+                                Create
+                              </>
+                            )}
+                          </button>
+                          {isConfigured && (
+                            <button
+                              onClick={() => handleSelectProduct(prod.const)}
+                              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-md"
+                              title="View template"
+                            >
+                              <Eye size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -487,14 +823,47 @@ export default function ProductTemplateManager({ context, onNavigate }) {
                     <label className="block text-sm font-medium text-gray-400 mb-2">
                       Base Labor Hours
                     </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={template.estimatedBaseLaborHours || 0}
-                      onChange={(e) => setTemplate({ ...template, estimatedBaseLaborHours: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Engineering</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={template.engineeringHours || 0}
+                          onChange={(e) => setTemplate({ ...template, engineeringHours: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="0.0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Programming</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={template.programmingHours || 0}
+                          onChange={(e) => setTemplate({ ...template, programmingHours: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="0.0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Production</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={template.productionHours || 0}
+                          onChange={(e) => setTemplate({ ...template, productionHours: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="0.0"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-500">
+                      Total: {((template.engineeringHours || 0) + (template.programmingHours || 0) + (template.productionHours || 0)).toFixed(1)} hours
+                    </div>
                   </div>
 
                   <div className="md:col-span-2">
@@ -808,7 +1177,10 @@ export default function ProductTemplateManager({ context, onNavigate }) {
                             onChange={() => handleToggleAssembly(asm.assemblyId, 'defaultAssemblies')}
                             className="rounded"
                           />
-                          <span className="text-sm text-gray-300">{asm.assemblyId} - {asm.description}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-gray-300 truncate">{asm.description}</div>
+                            <div className="text-xs text-gray-500">{asm.category}</div>
+                          </div>
                         </label>
                       ))}
                     </div>
@@ -830,7 +1202,10 @@ export default function ProductTemplateManager({ context, onNavigate }) {
                             onChange={() => handleToggleAssembly(asm.assemblyId, 'requiredAssemblies')}
                             className="rounded"
                           />
-                          <span className="text-sm text-gray-300">{asm.assemblyId} - {asm.description}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-gray-300 truncate">{asm.description}</div>
+                            <div className="text-xs text-gray-500">{asm.category}</div>
+                          </div>
                         </label>
                       ))}
                     </div>
@@ -852,7 +1227,10 @@ export default function ProductTemplateManager({ context, onNavigate }) {
                             onChange={() => handleToggleAssembly(asm.assemblyId, 'optionalAssemblies')}
                             className="rounded"
                           />
-                          <span className="text-sm text-gray-300">{asm.assemblyId} - {asm.description}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-gray-300 truncate">{asm.description}</div>
+                            <div className="text-xs text-gray-500">{asm.category}</div>
+                          </div>
                         </label>
                       ))}
                     </div>

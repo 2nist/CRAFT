@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Upload, CheckCircle, XCircle, FileText, Map, Settings, Package, Loader2, ArrowRight } from 'lucide-react';
 
 const REQUIRED_COLUMNS = ['productName', 'assemblyName', 'sku', 'quantity'];
-const OPTIONAL_COLUMNS = ['category', 'voltage', 'amps', 'protection', 'type', 'notes'];
+const OPTIONAL_COLUMNS = ['assemblyDescription', 'category', 'voltage', 'amps', 'protection', 'type', 'notes'];
 
 export default function LegacyBomImporter({ context }) {
   const [step, setStep] = useState(1);
@@ -46,9 +46,13 @@ export default function LegacyBomImporter({ context }) {
   const handleFileChange = (e) => {
     const f = e.target.files[0];
     if (f) {
+      console.log('File selected:', f.name);
       setFile(f);
       const reader = new FileReader();
-      reader.onload = (e) => setCsvContent(e.target.result);
+      reader.onload = (e) => {
+        console.log('File loaded, size:', e.target.result.length);
+        setCsvContent(e.target.result);
+      };
       reader.readAsText(f);
     }
   };
@@ -61,15 +65,19 @@ export default function LegacyBomImporter({ context }) {
     setIsLoading(true);
     setError(null);
     try {
+      console.log('Getting CSV headers...');
       const result = await window.bomImporter.getCsvHeaders(csvContent);
+      console.log('Header detection result:', result);
       if (result.headers && result.headers.length > 0) {
         setCsvHeaders(result.headers);
         setHeaderRowIndex(result.headerRowIndex);
+        console.log('Moving to step 2');
         setStep(2);
       } else {
         setError("Could not find a valid header row. Please check your file.");
       }
     } catch (err) {
+      console.error('Error getting headers:', err);
       setError(`Failed to parse CSV: ${err.message}`);
     }
     setIsLoading(false);
@@ -89,12 +97,17 @@ export default function LegacyBomImporter({ context }) {
     
     // Auto-detect product names from the CSV
     const productColName = columnMap.productName;
+    console.log('Product column name:', productColName);
+    console.log('CSV headers:', csvHeaders);
+    console.log('Header index:', csvHeaders.indexOf(productColName));
+    
     const uniqueProductNames = new Set(
       csvContent.split('\n').slice(headerRowIndex + 1)
         .map(row => row.split(',')[csvHeaders.indexOf(productColName)]?.trim())
         .filter(Boolean)
     );
     
+    console.log('Unique product names found:', Array.from(uniqueProductNames));
     setProductNames(Array.from(uniqueProductNames));
     
     // Auto-map any names that match existing product names
@@ -102,12 +115,17 @@ export default function LegacyBomImporter({ context }) {
     Array.from(uniqueProductNames).forEach(name => {
       const existingProduct = allProductCodes.find(p => p.name === name);
       if (existingProduct) {
+        console.log(`Mapping "${name}" to existing product ${existingProduct.code}`);
         newProductCodeMap[name] = existingProduct.code;
       } else {
-        newProductCodeMap[name] = "CREATE_NEW";
+        console.log(`Creating new product entry for "${name}"`);
+        // Create the object structure immediately for new products
+        newProductCodeMap[name] = { newCode: "", newName: name };
       }
     });
     setProductCodeMap(newProductCodeMap);
+    
+    console.log('Product code map:', newProductCodeMap);
     
     setError(null);
     setStep(3);
@@ -131,6 +149,14 @@ export default function LegacyBomImporter({ context }) {
   };
 
   const goToStep4 = () => {
+    console.log('goToStep4 called, productCodeMap:', productCodeMap);
+    
+    // Check if there are any products to map
+    if (Object.keys(productCodeMap).length === 0) {
+      setError('No products found in CSV. Please check your file.');
+      return;
+    }
+    
     // Validate that all products are mapped or new ones are fully defined
     for (const [name, mapping] of Object.entries(productCodeMap)) {
       if (typeof mapping === 'object') {
@@ -189,6 +215,7 @@ export default function LegacyBomImporter({ context }) {
   };
 
   const renderStep = () => {
+    console.log('Rendering step:', step);
     switch (step) {
       case 1:
         return (
@@ -266,7 +293,7 @@ export default function LegacyBomImporter({ context }) {
                           <SelectValue placeholder="Select a product..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CREATE_NEW" className="font-bold text-blue-600">-- Create new product... --</SelectItem>
+                          <SelectItem key="CREATE_NEW" value="CREATE_NEW" className="font-bold text-blue-600">-- Create new product... --</SelectItem>
                           {allProductCodes.map(p => (
                             <SelectItem key={p.code} value={p.code}>{p.code} - {p.name}</SelectItem>
                           ))}
@@ -378,10 +405,25 @@ function ColumnMapper({ ourField, csvHeaders, columnMap, onChange, isRequired = 
   // Filter out empty headers from CSV
   const validHeaders = csvHeaders.filter(h => h && h.trim() !== '');
   
+  // Friendly labels for display
+  const labelMap = {
+    productName: 'Product Name',
+    assemblyName: 'Assembly Name',
+    sku: 'Component SKU',
+    quantity: 'Component Quantity',
+    assemblyDescription: 'Assembly Description',
+    category: 'Assembly Category',
+    voltage: 'Voltage',
+    amps: 'Amperage',
+    protection: 'Protection Rating',
+    type: 'Type',
+    notes: 'Component Notes'
+  };
+  
   return (
     <div className="grid grid-cols-2 items-center gap-4">
       <label className="text-sm font-medium text-right">
-        {ourField} {isRequired && <span className="text-red-500">*</span>}
+        {labelMap[ourField] || ourField} {isRequired && <span className="text-red-500">*</span>}
       </label>
       <Select value={columnMap[ourField] || "__SKIP__"} onValueChange={(value) => onChange(ourField, value === "__SKIP__" ? "" : value)}>
         <SelectTrigger>

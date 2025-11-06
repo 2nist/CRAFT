@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag } from 'lucide-react';
+import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -88,7 +88,7 @@ export default function ManualBomBuilder() {
   const addItem = (item, type) => {
     setBom(prev => {
       const list = type === 'assembly' ? 'assemblies' : 'components';
-      const key = type === 'assembly' ? 'assemblyId' : 'id';
+      const key = type === 'assembly' ? 'assemblyId' : 'sku';
       
       const existing = prev[list].find(i => i[key] === item[key]);
       let newList;
@@ -109,7 +109,7 @@ export default function ManualBomBuilder() {
   const removeItem = (id, type) => {
     setBom(prev => {
       const list = type === 'assembly' ? 'assemblies' : 'components';
-      const key = type === 'assembly' ? 'assemblyId' : 'id';
+      const key = type === 'assembly' ? 'assemblyId' : 'sku';
       const newList = prev[list].filter(i => i[key] !== id);
       return { ...prev, [list]: newList };
     });
@@ -121,7 +121,7 @@ export default function ManualBomBuilder() {
     
     setBom(prev => {
       const list = type === 'assembly' ? 'assemblies' : 'components';
-      const key = type === 'assembly' ? 'assemblyId' : 'id';
+      const key = type === 'assembly' ? 'assemblyId' : 'sku';
       const newList = prev[list].map(i => 
         i[key] === id ? { ...i, quantity: qty } : i
       );
@@ -209,7 +209,7 @@ export default function ManualBomBuilder() {
             <TabsContent value="components">
               <SearchableList
                 searchFn={window.components.search}
-                itemKey="id"
+                itemKey="sku"
                 itemDisplay="description"
                 onAdd={(item) => addItem(item, 'component')}
               />
@@ -280,7 +280,7 @@ export default function ManualBomBuilder() {
           <BomSection 
             title="One-Off Components"
             items={bom.components}
-            itemKey="id"
+            itemKey="sku"
             type="component"
             updateQuantity={updateQuantity}
             removeItem={removeItem}
@@ -325,6 +325,7 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd }) {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [category, setCategory] = useState("");
+  const [sortBy, setSortBy] = useState(""); // New: sort field
 
   // Debounced search
   useEffect(() => {
@@ -350,50 +351,97 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd }) {
     return () => clearTimeout(handler);
   }, [searchTerm, category, searchFn]);
 
+  // Sort results based on selected field
+  const sortedResults = useMemo(() => {
+    if (!sortBy || results.length === 0) return results;
+    
+    return [...results].sort((a, b) => {
+      let aVal = a[sortBy] || '';
+      let bVal = b[sortBy] || '';
+      
+      // Handle vendor field (could be manufacturer or vendor)
+      if (sortBy === 'vendor') {
+        aVal = a.manufacturer || a.vendor || '';
+        bVal = b.manufacturer || b.vendor || '';
+      }
+      
+      // Handle part field (could be sku or partNumber)
+      if (sortBy === 'part') {
+        aVal = a.sku || a.partNumber || '';
+        bVal = b.sku || b.partNumber || '';
+      }
+      
+      // Numeric sort for voltage
+      if (sortBy === 'voltage') {
+        const aNum = parseFloat(aVal) || 0;
+        const bNum = parseFloat(bVal) || 0;
+        return aNum - bNum;
+      }
+      
+      // String sort for everything else
+      return String(aVal).localeCompare(String(bVal));
+    });
+  }, [results, sortBy]);
+
   return (
     <div className="flex flex-col h-full">
-      <div className="relative flex-shrink-0">
-        <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-        <Input 
-          placeholder="Search by description..." 
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="pl-8"
-        />
+      <div className="flex gap-2 flex-shrink-0">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Input 
+            placeholder="Search by description..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        {itemKey === 'sku' && (
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={14} className="text-slate-400" />
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="text-xs px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            >
+              <option value="">Sort by...</option>
+              <option value="part">Part #</option>
+              <option value="description">Description</option>
+              <option value="vendor">Vendor</option>
+              <option value="category">Category</option>
+              <option value="voltage">Voltage</option>
+            </select>
+          </div>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto mt-3">
         {isLoading && <div className="text-sm text-slate-500 p-2">Searching...</div>}
         {!isLoading && results.length === 0 && searchTerm.length > 1 && <div className="text-sm text-slate-500 p-2">No results found.</div>}
         {!isLoading && results.length === 0 && searchTerm.length < 2 && <div className="text-sm text-slate-400 p-2">Enter at least 2 characters to search...</div>}
-        {results.length > 0 && (
+        {sortedResults.length > 0 && (
           <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  {itemKey === 'id' && <th className="text-left px-1 py-1 font-semibold w-24">Part #</th>}
-                  {itemKey === 'id' && <th className="text-left px-1 py-1 font-semibold w-24">Mfg</th>}
-                  {itemKey !== 'id' && <th className="text-left px-1 py-1 font-semibold w-28">Assembly ID</th>}
-                  <th className="text-left px-1 py-1 font-semibold">Description</th>
-                  {itemKey === 'id' && <th className="text-left px-1 py-1 font-semibold w-24">Category</th>}
-                  {itemKey === 'id' && <th className="text-left px-1 py-1 font-semibold w-20">Sub</th>}
-                  {itemKey === 'id' && <th className="text-right px-1 py-1 font-semibold w-16">Price</th>}
-                  <th className="text-center px-1 py-1 font-semibold w-12">Add</th>
+                  {itemKey === 'sku' && <th className="text-left px-2 py-1.5 font-semibold">Part #</th>}
+                  <th className="text-left px-2 py-1.5 font-semibold">Description</th>
+                  {itemKey === 'sku' && <th className="text-left px-2 py-1.5 font-semibold">Vendor</th>}
+                  {itemKey === 'sku' && <th className="text-right px-2 py-1.5 font-semibold">Price</th>}
+                  {itemKey !== 'sku' && <th className="text-left px-2 py-1.5 font-semibold">Category</th>}
+                  <th className="text-center px-2 py-1.5 font-semibold w-12">Add</th>
                 </tr>
               </thead>
               <tbody>
-                {results.map(item => (
+                {sortedResults.map(item => (
                   <tr 
                     key={item[itemKey]} 
                     className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
                   >
-                    {itemKey === 'id' && <td className="px-1 py-1 font-mono text-xs">{item.partNumber || '-'}</td>}
-                    {itemKey === 'id' && <td className="px-1 py-1 text-xs truncate">{item.manufacturer || '-'}</td>}
-                    {itemKey !== 'id' && <td className="px-1 py-1 font-mono text-xs">{item[itemKey]}</td>}
-                    <td className="px-1 py-1">{item[itemDisplay]}</td>
-                    {itemKey === 'id' && <td className="px-1 py-1 text-xs text-slate-600 dark:text-slate-400">{item.category || '-'}</td>}
-                    {itemKey === 'id' && <td className="px-1 py-1 text-xs text-slate-600 dark:text-slate-400">{item.subcategory || '-'}</td>}
-                    {itemKey === 'id' && <td className="px-1 py-1 text-right font-medium text-xs">{item.price ? `$${item.price.toFixed(2)}` : '-'}</td>}
-                    <td className="px-1 py-1 text-center">
+                    {itemKey === 'sku' && <td className="px-2 py-1.5 font-mono text-xs">{item.sku || item.partNumber || '-'}</td>}
+                    <td className="px-2 py-1.5">{item[itemDisplay]}</td>
+                    {itemKey === 'sku' && <td className="px-2 py-1.5 text-xs">{item.manufacturer || item.vendor || '-'}</td>}
+                    {itemKey === 'sku' && <td className="px-2 py-1.5 text-right font-medium">{item.price ? `$${item.price.toFixed(2)}` : '-'}</td>}
+                    {itemKey !== 'sku' && <td className="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-400">{item.category || '-'}</td>}
+                    <td className="px-2 py-1.5 text-center">
                       <Button size="sm" variant="ghost" onClick={() => onAdd(item)} className="h-6 w-6 p-0">
                         <Plus size={14} />
                       </Button>

@@ -1,98 +1,48 @@
-Product Name,Assembly Name,Component SKU,Quantity,DESCRIPTION,,
-Brewhouse,ENCLOSURE,CSD423610,1,42Hx36Wx10D Grey Type 4 Enclosure,,
-Brewhouse,ENCLOSURE,CP4236G,1,Galvanized Subpanel for 42x36 enclosure,,
-Brewhouse,DISCONNECT,GLAS-R9-60-NF-KIT,1,"60AMP COMPACT NON-FUSED DISCONNECT UL98, SELECTOR HANDLE RED/YELLOW NEM4X, 320MM SHAFT INTERNAL LUGS",,
-Brewhouse,DISCONNECT,ADR21ITB,2,2/0AWG AL 1HOLE LUG LAMLA2/0-14Q,,
-Brewhouse,85,PS5R-VF24,1,24VDC 5A 120VA Slim 85-264VAC,,
-Brewhouse,HOLDER,E93/30SCC,1,CLASS CC 3POLE FUSE HOLDER INDICATING FLIP STYLE 30AMP DIN MOUNT,,
-Brewhouse,DELAY,LP-CC-2,2,2A CLASS CC Time Delay Fuse,,
-Brewhouse,DELAY,LP-CC-8,1,8A Class CC Time Delay Fuse,,
-Brewhouse,DISCONNECT,UD80A,3,ERICO PDB (85AMP UL1059) Load: 3x10AWG & 3x4AWG,,
-Brewhouse,DISCONNECT,XTPAXLSA,4,EATON - B Frame 3 Pole Feeder (60A Max),,
-Brewhouse,BUSBAR,XTPAXCLKA5,1,EATON - 3 Pole 5CMC Busbar (60A Max),,
-Brewhouse,PHASE,XTPR010BC1,3,EATON - MMP - Short Circuit/Phase/OL 6.3-10.0A,,
-Brewhouse,MOUNT,XTPAXFA11,3,EATON - MMP Front Under Mount Auxiliary,,
-Brewhouse,MMP,XTPAXEMCB,3,EATON - Connecting Link for MMP/CON Frame B:B,,
-Brewhouse,CONTACTOR,XTCE009B10TD,3,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,,
-Brewhouse,PHASE,XTPR012BC1,1,EATON - MMP - Short Circuit/Phase/OL 8.0-12.0A,,
-Brewhouse,MOUNT,XTPAXFA11,1,EATON - MMP Front Under Mount Auxiliary,,
-Brewhouse,,DM1-32011NB-S20S,1,DM1 PRO 3PH 230V FR2 3HP 11A CT NOEMC,,
-Brewhouse,PHASE,XTPR6P3BC1,1,EATON - MMP - Short Circuit/Phase/OL 4.0-6.3A,,
-Brewhouse,MOUNT,XTPAXFA11,1,EATON - MMP Front Under Mount Auxiliary,,
-Brewhouse,MMP,XTPAXEMCB,1,EATON - Connecting Link for MMP/CON Frame B:B,,
-Brewhouse,CONTACTOR,XTCE009B10TD,1,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,,
-Brewhouse,PHASE,XTPR004BC1,1,EATON - MMP - Short Circuit/Phase/OL 2.5-4.0A,,
-Brewhouse,MOUNT,XTPAXFA11,1,EATON - MMP Front Under Mount Auxiliary,,
-Brewhouse,MMP,XTPAXEMCB,1,EATON - Connecting Link for MMP/CON Frame B:B,,
-Brewhouse,CONTACTOR,XTCE009B10TD,1,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,,
-Brewhouse,PHASE,XTPR2P5BC1,1,EATON - MMP - Short Circuit/Phase/OL 1.6-2.5A,,
-Brewhouse,MOUNT,XTPAXFA11,1,EATON - MMP Front Under Mount Auxiliary,,
-Brewhouse,MMP,XTPAXEMCB,1,EATON - Connecting Link for MMP/CON Frame B:B,,
-Brewhouse,CONTACTOR,XTCE009B10TD,1,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,,
-Brewhouse,PHASE,XTPR001BC1,1,EATON - MMP - Short Circuit/Phase/OL 0.63-1.0A,,
-Brewhouse,MOUNT,XTPAXFA11,1,EATON - MMP Front Under Mount Auxiliary,,
-Brewhouse,MMP,XTPAXEMCB,1,EATON - Connecting Link for MMP/CON Frame B:B,,
-Brewhouse,CONTACTOR,XTCE009B10TD,1,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,,
-Brewhouse,24IN,FC6A-C40R1CE,1,IDEC 40I/O 24VDC 24IN (Sink/Source) 16RO RS485 Ethernet,,
-Brewhouse,,FC6A-R161,1,IDEC 16pt Relay Output,,
-Brewhouse,,FC6A-J8A1,1,IDEC 8pt 0-10V / 4-20mA Analog Input 12 Bit,,
-Brewhouse,,FC6A-K4A1,1,"IDEC 4pt Analog Output Module, 0-10V/4-20mA 12-Bit",,
-Brewhouse,DISCONNECT,HG4G-VCXT22MF-B,1,IDEC 12.1 65K Color 1024X768 Resolution 24VDC,,
-Brewhouse,ETHERNET,FL SWITCH 1000,1,"Phoenix Contact 1085039 Unmanaged Ethernet Switch, 5-Port, 24VDC",,
-Brewhouse,DISCONNECT,440R-N23135 ,1,AB MSR127RP Safety RLY 24VAC/DC 3NO/1NC,,
-Brewhouse,PLASTIC,800FP-MT44PX01,2,"AB 800F Red Mushroom Plastic 40mm, w/ 1N.C.",,
-Brewhouse,LEGEND,800F-15YSE112,2,"AB 800F E-Stop Legend Plate, Yellow",,
-Brewhouse,,800FP-P4PN3R,1,Red Pilot Light 24VDC,,
-Brewhouse,BLACK,800FP-SM22PX10 ,1,AB 2POS 1NO SWITCH BLACK,,
-Brewhouse,LED,RJ1S-CLD-D24,2,Relay SPDT 12A 24VDC LED and Diode (NEED SOCKET),,
-Brewhouse,,SJ1S-07LW,2,Socket for RJ1,,
-,,,,,,
-,,,,,,
-,,,,,,
-,,ENC-423610-GREY,,,ENCLOSURE,ENC
-,,ENC-423610-GREY,,,BRANCH BREAKER,BRB
-,,DIS-60A-NONFUS-HNDL,,,CONTROL,CON
-,,DIS-60A-NONFUS-HNDL,,,DISCONNECT,DIS
-,,PD_-24VDC5A-230V-3p,,,FUSE,FUS
-,,PD_-24VDC5A-230V-3p,,,MAIN BREAKER,MBR
-,,PD_-24VDC5A-230V-3p,,,MOTOR CONTROL VFD,MCV
-,,PD_-24VDC5A-230V-3p,,,MOTOR CONTROL CON,MCC
-,,PD_-24VDC5A-230V-3p,,,PLC/COM-Logic Controller w/HMI,PLC
-,,PD_-24VDC5A-230V-3p,,,PLC/COM Modules,LCM
-,,PD_-24VDC5A-230V-3p,,,PNU,PN
-,,MCC-1.5HP-230V-3p,,,PWRDST,PD
-,,MCC-1.5HP-230V-3p,,,PWRDST,
-,,MCC-1.5HP-230V-3p,,,SAFETY,SAF
-,,MCC-1.5HP-230V-3p,,,WIRING,WIR
-,,MCV-3HP-230V-3p,,,HEATER CONTROL SSR,HCS
-,,MCV-3HP-230V-3p,,,HEATER CONTROL CON,HCC
-,,MCV-3HP-230V-3p,,,,
-,,MCC-1HP-230-3p,,,,
-,,MCC-1HP-230-3p,,,,
-,,MCC-1HP-230-3p,,,,
-,,MCC-1HP-230-3p,,,,
-,,MCC-.75HP-230-3p,,,,
-,,MCC-.75HP-230-3p,,,,
-,,MCC-.75HP-230-3p,,,,
-,,MCC-.75HP-230-3p,,,,
-,,MCC-.5HP-230V-3p,,,,
-,,MCC-.5HP-230V-3p,,,,
-,,MCC-.5HP-230V-3p,,,,
-,,MCC-.5HP-230V-3p,,,,
-,,MCC-.25HP-230V-3p,,,,
-,,MCC-.25HP-230V-3p,,,,
-,,MCC-.25HP-230V-3p,$160.00 ,,,
-,,MCC-.25HP-230V-3p,$140.00 ,,,
-,,"PLC-IDEC-RelayOut-12""",$165.00 ,,,
-,,PMD-DI4-DO16-AI8-AO,$145.00 ,,,
-,,PMD-DI4-DO16-AI8-AO,"$1,425.00 ",,,
-,,PMD-DI4-DO16-AI8-AO,,,,
-,,"PLC-IDEC-RelayOut-12""",,,,
-,,"PLC-IDEC-RelayOut-12""",,,,
-,,SAF-RED-MUSH-40mm,,,,
-,,SAF-RED-MUSH-40mm,,,,
-,,SAF-RED-MUSH-40mm,,,,
-,,CON-AUTO-SWITCH,,,,
-,,CON-AUTO-SWITCH,,,,
-,,CON-AUTO-SWITCH,,,,
-,,CON-AUTO-SWITCH,,,,
+Product Name,Assembly Name,Assembly Description,Component SKU,Quantity,Category,Component Description,Notes
+Brewhouse,Main Enclosure Assembly,Primary control enclosure with subpanel for Brewhouse system,CSD423610,1,ENCLOSURE,42Hx36Wx10D Grey Type 4 Enclosure,Main enclosure
+Brewhouse,Main Enclosure Assembly,Primary control enclosure with subpanel for Brewhouse system,CP4236G,1,ENCLOSURE,Galvanized Subpanel for 42x36 enclosure,Mounting panel
+Brewhouse,Main Disconnect Assembly,60A main power disconnect with safety handle,GLAS-R9-60-NF-KIT,1,DISCONNECT,"60AMP COMPACT NON-FUSED DISCONNECT UL98, SELECTOR HANDLE RED/YELLOW NEM4X, 320MM SHAFT INTERNAL LUGS",Main disconnect switch
+Brewhouse,Main Disconnect Assembly,60A main power disconnect with safety handle,ADR21ITB,2,DISCONNECT,2/0AWG AL 1HOLE LUG LAMLA2/0-14Q,Terminal lugs
+Brewhouse,Power Supply Assembly,24VDC control power supply with fuse protection,PS5R-VF24,1,PWRDST,24VDC 5A 120VA Slim 85-264VAC,Control power supply
+Brewhouse,Power Supply Assembly,24VDC control power supply with fuse protection,E93/30SCC,1,FUSE,CLASS CC 3POLE FUSE HOLDER INDICATING FLIP STYLE 30AMP DIN MOUNT,Fuse holder for power supply
+Brewhouse,Power Supply Assembly,24VDC control power supply with fuse protection,LP-CC-2,2,FUSE,2A CLASS CC Time Delay Fuse,Control circuit protection
+Brewhouse,Power Supply Assembly,24VDC control power supply with fuse protection,LP-CC-8,1,FUSE,8A Class CC Time Delay Fuse,Power supply protection
+Brewhouse,Branch Circuit Distribution,Power distribution assembly with feeders and busbar,UD80A,3,BRANCH BREAKER,ERICO PDB (85AMP UL1059) Load: 3x10AWG & 3x4AWG,Power distribution blocks
+Brewhouse,Branch Circuit Distribution,Power distribution assembly with feeders and busbar,XTPAXLSA,4,BRANCH BREAKER,EATON - B Frame 3 Pole Feeder (60A Max),Branch circuit feeders
+Brewhouse,Branch Circuit Distribution,Power distribution assembly with feeders and busbar,XTPAXCLKA5,1,BRANCH BREAKER,EATON - 3 Pole 5CMC Busbar (60A Max),Distribution busbar
+Brewhouse,Kettle Pump Starter - 10A,Contactor-based motor starter for kettle recirculation pump (6.3-10A range),XTPR010BC1,3,MOTOR CONTROL CON,EATON - MMP - Short Circuit/Phase/OL 6.3-10.0A,Motor protection 10A
+Brewhouse,Kettle Pump Starter - 10A,Contactor-based motor starter for kettle recirculation pump (6.3-10A range),XTPAXFA11,3,MOTOR CONTROL CON,EATON - MMP Front Under Mount Auxiliary,Auxiliary contacts
+Brewhouse,Kettle Pump Starter - 10A,Contactor-based motor starter for kettle recirculation pump (6.3-10A range),XTPAXEMCB,3,MOTOR CONTROL CON,EATON - Connecting Link for MMP/CON Frame B:B,Mechanical interlock
+Brewhouse,Kettle Pump Starter - 10A,Contactor-based motor starter for kettle recirculation pump (6.3-10A range),XTCE009B10TD,3,MOTOR CONTROL CON,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,Motor contactor
+Brewhouse,Mash Pump Starter - 12A,Contactor-based motor starter for mash transfer pump (8-12A range),XTPR012BC1,1,MOTOR CONTROL CON,EATON - MMP - Short Circuit/Phase/OL 8.0-12.0A,Motor protection 12A
+Brewhouse,Mash Pump Starter - 12A,Contactor-based motor starter for mash transfer pump (8-12A range),XTPAXFA11,1,MOTOR CONTROL CON,EATON - MMP Front Under Mount Auxiliary,Auxiliary contacts
+Brewhouse,Mash Pump VFD - 3HP,Variable frequency drive assembly for 3HP mash pump with speed control,DM1-32011NB-S20S,1,MOTOR CONTROL VFD,DM1 PRO 3PH 230V FR2 3HP 11A CT NOEMC,Variable frequency drive 3HP
+Brewhouse,HLT Pump Starter - 6.3A,Contactor-based motor starter for hot liquor tank pump (4-6.3A range),XTPR6P3BC1,1,MOTOR CONTROL CON,EATON - MMP - Short Circuit/Phase/OL 4.0-6.3A,Motor protection 6.3A
+Brewhouse,HLT Pump Starter - 6.3A,Contactor-based motor starter for hot liquor tank pump (4-6.3A range),XTPAXFA11,1,MOTOR CONTROL CON,EATON - MMP Front Under Mount Auxiliary,Auxiliary contacts
+Brewhouse,HLT Pump Starter - 6.3A,Contactor-based motor starter for hot liquor tank pump (4-6.3A range),XTPAXEMCB,1,MOTOR CONTROL CON,EATON - Connecting Link for MMP/CON Frame B:B,Mechanical interlock
+Brewhouse,HLT Pump Starter - 6.3A,Contactor-based motor starter for hot liquor tank pump (4-6.3A range),XTCE009B10TD,1,MOTOR CONTROL CON,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,Motor contactor
+Brewhouse,Whirlpool Pump Starter - 4A,Contactor-based motor starter for whirlpool pump (2.5-4A range),XTPR004BC1,1,MOTOR CONTROL CON,EATON - MMP - Short Circuit/Phase/OL 2.5-4.0A,Motor protection 4A
+Brewhouse,Whirlpool Pump Starter - 4A,Contactor-based motor starter for whirlpool pump (2.5-4A range),XTPAXFA11,1,MOTOR CONTROL CON,EATON - MMP Front Under Mount Auxiliary,Auxiliary contacts
+Brewhouse,Whirlpool Pump Starter - 4A,Contactor-based motor starter for whirlpool pump (2.5-4A range),XTPAXEMCB,1,MOTOR CONTROL CON,EATON - Connecting Link for MMP/CON Frame B:B,Mechanical interlock
+Brewhouse,Whirlpool Pump Starter - 4A,Contactor-based motor starter for whirlpool pump (2.5-4A range),XTCE009B10TD,1,MOTOR CONTROL CON,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,Motor contactor
+Brewhouse,Glycol Pump Starter - 2.5A,Contactor-based motor starter for glycol circulation pump (1.6-2.5A range),XTPR2P5BC1,1,MOTOR CONTROL CON,EATON - MMP - Short Circuit/Phase/OL 1.6-2.5A,Motor protection 2.5A
+Brewhouse,Glycol Pump Starter - 2.5A,Contactor-based motor starter for glycol circulation pump (1.6-2.5A range),XTPAXFA11,1,MOTOR CONTROL CON,EATON - MMP Front Under Mount Auxiliary,Auxiliary contacts
+Brewhouse,Glycol Pump Starter - 2.5A,Contactor-based motor starter for glycol circulation pump (1.6-2.5A range),XTPAXEMCB,1,MOTOR CONTROL CON,EATON - Connecting Link for MMP/CON Frame B:B,Mechanical interlock
+Brewhouse,Glycol Pump Starter - 2.5A,Contactor-based motor starter for glycol circulation pump (1.6-2.5A range),XTCE009B10TD,1,MOTOR CONTROL CON,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,Motor contactor
+Brewhouse,Agitator Starter - 1A,Contactor-based motor starter for agitator motor (0.63-1A range),XTPR001BC1,1,MOTOR CONTROL CON,EATON - MMP - Short Circuit/Phase/OL 0.63-1.0A,Motor protection 1A
+Brewhouse,Agitator Starter - 1A,Contactor-based motor starter for agitator motor (0.63-1A range),XTPAXFA11,1,MOTOR CONTROL CON,EATON - MMP Front Under Mount Auxiliary,Auxiliary contacts
+Brewhouse,Agitator Starter - 1A,Contactor-based motor starter for agitator motor (0.63-1A range),XTPAXEMCB,1,MOTOR CONTROL CON,EATON - Connecting Link for MMP/CON Frame B:B,Mechanical interlock
+Brewhouse,Agitator Starter - 1A,Contactor-based motor starter for agitator motor (0.63-1A range),XTCE009B10TD,1,MOTOR CONTROL CON,EATON - 9A (20A Gen.) Contactor 3P 1 N.O. DC Coil,Motor contactor
+Brewhouse,PLC Control System,IDEC PLC system with 40 I/O points and expansion modules,FC6A-C40R1CE,1,PLC/COM-Logic Controller w/HMI,IDEC 40I/O 24VDC 24IN (Sink/Source) 16RO RS485 Ethernet,Main PLC controller
+Brewhouse,PLC Control System,IDEC PLC system with 40 I/O points and expansion modules,FC6A-R161,1,PLC/COM Modules,IDEC 16pt Relay Output,Relay output module
+Brewhouse,PLC Control System,IDEC PLC system with 40 I/O points and expansion modules,FC6A-J8A1,1,PLC/COM Modules,IDEC 8pt 0-10V / 4-20mA Analog Input 12 Bit,Analog input module
+Brewhouse,PLC Control System,IDEC PLC system with 40 I/O points and expansion modules,FC6A-K4A1,1,PLC/COM Modules,"IDEC 4pt Analog Output Module, 0-10V/4-20mA 12-Bit",Analog output module
+Brewhouse,HMI Touchscreen,12.1 inch color touchscreen operator interface,HG4G-VCXT22MF-B,1,PLC/COM-Logic Controller w/HMI,IDEC 12.1 65K Color 1024X768 Resolution 24VDC,Operator interface panel
+Brewhouse,Network Communication,Ethernet switch for PLC and HMI network communication,FL SWITCH 1000,1,PLC/COM Modules,"Phoenix Contact 1085039 Unmanaged Ethernet Switch, 5-Port, 24VDC",Ethernet network switch
+Brewhouse,Safety Circuit Assembly,Emergency stop safety circuit with dual e-stop buttons and safety relay,440R-N23135,1,SAFETY,AB MSR127RP Safety RLY 24VAC/DC 3NO/1NC,Safety relay module
+Brewhouse,Safety Circuit Assembly,Emergency stop safety circuit with dual e-stop buttons and safety relay,800FP-MT44PX01,2,SAFETY,"AB 800F Red Mushroom Plastic 40mm, w/ 1N.C.",Emergency stop buttons
+Brewhouse,Safety Circuit Assembly,Emergency stop safety circuit with dual e-stop buttons and safety relay,800F-15YSE112,2,SAFETY,"AB 800F E-Stop Legend Plate, Yellow",E-stop identification labels
+Brewhouse,Operator Controls,Control station with selector switch and indicator lights,800FP-P4PN3R,1,CONTROL,Red Pilot Light 24VDC,Power indicator light
+Brewhouse,Operator Controls,Control station with selector switch and indicator lights,800FP-SM22PX10,1,CONTROL,AB 2POS 1NO SWITCH BLACK,Mode selector switch
+Brewhouse,Operator Controls,Control station with selector switch and indicator lights,RJ1S-CLD-D24,2,CONTROL,Relay SPDT 12A 24VDC LED and Diode (NEED SOCKET),Control relay with indicator
+Brewhouse,Operator Controls,Control station with selector switch and indicator lights,SJ1S-07LW,2,CONTROL,Socket for RJ1,,Relay socket
