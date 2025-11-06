@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
-import { Search, X, Package } from 'lucide-react';
+import { Search, X, Package, Info, Copy, CheckCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { searchService } from '../../services/SearchService';
 import { eventBus, EVENTS } from '../../services/EventBus';
@@ -15,6 +15,8 @@ export default function GlobalComponentSearch() {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   const searchInputRef = useRef(null);
   const resultsContainerRef = useRef(null);
 
@@ -89,12 +91,31 @@ export default function GlobalComponentSearch() {
 
   // Handle component selection
   const handleSelectComponent = (component) => {
-    // Publish event for plugins to consume
-    eventBus.publish(EVENTS.COMPONENT_SELECTED, component);
-    
-    // Optionally close modal after selection
-    closeSearchModal();
-    setSearchQuery('');
+    // Show detail dialog instead of closing immediately
+    setSelectedComponent(component);
+    setShowDetailDialog(true);
+  };
+
+  // Handle using the selected component
+  const handleUseComponent = () => {
+    if (selectedComponent) {
+      // Publish event for plugins to consume
+      eventBus.publish(EVENTS.COMPONENT_SELECTED, selectedComponent);
+      
+      // Close detail dialog and reset search
+      setShowDetailDialog(false);
+      setSelectedComponent(null);
+      closeSearchModal();
+      setSearchQuery('');
+    }
+  };
+
+  // Handle copying component data
+  const handleCopyComponent = () => {
+    if (selectedComponent) {
+      const data = JSON.stringify(selectedComponent, null, 2);
+      navigator.clipboard.writeText(data);
+    }
   };
 
   // Handle keyboard shortcuts
@@ -102,13 +123,19 @@ export default function GlobalComponentSearch() {
     const handleKeyDown = (e) => {
       // Escape to close
       if (e.key === 'Escape' && isSearchModalOpen) {
-        closeSearchModal();
+        // If detail dialog is open, close it first
+        if (showDetailDialog) {
+          setShowDetailDialog(false);
+          setSelectedComponent(null);
+        } else {
+          closeSearchModal();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchModalOpen, closeSearchModal]);
+  }, [isSearchModalOpen, closeSearchModal, showDetailDialog]);
 
   if (!isSearchModalOpen) {
     return null;
@@ -124,10 +151,9 @@ export default function GlobalComponentSearch() {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - Don't close on click */}
       <div
         className="fixed inset-0 bg-black/50 z-[9998]"
-        onClick={closeSearchModal}
       />
 
       {/* Draggable/Resizable Modal */}
@@ -282,6 +308,128 @@ export default function GlobalComponentSearch() {
           </div>
         </div>
       </Rnd>
+
+      {/* Component Detail Dialog */}
+      {showDetailDialog && selectedComponent && (
+        <div className="fixed inset-0 flex items-center justify-center z-[10000]">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowDetailDialog(false)} />
+          <div className="relative bg-gray-800 rounded-lg shadow-2xl border border-gray-700 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            {/* Dialog Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <Info size={24} className="text-blue-400" />
+                <h3 className="text-xl font-semibold text-white">Component Details</h3>
+              </div>
+              <button
+                onClick={() => setShowDetailDialog(false)}
+                className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+                title="Close (Esc)"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Dialog Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
+              {/* SKU and Category */}
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="font-mono text-2xl font-bold text-white">
+                    {selectedComponent.sku || selectedComponent.id || 'No SKU'}
+                  </span>
+                  {selectedComponent.category && (
+                    <span className="px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 border border-blue-700 rounded-full">
+                      {selectedComponent.category}
+                    </span>
+                  )}
+                  {selectedComponent.partAbbrev && (
+                    <span className="px-3 py-1 text-sm font-medium text-green-300 bg-green-900/50 border border-green-700 rounded-full">
+                      {selectedComponent.partAbbrev}
+                    </span>
+                  )}
+                </div>
+                <p className="text-lg text-gray-300">
+                  {selectedComponent.description || 'No description available'}
+                </p>
+              </div>
+
+              {/* Component Details Grid */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {(selectedComponent.manufacturer || selectedComponent.vendor) && (
+                  <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 mb-1">Manufacturer/Vendor</div>
+                    <div className="text-white font-medium">
+                      {selectedComponent.manufacturer || selectedComponent.vendor}
+                    </div>
+                  </div>
+                )}
+
+                {selectedComponent.vndrnum && (
+                  <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 mb-1">Vendor Part #</div>
+                    <div className="text-white font-medium font-mono">{selectedComponent.vndrnum}</div>
+                  </div>
+                )}
+
+                {(selectedComponent.price !== undefined && selectedComponent.price !== null) && (
+                  <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 mb-1">Price</div>
+                    <div className="text-green-400 font-bold text-xl">
+                      ${selectedComponent.price.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+
+                {(selectedComponent.quantity !== undefined && selectedComponent.quantity !== null) && (
+                  <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 mb-1">Quantity</div>
+                    <div className="text-white font-medium">{selectedComponent.quantity}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* All Fields (for debugging/completeness) */}
+              <div className="bg-gray-900/30 rounded-lg p-4 border border-gray-700">
+                <div className="text-xs text-gray-500 mb-2">All Fields:</div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {Object.entries(selectedComponent).map(([key, value]) => (
+                    <div key={key} className="flex gap-2">
+                      <span className="text-gray-500">{key}:</span>
+                      <span className="text-gray-300 truncate">{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Dialog Actions */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-t border-gray-700">
+              <button
+                onClick={handleCopyComponent}
+                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center gap-2"
+              >
+                <Copy size={16} />
+                Copy Data
+              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDetailDialog(false)}
+                  className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUseComponent}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <CheckCircle size={16} />
+                  Use Component
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

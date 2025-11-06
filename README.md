@@ -1,6 +1,6 @@
 # 🛠️ Craft Tools Hub
 
-**Professional Quote and Project Management System for Brewery & Distillery Automation**
+**Quote, Product Development and Project Management System for AutomationProcess'
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-Latest-brightgreen.svg)](https://www.electronjs.org/)
@@ -10,7 +10,7 @@
 
 ## 📖 Overview
 
-Craft Tools Hub is a comprehensive desktop application designed for managing quotes, BOMs, components, and projects in the brewery and distillery automation industry. Built with modern web technologies and packaged as a native desktop app.
+Craft Tools Hub is a comprehensive desktop application designed for managing quotes, BOMs, components, and projects in the automation industry. Built with modern web technologies and packaged as a native desktop app.
 
 ### ✨ Key Features
 
@@ -58,7 +58,8 @@ npm run build
 npm run electron:build
 \\\
 
-Executable will be in \elease/\ folder.
+Executable will be in \
+elease/\ folder.
 
 ---
 
@@ -109,16 +110,16 @@ The system organizes products into 10 specialized categories:
 
 | Category | Range | Icon | Products |
 |----------|-------|------|----------|
-| **Brewery** | 100-149 | 🍺 | Brewhouse, Brite Tanks, Unitanks |
-| **Distillery** | 150-199 | 🍸 | Stills, Spirit Vessels, Columns |
-| **Fermentation** | 200-249 | 🍷 | Fermenters, Glycol, Valves |
+| **Brewery** | 100-149 |  | Brewhouse, Brite Tanks, Unitanks |
+| **Distillery** | 150-199 || Stills, Spirit Vessels, Columns |
+| **Fermentation** | 200-249 |  | Fermenters, Glycol, Valves |
 | **Grain** | 250-299 | 🌾 | Milling, Handling, Storage |
-| **Motor Control** | 300-349 | ⚙️ | VFDs, Soft Starters, Motors |
-| **Pneumatics** | 400-449 | 🎯 | Valves, Actuators, Regulators |
-| **Sanitary** | 450-499 | 💧 | CIP, Pumps, Fittings |
-| **Remote** | 500-549 | 📡 | HMI, SCADA, PLCs |
-| **Heating** | 550-599 | 🔥 | Heat Exchangers, Boilers |
-| **General** | 990-999 | 📦 | Miscellaneous |
+| **Motor Control** | 300-349 | | VFDs, Soft Starters, Motors |
+| **Pneumatics** | 400-449 |  | Valves, Actuators, Regulators |
+| **Sanitary** | 450-499 || CIP, Pumps, Fittings |
+| **Remote** | 500-549 |  | HMI, SCADA, PLCs |
+| **Heating** | 550-599 |  | Heat Exchangers, Boilers |
+| **General** | 990-999 |  | Miscellaneous |
 
 ---
 
