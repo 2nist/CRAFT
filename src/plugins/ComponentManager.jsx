@@ -165,10 +165,10 @@ export default function ComponentManager({ context, onNavigate }) {
 
   const getLogIcon = (type) => {
     switch (type) {
-      case 'error': return <AlertCircle size={16} className="text-red-500" />;
-      case 'success': return <CheckCircle size={16} className="text-green-500" />;
-      case 'warning': return <AlertCircle size={16} className="text-yellow-500" />;
-      default: return <Loader size={16} className="text-blue-500" />;
+      case 'error': return <AlertCircle size={16} className="text-danger" />;
+      case 'success': return <CheckCircle size={16} className="text-success" />;
+      case 'warning': return <AlertCircle size={16} className="text-[#fb923c]" />;
+      default: return <Loader size={16} className="text-info" />;
     }
   };
 
@@ -182,7 +182,7 @@ export default function ComponentManager({ context, onNavigate }) {
           <button 
             onClick={handleSync}
             disabled={isSyncing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="ca-btn-primary flex items-center gap-2 px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSyncing ? (
               <>
@@ -198,21 +198,21 @@ export default function ComponentManager({ context, onNavigate }) {
           </button>
           <button 
             onClick={() => handleExportComponents()}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className="ca-btn-success flex items-center gap-2 px-4 py-2 rounded-md"
           >
             <Download size={18} />
             Export All
           </button>
           <button 
             onClick={() => handleExportComponents({ hasPrice: true })}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+            className="ca-btn-info flex items-center gap-2 px-4 py-2 rounded-md"
           >
             <Download size={18} />
             Export Priced
           </button>
           <button 
             onClick={() => handleExportComponents({ hasEngineering: true })}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+            className="ca-btn-info flex items-center gap-2 px-4 py-2 rounded-md"
           >
             <Download size={18} />
             Export Engineering
@@ -234,12 +234,12 @@ export default function ComponentManager({ context, onNavigate }) {
               {logs.map((log, index) => (
                 <div key={index} className="flex items-start gap-2 text-sm">
                   {getLogIcon(log.type)}
-                  <span className="text-gray-500 font-mono">[{log.timestamp}]</span>
+                  <span className="text-slateish/60 font-mono">[{log.timestamp}]</span>
                   <span className={`flex-1 ${
-                    log.type === 'error' ? 'text-red-400' :
-                    log.type === 'success' ? 'text-green-400' :
-                    log.type === 'warning' ? 'text-yellow-400' :
-                    'text-gray-300'
+                    log.type === 'error' ? 'text-danger' :
+                    log.type === 'success' ? 'text-success' :
+                    log.type === 'warning' ? 'text-[#fb923c]' :
+                    'text-slateish/80'
                   }`}>
                     {log.message}
                   </span>
@@ -253,26 +253,26 @@ export default function ComponentManager({ context, onNavigate }) {
         {syncResult && (
           <div className={`mb-6 p-4 rounded-lg border ${
             syncResult.success 
-              ? 'bg-green-900/20 border-green-700' 
-              : 'bg-red-900/20 border-red-700'
+              ? 'bg-success/10 border-success/30' 
+              : 'bg-danger/10 border-danger/30'
           }`}>
             <div className="flex items-center gap-2">
               {syncResult.success ? (
                 <>
-                  <CheckCircle className="text-green-500" size={24} />
+                  <CheckCircle className="text-success" size={24} />
                   <div>
-                    <h3 className="font-semibold text-green-400">Sync Successful</h3>
-                    <p className="text-sm text-green-300">
+                    <h3 className="font-semibold text-success">Sync Successful</h3>
+                    <p className="text-sm text-success/80">
                       {syncResult.updated} updated, {syncResult.added} added
                     </p>
                   </div>
                 </>
               ) : (
                 <>
-                  <AlertCircle className="text-red-500" size={24} />
+                  <AlertCircle className="text-danger" size={24} />
                   <div>
-                    <h3 className="font-semibold text-red-400">Sync Failed</h3>
-                    <p className="text-sm text-red-300">{syncResult.error}</p>
+                    <h3 className="font-semibold text-danger">Sync Failed</h3>
+                    <p className="text-sm text-danger/80">{syncResult.error}</p>
                   </div>
                 </>
               )}
@@ -325,11 +325,11 @@ export default function ComponentManager({ context, onNavigate }) {
                         </td>
                         <td className="p-3 text-center">
                           {hasEngineeringData ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-900/50 text-blue-300 border border-blue-700">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-info/10 text-info border border-info/30">
                               ✓ Custom
                             </span>
                           ) : (
-                            <span className="text-gray-600 text-xs">—</span>
+                            <span className="text-slateish/40 text-xs">—</span>
                           )}
                         </td>
                       </tr>

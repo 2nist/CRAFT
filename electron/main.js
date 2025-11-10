@@ -2022,6 +2022,53 @@ ipcMain.handle('schemas:get-product', async () => {
     return MOCK_PRODUCT_SCHEMA; // Fallback to mock data
   }
 });
+
+// Add product handler with hyphenated name
+ipcMain.handle('schemas:add-product', async (event, productData) => {
+  try {
+    let schemaPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
+    } else {
+      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+    }
+    
+    // Read current schema
+    const data = await fs.readFile(schemaPath, 'utf-8');
+    const schema = JSON.parse(data);
+    
+    // Get current product list
+    const productCodes = schema.properties?.projectCodes?.properties?.product?.oneOf || [];
+    
+    // Check if product already exists
+    if (productCodes.find(p => p.const === productData.const)) {
+      return { success: false, error: 'Product code already exists' };
+    }
+    
+    // Add new product
+    productCodes.push({
+      const: productData.const,
+      description: productData.description
+    });
+    
+    // Sort by const value
+    productCodes.sort((a, b) => a.const - b.const);
+    
+    // Update schema
+    schema.properties.projectCodes.properties.product.oneOf = productCodes;
+    
+    // Write back to file
+    await fs.writeFile(schemaPath, JSON.stringify(schema, null, 2), 'utf-8');
+    
+    console.log(`[Schema] Added new product: ${productData.const} - ${productData.description}`);
+    
+    return { success: true };
+  } catch (err) {
+    console.error('Error adding product to schema:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('schemas:get-control', () => { return MOCK_CONTROL_SCHEMA; });
 ipcMain.handle('schemas:get-scope', () => { return MOCK_SCOPE_SCHEMA; });
 
@@ -2886,7 +2933,7 @@ ipcMain.handle('manuals:get-index', async () => {
 async function logNumberGeneration(type, numberData) {
   try {
     const logsDir = resolveRuntimePath('OUTPUT/LOGS');
-    const csvPath = path.join(logsDir, `${type}s.csv`);
+    const csvPath = path.join(logsDir, `${type}Numbers.csv`);
 
     // Ensure LOGS directory exists
     await ensureDirectoryForFile(csvPath);
@@ -2901,14 +2948,17 @@ async function logNumberGeneration(type, numberData) {
     }
 
     const timestamp = new Date().toISOString();
-    const row = `"${timestamp}","${numberData.mainId}","${numberData.fullId}","${numberData.customerCode}","${numberData.customerName || ''}"`;
+    const row = `"${timestamp}","${numberData.mainId}","${numberData.fullId}","${numberData.customerCode}","${numberData.customerName || ''}","${numberData.industry || ''}","${numberData.product || ''}","${numberData.control || ''}","${numberData.scope || ''}","${numberData.poNumber || ''}"`;
 
     if (!fileExists) {
-      const header = '"Timestamp","Main ID","Full ID","Customer Code","Customer Name"';
+      const header = '"Timestamp","Main ID","Full ID","Customer Code","Customer Name","Industry","Product","Control","Scope","PO Number"';
       await fs.writeFile(csvPath, header + '\n' + row + '\n', 'utf8');
+      console.log(`[${type} Number Log] Created new log file: ${csvPath}`);
     } else {
       await fs.appendFile(csvPath, row + '\n', 'utf8');
     }
+    
+    console.log(`[${type} Number Log] Generated: ${numberData.fullId} for customer ${numberData.customerName} (${numberData.customerCode})`);
   } catch (error) {
     console.error('Error logging number generation:', error);
   }
@@ -2990,9 +3040,31 @@ ipcMain.handle('calc:get-quote-number', async (event, data) => {
   const mainId = `CA${yy}${mm}${dd}${cust}`;
   const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
   
-  // Log to CSV
-  const customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
-  await logNumberGeneration('Quote', { mainId, fullId, customerCode: cust, customerName });
+  // Get customer name from DEFAULT_CUSTOMER_DATA or custom customers
+  let customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
+  if (!customerName) {
+    try {
+      const customersPath = path.join(dataPath, 'customers', 'customers.json');
+      const customersData = await fs.readFile(customersPath, 'utf-8');
+      const customCustomers = JSON.parse(customersData);
+      const customer = customCustomers.find(c => c.id === cust);
+      customerName = customer ? customer.name : 'Unknown';
+    } catch (error) {
+      customerName = 'Unknown';
+    }
+  }
+  
+  // Log to CSV with full details
+  await logNumberGeneration('Quote', { 
+    mainId, 
+    fullId, 
+    customerCode: cust, 
+    customerName,
+    industry: data.industry,
+    product: data.product,
+    control: data.control,
+    scope: data.scope
+  });
   
   return { mainId, fullId };
 });
@@ -3006,9 +3078,32 @@ ipcMain.handle('calc:get-project-number', async (event, data) => {
   const mainId = `CA${yy}${po}${cust}`;
   const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}`;
   
-  // Log to CSV
-  const customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
-  await logNumberGeneration('Project', { mainId, fullId, customerCode: cust, customerName });
+  // Get customer name from DEFAULT_CUSTOMER_DATA or custom customers
+  let customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
+  if (!customerName) {
+    try {
+      const customersPath = path.join(dataPath, 'customers', 'customers.json');
+      const customersData = await fs.readFile(customersPath, 'utf-8');
+      const customCustomers = JSON.parse(customersData);
+      const customer = customCustomers.find(c => c.id === cust);
+      customerName = customer ? customer.name : 'Unknown';
+    } catch (error) {
+      customerName = 'Unknown';
+    }
+  }
+  
+  // Log to CSV with full details
+  await logNumberGeneration('Project', { 
+    mainId, 
+    fullId, 
+    customerCode: cust, 
+    customerName,
+    industry: data.industry,
+    product: data.product,
+    control: data.control,
+    scope: data.scope,
+    poNumber: po
+  });
   
   return { mainId, fullId };
 });

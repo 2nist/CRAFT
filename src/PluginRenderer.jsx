@@ -29,7 +29,7 @@ const PluginRenderer = ({ pluginId, pluginContext, onNavigate }) => {
   if (!PluginComponent) {
     return (
       <div className="p-8 text-center">
-        <div className="bg-red-900 text-red-200 p-4 rounded-lg">
+        <div className="bg-danger/10 text-danger border border-danger/30 p-4 rounded-lg">
           <p className="font-semibold">Error: Plugin '{pluginId}' not found.</p>
           <p className="text-sm mt-2">Available plugins: {Object.keys(pluginMap).join(', ')}</p>
         </div>
@@ -42,8 +42,8 @@ const PluginRenderer = ({ pluginId, pluginContext, onNavigate }) => {
       <Suspense fallback={
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <p className="mt-4 text-gray-400">Loading plugin...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+            <p className="mt-4 text-slateish/60">Loading plugin...</p>
           </div>
         </div>
       }>

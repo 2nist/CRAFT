@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Percent, ArrowRight, Clock, Wrench, Code, Package } from 'lucide-react';
+import { DollarSign, Percent, ArrowRight, Clock, Wrench, Code, Package, Copy, Check } from 'lucide-react';
 
 // Re-usable Input with Icon
 const IconInput = ({ label, value, onValueChange, placeholder, icon: Icon, type = 'number', step = 'any' }) => (
@@ -52,6 +52,9 @@ export default function MarginCalculator() {
   const [profit, setProfit] = useState(0);
   const [marginPercent, setMarginPercent] = useState(0);
   const [priceForTargetMargin, setPriceForTargetMargin] = useState(0);
+  
+  // Copy state
+  const [hasCopied, setHasCopied] = useState(false);
 
   useEffect(() => {
     // Parse all inputs
@@ -106,6 +109,40 @@ export default function MarginCalculator() {
   const formatPercent = (num) => {
     if (isNaN(num)) return '0.00%';
     return (num * 100).toFixed(2) + '%';
+  };
+
+  const handleCopyResults = () => {
+    const results = [];
+    results.push('=== MARGIN CALCULATOR RESULTS ===\n');
+    results.push(`Mode: ${mode === 'FORWARD' ? 'Forward (Price → Margin)' : 'Reverse (Margin → Price)'}\n`);
+    results.push('\nINPUTS:');
+    results.push(`  Estimated BOM: ${formatCurrency(parseFloat(estimatedBOM) || 0)}`);
+    results.push(`  Engineering Hours: ${engineeringHours} hrs @ $60/hr`);
+    results.push(`  Production Hours: ${productionHours} hrs @ $35/hr`);
+    results.push(`  Programming Hours: ${programmingHours} hrs @ $85/hr`);
+    results.push(`  Other Costs: ${formatCurrency(parseFloat(otherCosts) || 0)}`);
+    results.push(`  Overhead %: ${formatPercent(parseFloat(overheadPercent) || 0)}`);
+    if (mode === 'FORWARD') {
+      results.push(`  Purchase Price: ${formatCurrency(parseFloat(purchasePrice) || 0)}`);
+    } else {
+      results.push(`  Target Margin %: ${formatPercent(parseFloat(targetMargin) || 0)}`);
+    }
+    results.push('\nCALCULATED RESULTS:');
+    results.push(`  Labor Cost: ${formatCurrency(laborCost)}`);
+    results.push(`  Total COGS: ${formatCurrency(totalCOGS)}`);
+    if (mode === 'REVERSE') {
+      results.push(`  Price for Target Margin: ${formatCurrency(priceForTargetMargin)}`);
+    }
+    results.push(`  Profit: ${formatCurrency(profit)}`);
+    results.push(`  Margin %: ${formatPercent(marginPercent)}`);
+    
+    const text = results.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      setHasCopied(true);
+      setTimeout(() => setHasCopied(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
   };
 
   return (
@@ -219,7 +256,30 @@ export default function MarginCalculator() {
         {/* Right Column - Results */}
         <div className="space-y-4">
           <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Calculated Results</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Calculated Results</h2>
+              <button
+                onClick={handleCopyResults}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded transition-colors ${
+                  hasCopied 
+                    ? 'bg-success text-white' 
+                    : 'bg-transparent border border-slateish/30 text-slateish dark:text-slate-300 hover:border-accent hover:text-accent'
+                }`}
+                title="Copy results to clipboard"
+              >
+                {hasCopied ? (
+                  <>
+                    <Check size={16} />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} />
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
             
             <ResultCard
               label="Labor Cost"

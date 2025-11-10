@@ -3,6 +3,26 @@
 ## Overview
 The Global Component Search now includes a smart, lazy-loading manual system that automatically finds and caches component manuals with zero upfront work required.
 
+## NAS Deployment Integration
+
+When deployed via the NAS using `scripts/publish-to-nas.ps1`:
+
+**Manual Index Storage:**
+- Stored in user's `%APPDATA%\electron-vite-react-app\data\manual_index.json`
+- Each user maintains their own manual cache
+- Cached references persist across app updates
+
+**Shared Manual Library (Future):**
+- Future enhancement: Store manuals on NAS for team sharing
+- Path: `\\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\ComponentManuals\`
+- Controlled via `CTH_RUNTIME_ROOT` environment variable
+
+**Benefits:**
+- Users can run from NAS without local installation
+- Manual cache stays with user profile
+- IT can deploy updated component database via publish script
+- Manuals build organically across team
+
 ## How It Works
 
 ### First-Time Access

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Load Bungee and Poppins fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Global Styles from the reference webapp */
+    .font-bungee { font-family: "Bungee", sans-serif; }
+    .font-poppins { font-family: "Poppins", sans-serif; }
+    
+    #app-root { min-height: 100vh; background: #F5E5D0; color: #4a5a63; }
+    
+    .form-input, .form-select {
+      width:100%; 
+      padding:.4rem; /* Significantly reduced input padding */ 
+      background:#fff; border:1px solid #d1d5db; border-radius:.4rem; /* Tighter radius */ 
+      color:#0f172a; 
+      font-size:0.8rem; /* Reduced input font size */
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .form-input:focus, .form-select:focus { outline:none; border-color:#d67f5c; box-shadow:0 0 0 2px rgba(214,127,92,.2) } /* Smaller focus ring */
+    .form-label{
+      display:block;
+      margin-bottom:.1rem; /* Minimal label margin */ 
+      font-size:.75rem; /* Smallest label font */ 
+      font-weight:500;
+      color:#4a5a63
+    }
+    
+    .stat-card{
+      background:#fff;
+      padding:0.4rem 0.75rem; /* Highly reduced padding for tight fit */
+      border-radius:.5rem;
+      box-shadow:0 1px 3px rgba(0,0,0,.08);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      transition: all 0.2s ease;
+    }
+    .stat-title{font-size:.65rem; /* Very small title */ font-weight:500;color:#4a5a63;text-transform:uppercase;letter-spacing:.05em}
+    .stat-value{font-size:1.0rem; /* Further reduced result font size */
+      font-weight:700;color:#d67f5c;margin-top:.1rem; /* Minimal margin */ word-break: break-word;}
+    
+    /* Custom tab styles to fit the new theme */
+    .tab-container {
+      border-bottom: 2px solid #d1ddbe;
+      margin-bottom: -2px;
+    }
+    .tab-button {
+      padding: 0.4rem 0.6rem; /* Reduced tab padding */
+      border-radius: 0.5rem 0.5rem 0 0;
+      font-weight: 600;
+      color: #4a5a63;
+      background-color: transparent;
+      transition: all 0.2s ease-in-out;
+      flex-grow: 1;
+      text-align: center;
+      margin-right: 0.25rem;
+      border: 1px solid transparent;
+      border-bottom: none;
+      font-size: 0.75rem; /* Smaller tab font */
+    }
+    .tab-button.active {
+      color: #d67f5c;
+      background-color: #f2ebe1;
+      border-bottom: 3px solid #d67f5c;
+    }
+    .tab-button:hover:not(.active) {
+      background-color: #f2ebe1;
+      color: #d67f5c;
+    }
+    .tab-content {
+      background-color: #f2ebe1;
+      padding: 0.75rem; /* Reduced content padding */
+      border-radius: 0.5rem;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Input spin button removal */
+    input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    
+    /* Styles for the split number display - now used for single line */
+    .number-display {
+      font-family: 'Bungee', sans-serif;
+      font-size: 1.1rem; 
+      line-height: 1.1;
+      word-break: break-all;
+      color: #d67f5c;
+    }
+    
+    #priceForTargetMarginDisplay {
+        font-size: 1.3rem !important; /* Prominent but scaled down */
+    }
+  </style>
+</head>
+<body class="font-poppins">
+  <div id="app-root" class="p-2 sm:p-3"> 
+    <div class="max-w-md mx-auto rounded-xl shadow-2xl border border-gray-200">
+      
+      <header class="text-center p-2 bg-white rounded-t-xl"> 
+        <h1 class="font-bungee text-[#d67f5c] text-xl sm:text-2xl">QUOTING TOOLS</h1> <!-- Reduced header font size -->
+      </header>
+
+      <!-- Tab Buttons -->
+      <div class="flex flex-wrap sm:flex-nowrap px-2 pt-2 tab-container">
+        <button class="tab-button active" onclick="openTab(event, 'quoteOrderTab')">Quote & Order #</button>
+        <button class="tab-button" onclick="openTab(event, 'marginCalculatorTab')">Margin Calc</button>
+        <button class="tab-button" onclick="openTab(event, 'flaCalculatorTab')">FLA Calc</button>
+        <button class="tab-button" onclick="openTab(event, 'bomToolsTab')">BOM Tools</button>
+      </div>
+
+      <!-- Tab Content Container -->
+      <div class="pb-3">
+
+        <!-- 1. Quote & Order # Tab -->
+        <div id="quoteOrderTab" class="tab-content">
+          <h2 class="text-base font-bold text-[#d67f5c] mb-3 text-center">Generate Quote/Order</h2> <!-- Reduced header font -->
+          
+          <div class="space-y-1"> <!-- Highly reduced spacing -->
+            <div>
+              <label for="categorySelect" class="form-label">Category:</label>
+              <select id="categorySelect" class="form-select">
+                <option value="">Select a Category</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="productCodeSelect" class="form-label">Product Code:</label>
+              <select id="productCodeSelect" class="form-select">
+                <option value="">Select a Product Code</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="customerCodeInput" class="form-label">Customer Code (2 characters):</label>
+              <input type="text" id="customerCodeInput" maxlength="2" class="form-input" placeholder="e.g., AB" oninput="this.value = this.value.toUpperCase()">
+            </div>
+
+            <div>
+              <label for="poNumberInput" class="form-label">PO Number (Optional for Order #):</label>
+              <input type="text" id="poNumberInput" class="form-input" placeholder="e.g., 54321">
+            </div>
+          </div>
+
+          <!-- Results Display -->
+          <div class="space-y-2 mt-3">
+            <div id="quoteResultContainer" class="stat-card border-l-4 border-[#d67f5c] hidden">
+              <h3 class="stat-title">Generated Quote Number</h3>
+              <!-- Single row display for quote -->
+              <div class="mt-1">
+                <span id="quoteNumberDisplay" class="number-display"></span>
+              </div>
+              <p id="quoteCategoryDisplay" class="text-xs text-gray-500 mt-1"></p>
+              <div class="mt-2 text-right">
+                <button id="copyQuoteButton" data-target="quote" class="copy-btn px-2 py-0.5 text-xs rounded-full bg-[#d67f5c] text-white hover:opacity-90 shadow transition duration-150">Copy Full</button>
+              </div>
+              <!-- Hidden field to hold the full number for copying -->
+              <input type="hidden" id="fullQuoteNumber">
+            </div>
+
+            <div id="orderResultContainer" class="stat-card border-l-4 border-gray-700 hidden">
+              <h3 class="stat-title">Generated Order Number</h3>
+              <!-- Single row display for order -->
+              <div class="mt-1">
+                <span id="orderNumberDisplay" class="number-display text-gray-700"></span>
+              </div>
+              <p id="orderCategoryDisplay" class="text-xs text-gray-500 mt-1"></p>
+              <div class="mt-2 text-right">
+                <button id="copyOrderButton" data-target="order" class="copy-btn px-2 py-0.5 text-xs rounded-full bg-gray-700 text-white hover:opacity-90 shadow transition duration-150">Copy Full</button>
+              </div>
+              <!-- Hidden field to hold the full number for copying -->
+              <input type="hidden" id="fullOrderNumber">
+            </div>
+          </div>
+
+
+          <!-- Status/Error -->
+          <div id="loading" class="mt-3 text-center text-[#d67f5c] hidden">
+            <svg class="animate-spin h-4 w-4 mx-auto text-[#d67f5c]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="ml-2 text-xs">Generating...</span>
+          </div>
+          <div id="errorMessage" class="mt-3 p-2 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden text-xs"></div>
+
+          <!-- Buttons -->
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <button id="generateQuoteButton" class="w-full bg-[#d67f5c] hover:opacity-90 text-white font-bold py-2 px-3 rounded-lg shadow-lg transition duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-[#d67f5c] focus:ring-opacity-50 text-xs">
+              Generate Quote
+            </button>
+            <button id="generateOrderButton" class="w-full bg-gray-700 hover:opacity-90 text-white font-bold py-2 px-3 rounded-lg shadow-lg transition duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-gray-600 focus:ring-opacity-50 text-xs">
+              Generate Order
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Margin Calculator Tab -->
+        <div id="marginCalculatorTab" class="tab-content">
+          <h2 class="text-base font-bold text-[#d67f5c] mb-3 text-center">Forward & Reverse Margin</h2>
+          
+          <!-- Mode Switch -->
+          <div class="mb-3 flex justify-center space-x-3 p-1 bg-white rounded-lg shadow-sm">
+            <label for="quoteModeForward" class="inline-flex items-center cursor-pointer">
+              <input type="radio" id="quoteModeForward" name="quoteMode" value="FORWARD" class="form-radio h-3 w-3 text-[#d67f5c] border-gray-300 focus:ring-[#d67f5c]" checked onchange="calculateMargin()">
+              <span class="ml-1 text-gray-700 font-medium text-xs">Forward (Margin %)</span>
+            </label>
+            <label for="quoteModeReverse" class="inline-flex items-center cursor-pointer">
+              <input type="radio" id="quoteModeReverse" name="quoteMode" value="REVERSE" class="form-radio h-3 w-3 text-[#d67f5c] border-gray-300 focus:ring-[#d67f5c]" onchange="calculateMargin()">
+              <span class="ml-1 text-gray-700 font-medium text-xs">Reverse (Price)</span>
+            </label>
+          </div>
+
+          <!-- Input Fields - ALWAYS GRID-COLS-2 -->
+          <div class="grid grid-cols-2 gap-x-2 gap-y-1">
+            <div class="">
+              <label for="estimatedBomInput" class="form-label">BOM ($):</label> <!-- Shortened label -->
+              <input type="number" id="estimatedBomInput" value="0.00" step="0.01" class="form-input" oninput="calculateMargin()">
+            </div>
+            <div class="">
+              <label for="otherCostsInput" class="form-label">Other Costs ($):</label>
+              <input type="number" id="otherCostsInput" value="0.00" step="0.01" class="form-input" oninput="calculateMargin()">
+            </div>
+
+            <div class="">
+              <label for="engineeringHoursInput" class="form-label">Engineering Hrs:</label>
+              <input type="number" id="engineeringHoursInput" value="0" step="1" class="form-input" oninput="calculateMargin()">
+            </div>
+            <div class="">
+              <label for="productionHoursInput" class="form-label">Production Hrs:</label>
+              <input type="number" id="productionHoursInput" value="0" step="1" class="form-input" oninput="calculateMargin()">
+            </div>
+            <div class="">
+              <label for="programmingHoursInput" class="form-label">Programming Hrs:</label>
+              <input type="number" id="programmingHoursInput" value="0" step="1" class="form-input" oninput="calculateMargin()">
+            </div>
+            <div class="">
+              <label for="overheadPercentInput" class="form-label">Overhead %:</label>
+              <input type="number" id="overheadPercentInput" value="25.00" step="0.01" class="form-input" oninput="calculateMargin()">
+            </div>
+          </div>
+          
+          <!-- Mode-Specific Inputs -->
+          <div id="purchasePriceDiv" class="mt-2">
+            <label for="purchasePriceInput" class="form-label text-gray-700">Sales Price ($) - FORWARD MODE:</label>
+            <input type="number" id="purchasePriceInput" value="100.00" step="0.01" class="form-input" oninput="calculateMargin()">
+          </div>
+          <div id="targetMarginPercentDiv" class="mt-2 hidden">
+            <label for="targetMarginPercentInput" class="form-label text-[#d67f5c]">Target Margin % - REVERSE MODE:</label>
+            <input type="number" id="targetMarginPercentInput" value="25.00" step="0.01" class="form-input" oninput="calculateMargin()">
+          </div>
+
+          <!-- Results Display (Stat Cards) -->
+          <div class="mt-3">
+            <div class="text-xs font-bold text-[#d67f5c] mb-1">CALCULATED RESULTS</div>
+            
+            <div class="grid grid-cols-1 gap-1">
+              
+              <div class="stat-card">
+                <h3 class="stat-title">Labor Cost</h3>
+                <p id="laborCostDisplay" class="stat-value font-bungee"></p>
+              </div>
+
+              <div id="totalCogsCard" class="stat-card">
+                <h3 class="stat-title">Total COGS</h3>
+                <p id="totalCogsDisplay" class="stat-value font-bungee"></p>
+              </div>
+              
+              <div id="profitCard" class="stat-card">
+                <h3 class="stat-title">Profit</h3>
+                <p id="profitDisplay" class="stat-value font-bungee"></p>
+              </div>
+              
+              <div id="marginPercentCard" class="stat-card">
+                <h3 class="stat-title">Margin %</h3>
+                <p id="marginPercentDisplay" class="stat-value font-bungee"></p>
+              </div>
+            </div>
+
+            <!-- Single Dedicated Card for Reverse Mode Output -->
+            <div id="priceForTargetMarginCard" class="stat-card col-span-2 sm:col-span-4 text-center bg-yellow-100/50 hidden mt-2">
+              <h3 class="stat-title text-sm font-bold">REQUIRED SALES PRICE (REVERSE)</h3>
+              <p id="priceForTargetMarginDisplay" class="stat-value font-bungee text-gray-700"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. FLA Calculator Tab -->
+        <div id="flaCalculatorTab" class="tab-content hidden">
+          <h2 class="text-base font-bold text-[#d67f5c] mb-3 text-center">Full Load Amps (FLA) Calculator</h2>
+
+          <!-- FLA Inputs -->
+          <div class="grid grid-cols-2 gap-x-2 gap-y-1">
+            <div class="">
+                <label for="flaPhaseSelect" class="form-label">Phase:</label>
+                <select id="flaPhaseSelect" class="form-select" onchange="calculateFLA()">
+                    <option value="1">1-Phase</option>
+                    <option value="3" selected>3-Phase</option>
+                </select>
+            </div>
+            <div class="">
+                <label for="flaVoltageInput" class="form-label">Voltage (V):</label>
+                <input type="number" id="flaVoltageInput" value="460" step="1" class="form-input" oninput="calculateFLA()">
+            </div>
+            <div class="">
+                <label for="flaHPInput" class="form-label">Horsepower (HP):</label>
+                <input type="number" id="flaHPInput" value="10" step="0.1" class="form-input" oninput="calculateFLA()">
+            </div>
+            <div class="">
+                <label for="flaEfficiencyInput" class="form-label">Efficiency ($\eta$ %):</label>
+                <input type="number" id="flaEfficiencyInput" value="85" min="50" max="100" step="0.1" class="form-input" oninput="calculateFLA()">
+            </div>
+            <div class="">
+                <label for="flaPFInput" class="form-label">Power Factor (PF):</label>
+                <input type="number" id="flaPFInput" value="0.8" min="0.1" max="1.0" step="0.01" class="form-input" oninput="calculateFLA()">
+            </div>
+            <div class="">
+                <label for="flaQtyInput" class="form-label">Quantity:</label>
+                <input type="number" id="flaQtyInput" value="1" min="1" step="1" class="form-input" oninput="calculateFLA()">
+            </div>
+          </div>
+
+          <!-- FLA Results (UL/NEC Sizing) -->
+          <div class="mt-3">
+            <div class="text-xs font-bold text-[#d67f5c] mb-1">FLA & SIZING REQUIREMENTS (UL/NEC)</div>
+            
+            <div class="grid grid-cols-2 gap-1">
+                <div class="stat-card">
+                    <h3 class="stat-title">Calculated FLA (Per Motor)</h3>
+                    <p id="flaCalculatedDisplay" class="stat-value font-bungee text-gray-700">0.0 A</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-title">Total FLA (All Motors)</h3>
+                    <p id="flaTotalDisplay" class="stat-value font-bungee text-gray-700">0.0 A</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3 class="stat-title">Min Disconnect Rating (115% FLA)</h3>
+                    <p id="flaDisconnectDisplay" class="stat-value font-bungee text-gray-700">0.0 A</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-title">Max Time-Delay Fuse (175% FLA)</h3>
+                    <p id="flaFuseTDDisplay" class="stat-value font-bungee text-gray-700">0.0 A</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2 text-center">Note: Use VFD specs if a drive is present. Disconnect must be $\ge 115\%$ of FLC. Consult code for final sizing.</p>
+          </div>
+        </div>
+
+        <!-- 4. BOM Tools Tab (Placeholder) -->
+        <div id="bomToolsTab" class="tab-content hidden">
+          <h2 class="text-lg font-bold text-[#d67f5c] mb-3 text-center">BOM Tools</h2>
+          <p class="text-gray-700 p-3 bg-white rounded-lg shadow-sm text-sm">This tab is reserved for future BOM management and analysis tools.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Hardcoded Data (Categories and Products) ---
+    // NOTE: Category values are padded to two digits ('01' through '13') for use in both Quote and Order generation.
+    const CATEGORY_DATA = [
+        { value: '01', name: 'New Build' },
+        { value: '02', name: 'Mod/Upgrade/Change Order' },
+        { value: '03', name: 'Part Order/ Equipment' },
+        { value: '04', name: 'Install / Commissioning' },
+        { value: '05', name: 'Panel Build' },
+        { value: '06', name: 'Warranty' },
+        { value: '07', name: 'R&D' },
+        { value: '08', name: 'Programming ONLY' },
+        { value: '09', name: 'System Integration' },
+        { value: '10', name: 'Engineering and Programming' },
+        { value: '11', name: 'Evaluation' },
+        { value: '12', name: 'Tech Support' },
+        { value: '13', name: 'Data' },
+    ];
+
+    // Product codes with their display names
+    const PRODUCT_CODE_DATA = [
+        // Brewhouse Design
+        { name: 'Brew-House Manual Control', value: 'BHMC' },
+        { name: 'Brew-House Automated Control/PLC', value: 'BHAC' },
+        { name: 'Brewhouse Gas Control', value: 'BHGC' },
+        { name: 'Brewhouse Gas/ Electric Control', value: 'BHEC' },
+        { name: 'Heater Control Panel', value: 'HCP' },
+        { name: 'Manual Kettle Control', value: 'MKC' },
+        { name: 'Hot Liqor Tank', value: 'HLT' },
+        
+        // CIP Design
+        { name: 'CIP Manual Control', value: 'CPMC' },
+        { name: 'CIP Automated Control/PLC', value: 'CPAC' },
+        { name: 'Blichmann Keg Washer', value: 'KWBL' },
+        
+        // Still Design
+        { name: 'Manual Still Control', value: 'DTMC' },
+        { name: 'Automated Still Control', value: 'DTAC' },
+        
+        // Cellar Design
+        { name: 'Automated Cellar Control', value: 'CRAC' },
+        { name: 'Coolness Lite Automated Control', value: 'CLAC' },
+        { name: 'Simple STC', value: 'STCS' },
+        { name: 'Advanced STC', value: 'STCA' },
+        { name: 'Carbo Blend Automated Control', value: 'CBAC' },
+        
+        // Glycol Monitoring Design
+        { name: 'Glycol Monitoring Automated Control/PLC', value: 'GMAC' },
+
+        // Grain Handling
+        { name: 'Grain Handling Automated Control/PLC', value: 'GHAC' },
+        { name: 'MHGC Flowscale', value: 'GHAC-FS' },
+        { name: 'MHGC-Load Cell', value: 'GHAC-LC' },
+        { name: 'MHGC-Flowscale-Load Cell', value: 'GHAC-FS-LC' },
+        { name: 'Grain Handling Manual Control', value: 'GHMC' },
+        { name: 'Manual Grain Handling', value: 'MGH' },
+        { name: 'MHCP Flowscale (Manual)', value: 'GHMC-FS' },
+        { name: 'MHCP Load Cell (Manual)', value: 'GHMC-LC' },
+        { name: 'MHCP Flowscale-Load Cell (Manual)', value: 'GHMC-FS-LC' },
+        { name: 'Standalone Manual', value: 'SM' },
+        
+        // Spent Grain Handling
+        { name: 'Manual Spent Grain Handling', value: 'SGMC' },
+        { name: 'Fused Spent Grain Control Assembly', value: 'FSGCA' },
+        
+        // Motor Control
+        { name: 'Start/Stop Non-Fused Motor Switch', value: 'SSMS' },
+        { name: 'Start/Stop Fused Motor Switch', value: 'SSFMS' },
+        { name: 'Start/Stop Non-Fused VFD Switch', value: 'SSVS' },
+        { name: 'Start/Stop Fused VFD Switch', value: 'SSFVS' },
+        { name: 'Start/Stop Remote Switch', value: 'SSRS' },
+        { name: 'Data Logger with Automated Motor Control/PLC', value: 'DLAC' },
+        
+        // Pneumatic Control
+        { name: 'Start/Stop Pneumatic Switch', value: 'SSPS' },
+        { name: 'Start/Stop Keyed Pneumatic Switch', value: 'SSKPS' },
+        { name: 'Pneumatic Switch Control Panel', value: 'PSCP' },
+        
+        // Panel Build Design
+        { name: 'Future Custom Designs', value: 'PNLB' },
+        
+        // Extraction Designs
+        { name: 'Extraction With Automated Control', value: 'EXAC' },
+        { name: 'Ethanol Automated Control', value: 'ETAC' },
+        { name: 'Hydrocarbon Automated', value: 'HCAC' },
+        { name: 'Gas Detection Control', value: 'GDMC' },
+        
+        // No New Product Codes Assigned (Legacy/Generic)
+        { name: 'Remote Panel', value: 'RM' },
+        { name: 'Equipment/Part', value: 'EQ' },
+        { name: 'Warranty Part Order', value: 'WY' },
+        { name: 'Variable Frequency Drive', value: 'VFD' },
+        { name: 'Foundry Autopour', value: 'FA' },
+        { name: 'Engineering and Programming', value: 'ENPG' },
+        { name: 'Evaluation', value: 'EV' },
+        { name: 'Panel Modification', value: 'PM' },
+        { name: 'Facility Wide', value: 'FW' },
+        { name: 'System Integration', value: 'SI' },
+        { name: 'Commissioning', value: 'CMSN' },
+        { name: 'Install', value: 'IN' },
+        { name: 'Programming', value: 'PR' },
+        { name: 'Tech Support', value: 'TECH' },
+        { name: 'Well Pump Control Panel', value: 'WP' },
+    ];
+    
+    // Constants for Labor Rates
+    const ENG_RATE = 60; // $60/hr
+    const PROD_RATE = 35; // $35/hr
+    const PROG_RATE = 85; // $85/hr
+
+    // Formatters
+    const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const percentFormatter = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // --- Core Logic Functions ---
+    // Moved outside DOMContentLoaded to be globally accessible by HTML onclick attributes
+
+    /**
+     * Handles tab switching visibility.
+     */
+    function openTab(evt, tabName) {
+      const tabContents = document.getElementsByClassName('tab-content');
+      for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.add('hidden');
+      }
+
+      const tabButtons = document.getElementsByClassName('tab-button');
+      for (let i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove('active');
+      }
+
+      document.getElementById(tabName).classList.remove('hidden');
+      evt.currentTarget.classList.add('active');
+
+      // Re-run calculations on tab switch to ensure fresh display
+      if (tabName === 'marginCalculatorTab') {
+        calculateMargin();
+      } else if (tabName === 'flaCalculatorTab') {
+        calculateFLA();
+      }
+    }
+
+    /**
+     * Populates the Category and Product Code dropdowns on the Quote/Order tab.
+     */
+    function populateQuoteOrderDropdowns() {
+      const categorySelect = document.getElementById('categorySelect');
+      const productCodeSelect = document.getElementById('productCodeSelect');
+
+      // Clear and add default
+      categorySelect.innerHTML = '<option value="">Select a Category</option>';
+      productCodeSelect.innerHTML = '<option value="">Select a Product Code</option>';
+
+      // Populate Category dropdown
+      CATEGORY_DATA.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.name;
+        categorySelect.appendChild(option);
+      });
+
+      // Populate Product Code dropdown
+      PRODUCT_CODE_DATA.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = `${item.value} - ${item.name}`; // Display code and name
+        productCodeSelect.appendChild(option);
+      });
+    }
+
+    /**
+     * Calculates Margin based on FORWARD or REVERSE mode.
+     */
+    function calculateMargin() {
+      const mode = document.querySelector('input[name="quoteMode"]:checked').value;
+
+      // Inputs
+      const estimatedBom = parseFloat(document.getElementById('estimatedBomInput').value) || 0;
+      const engineeringHours = parseFloat(document.getElementById('engineeringHoursInput').value) || 0;
+      const productionHours = parseFloat(document.getElementById('productionHoursInput').value) || 0;
+      const programmingHours = parseFloat(document.getElementById('programmingHoursInput').value) || 0;
+      const otherCosts = parseFloat(document.getElementById('otherCostsInput').value) || 0;
+      const overheadPercent = (parseFloat(document.getElementById('overheadPercentInput').value) || 0) / 100;
+      const purchasePrice = parseFloat(document.getElementById('purchasePriceInput').value) || 0;
+      const targetMarginPercent = (parseFloat(document.getElementById('targetMarginPercentInput').value) || 0) / 100;
+
+      // HTML Output elements
+      const laborCostDisplay = document.getElementById('laborCostDisplay');
+      const totalCogsDisplay = document.getElementById('totalCogsDisplay');
+      const profitDisplay = document.getElementById('profitDisplay');
+      const marginPercentDisplay = document.getElementById('marginPercentDisplay');
+      const priceForTargetMarginDisplay = document.getElementById('priceForTargetMarginDisplay');
+
+      // Input visibility elements
+      const purchasePriceDiv = document.getElementById('purchasePriceDiv');
+      const targetMarginPercentDiv = document.getElementById('targetMarginPercentDiv');
+
+      // Output card visibility elements
+      const totalCogsCard = document.getElementById('totalCogsCard');
+      const profitCard = document.getElementById('profitCard');
+      const marginPercentCard = document.getElementById('marginPercentCard');
+      const priceForTargetMarginCard = document.getElementById('priceForTargetMarginCard');
+
+      // 1. Calculate Labor Cost (Independent of mode)
+      const laborCost = (engineeringHours * ENG_RATE) + (productionHours * PROD_RATE) + (programmingHours * PROG_RATE);
+      laborCostDisplay.textContent = currencyFormatter.format(laborCost);
+
+      // 2. Calculate Costs and Price based on Mode
+      if (mode === "FORWARD") {
+        // Mode setup (Forward: calculate margin from sales price)
+        purchasePriceDiv.classList.remove('hidden');
+        targetMarginPercentDiv.classList.add('hidden');
+        totalCogsCard.classList.remove('hidden');
+        profitCard.classList.remove('hidden');
+        marginPercentCard.classList.remove('hidden');
+        priceForTargetMarginCard.classList.add('hidden');
+
+        // Total COGS = Direct Costs (BOM + Labor + Other) + (Overhead % * Sales Price)
+        const directCosts = estimatedBom + laborCost + otherCosts;
+        const overheadCost = overheadPercent * purchasePrice;
+        const totalCogs = directCosts + overheadCost;
+        const profit = purchasePrice - totalCogs;
+        
+        let marginPercent = 0;
+        if (purchasePrice > 0) {
+          marginPercent = profit / purchasePrice;
+        }
+
+        // Display results
+        totalCogsDisplay.textContent = currencyFormatter.format(totalCogs);
+        profitDisplay.textContent = currencyFormatter.format(profit);
+        marginPercentDisplay.textContent = percentFormatter.format(marginPercent);
+
+      } else { // REVERSE mode
+        // Mode setup (Reverse: calculate required sales price for target margin)
+        purchasePriceDiv.classList.add('hidden');
+        targetMarginPercentDiv.classList.remove('hidden');
+        totalCogsCard.classList.add('hidden');
+        profitCard.classList.add('hidden');
+        marginPercentCard.classList.add('hidden');
+        priceForTargetMarginCard.classList.remove('hidden');
+        
+        // Target Price = Direct Costs / (1 - Overhead % - Target Margin %)
+        const directCosts = estimatedBom + laborCost + otherCosts;
+        const denominator = 1 - overheadPercent - targetMarginPercent;
+        
+        let priceForTargetMargin = 0;
+
+        if (denominator > 0) {
+          priceForTargetMargin = directCosts / denominator;
+        } else if (denominator <= 0 && directCosts > 0) {
+          priceForTargetMargin = Infinity;
+        }
+
+        // Display results
+        if (priceForTargetMargin === Infinity) {
+            priceForTargetMarginDisplay.textContent = 'MARGIN UNATTAINABLE';
+            priceForTargetMarginDisplay.classList.add('text-red-700');
+            priceForTargetMarginDisplay.classList.remove('text-gray-700');
+        } else {
+            priceForTargetMarginDisplay.textContent = currencyFormatter.format(priceForTargetMargin);
+            priceForTargetMarginDisplay.classList.remove('text-red-700');
+            priceForTargetMarginDisplay.classList.add('text-gray-700');
+        }
+      }
+    }
+
+    /**
+     * Calculates Full Load Amps (FLA) and related sizing requirements based on motor parameters.
+     */
+    function calculateFLA() {
+        // Inputs
+        const phase = parseInt(document.getElementById('flaPhaseSelect').value, 10);
+        const V = parseFloat(document.getElementById('flaVoltageInput').value) || 0;
+        const HP = parseFloat(document.getElementById('flaHPInput').value) || 0;
+        const eta = (parseFloat(document.getElementById('flaEfficiencyInput').value) || 0) / 100; // Efficiency (as decimal)
+        const PF = parseFloat(document.getElementById('flaPFInput').value) || 0; // Power Factor
+        const Q = parseInt(document.getElementById('flaQtyInput').value) || 1; // Quantity
+        
+        // Output Elements
+        const flaCalculatedDisplay = document.getElementById('flaCalculatedDisplay');
+        const flaTotalDisplay = document.getElementById('flaTotalDisplay');
+        const flaDisconnectDisplay = document.getElementById('flaDisconnectDisplay');
+        const flaFuseTDDisplay = document.getElementById('flaFuseTDDisplay');
+
+        const HP_TO_WATTS = 746;
+        const SQRT_3 = 1.732;
+        let FLA_per_motor = 0;
+        let error = false;
+
+        if (HP <= 0 || V <= 0 || eta <= 0 || PF <= 0) {
+            error = true;
+        } else {
+            const watts = HP * HP_TO_WATTS;
+            let denominator;
+
+            if (phase === 1) {
+                // Single-Phase: FLA = (HP * 746) / (V * eta * PF)
+                denominator = V * eta * PF;
+            } else if (phase === 3) {
+                // Three-Phase: FLA = (HP * 746) / (sqrt(3) * V * eta * PF)
+                denominator = SQRT_3 * V * eta * PF;
+            }
+
+            if (denominator > 0) {
+                FLA_per_motor = watts / denominator;
+            } else {
+                error = true;
+            }
+        }
+
+        if (error) {
+            flaCalculatedDisplay.textContent = 'N/A';
+            flaTotalDisplay.textContent = 'N/A';
+            flaDisconnectDisplay.textContent = 'N/A';
+            flaFuseTDDisplay.textContent = 'N/A';
+            return;
+        }
+
+        const totalFLA = FLA_per_motor * Q;
+        
+        // UL/NEC Sizing Multipliers
+        const DISCONNECT_MULTIPLIER = 1.15; // Minimum 115% of FLC
+        const FUSE_TD_MULTIPLIER = 1.75;    // Maximum 175% of FLC (Time-Delay)
+        
+        const minDisconnectAmps = totalFLA * DISCONNECT_MULTIPLIER;
+        const maxFuseTDAmps = totalFLA * FUSE_TD_MULTIPLIER;
+
+        // Display Results (to one decimal place)
+        flaCalculatedDisplay.textContent = `${FLA_per_motor.toFixed(1)} A`;
+        flaTotalDisplay.textContent = `${totalFLA.toFixed(1)} A`;
+        flaDisconnectDisplay.textContent = `${minDisconnectAmps.toFixed(1)} A`;
+        flaFuseTDDisplay.textContent = `${maxFuseTDAmps.toFixed(1)} A`;
+    }
+
+    /**
+     * Generates a sequential ID (mocking a server sequence) using localStorage.
+     * @returns {string} A two-digit sequential ID (00-99).
+     */
+    function getNextSequenceId() {
+        const today = new Date();
+        const dateKey = today.toISOString().slice(0, 10); // YYYY-MM-DD
+        const sequenceKey = 'quote_sequence_' + dateKey;
+        
+        let currentSequence = parseInt(localStorage.getItem(sequenceKey) || '0', 10);
+        currentSequence++;
+        
+        // Reset to 01 if overflow or if starting from 0 (pre-increment to 1)
+        if (currentSequence > 99) {
+            currentSequence = 1; 
+        }
+
+        localStorage.setItem(sequenceKey, currentSequence);
+        return String(currentSequence).padStart(2, '0'); // 2 digits: 00-99
+    }
+
+    /**
+     * Generates the full string for a Quote Number using the format:
+     * [CA][yymmdd][category#][product code][customercode]-[00]
+     */
+    function generateQuoteNumberParts(categoryCode, productCode, customerCode) {
+        const now = new Date();
+        const year = String(now.getFullYear()).slice(-2);
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        
+        // This increments the daily sequence ID for the quote
+        const sequence = getNextSequenceId();
+
+        const categoryEntry = CATEGORY_DATA.find(c => c.value === categoryCode);
+        const categoryName = categoryEntry ? categoryEntry.name : 'Unknown Category';
+        
+        const prefix = "CA";
+        const datePart = `${year}${month}${day}`;
+        const mainPart = `${categoryCode}${productCode}${customerCode}`; 
+        const suffixPart = sequence; 
+
+        // Final Quote format: CAyymmdd[category#][product code][customercode]-[00]
+        const fullNumber = `${prefix}${datePart}${mainPart}-${suffixPart}`;
+
+        return {
+            full: fullNumber,
+            categoryName: categoryName
+        };
+    }
+
+    /**
+     * Generates the full string for an Order Number using the format:
+     * [CA][yy][last4of PO#][category#][product code][customercode]
+     */
+    function generateOrderNumberParts(categoryCode, productCode, customerCode, poNumber) {
+        const now = new Date();
+        const year = String(now.getFullYear()).slice(-2);
+        
+        // 1. Handle PO Suffix (Last 4 characters or default to '0000')
+        // Clean PO: only keep letters/numbers, convert to uppercase
+        const po = poNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); 
+        let poSuffix = '0000'; // Default fallback
+
+        if (po.length >= 4) {
+            poSuffix = po.slice(-4);
+        } else if (po.length > 0) {
+            // If shorter than 4 characters but present, pad with leading zeros
+            poSuffix = po.padStart(4, '0');
+        }
+
+        const categoryEntry = CATEGORY_DATA.find(c => c.value === categoryCode);
+        const categoryName = categoryEntry ? categoryEntry.name : 'Unknown Category';
+        
+        const prefix = "CA";
+        const mainPart = `${categoryCode}${productCode}${customerCode}`;
+
+        // Final Order format: CAyy[last4of PO#][category#][product code][customercode]
+        const fullNumber = `${prefix}${year}${poSuffix}${mainPart}`;
+
+        return {
+            full: fullNumber,
+            categoryName: categoryName
+        };
+    }
+
+
+    // --- General Script Logic ---
+    const categorySelect = document.getElementById('categorySelect');
+    const productCodeSelect = document.getElementById('productCodeSelect');
+    const customerCodeInput = document.getElementById('customerCodeInput');
+    const poNumberInput = document.getElementById('poNumberInput');
+
+    const generateQuoteButton = document.getElementById('generateQuoteButton');
+    const generateOrderButton = document.getElementById('generateOrderButton');
+
+    // Quote Elements
+    const quoteResultContainer = document.getElementById('quoteResultContainer');
+    const quoteNumberDisplay = document.getElementById('quoteNumberDisplay');
+    const quoteCategoryDisplay = document.getElementById('quoteCategoryDisplay');
+    const fullQuoteNumberInput = document.getElementById('fullQuoteNumber');
+    const copyQuoteButton = document.getElementById('copyQuoteButton');
+
+    // Order Elements
+    const orderResultContainer = document.getElementById('orderResultContainer');
+    const orderNumberDisplay = document.getElementById('orderNumberDisplay');
+    const orderCategoryDisplay = document.getElementById('orderCategoryDisplay');
+    const fullOrderNumberInput = document.getElementById('fullOrderNumber');
+    const copyOrderButton = document.getElementById('copyOrderButton');
+
+
+    const loadingDiv = document.getElementById('loading');
+    const errorMessageDiv = document.getElementById('errorMessage');
+
+    /**
+     * Displays an error message.
+     */
+    function showError(message) {
+      errorMessageDiv.textContent = message;
+      errorMessageDiv.classList.remove('hidden');
+      loadingDiv.classList.add('hidden');
+      quoteResultContainer.classList.add('hidden');
+      orderResultContainer.classList.add('hidden');
+    }
+
+    /**
+     * Hides the error message div.
+     */
+    function hideError() {
+      errorMessageDiv.classList.add('hidden');
+      errorMessageDiv.textContent = '';
+    }
+
+    /**
+     * Copies text to the clipboard and provides visual feedback.
+     */
+    function copyToClipboard(text, button) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = 0;
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      
+      const originalText = button.textContent;
+      const originalBg = button.classList.contains('bg-[#d67f5c]') ? 'bg-[#d67f5c]' : 'bg-gray-700';
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            button.textContent = 'Copied!';
+            button.classList.add('bg-gray-400', 'hover:opacity-100');
+            button.classList.remove(originalBg, 'hover:opacity-90');
+        }
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+        showError('Copy failed. Check console for details.');
+      } finally {
+        document.body.removeChild(textarea);
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('bg-gray-400', 'hover:opacity-100');
+            button.classList.add(originalBg, 'hover:opacity-90');
+        }, 1500);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize the first tab
+      document.getElementById('quoteOrderTab').classList.remove('hidden');
+      document.querySelector('.tab-button').classList.add('active');
+
+      // Populate dropdowns with hardcoded data
+      populateQuoteOrderDropdowns();
+
+      // Initialize Margin Calculator and FLA Calculator on load
+      calculateMargin();
+      calculateFLA();
+
+      // Event listener for the Generate Quote button
+      generateQuoteButton.addEventListener('click', function() {
+          hideError();
+          const selectedCategoryCode = categorySelect.value;
+          const selectedProductCode = productCodeSelect.value;
+          const customerCode = customerCodeInput.value.trim().toUpperCase();
+
+          if (!selectedCategoryCode) { showError('Please select a category.'); return; }
+          if (!selectedProductCode) { showError('Please select a product code.'); return; }
+          if (!customerCode || customerCode.length !== 2) { showError('Please enter a 2-character customer code.'); return; }
+
+          loadingDiv.classList.add('hidden');
+          quoteResultContainer.classList.add('hidden');
+          orderResultContainer.classList.add('hidden');
+          
+          const parts = generateQuoteNumberParts(selectedCategoryCode, selectedProductCode, customerCode);
+          
+          quoteNumberDisplay.textContent = parts.full;
+          quoteCategoryDisplay.textContent = parts.categoryName;
+          fullQuoteNumberInput.value = parts.full; // Store full number for copy
+          
+          quoteResultContainer.classList.remove('hidden');
+      });
+
+      // Event listener for the Generate Order button
+      generateOrderButton.addEventListener('click', function() {
+          hideError();
+          const selectedCategoryCode = categorySelect.value;
+          const selectedProductCode = productCodeSelect.value;
+          const customerCode = customerCodeInput.value.trim().toUpperCase();
+          const poNumber = poNumberInput.value.trim();
+
+          if (!selectedCategoryCode) { showError('Please select a category.'); return; }
+          if (!selectedProductCode) { showError('Please select a product code.'); return; }
+          if (!customerCode || customerCode.length !== 2) { showError('Please enter a 2-character customer code.'); return; }
+          // NOTE: PO number validation is intentionally omitted here as the generator handles missing/short POs with a default.
+
+          loadingDiv.classList.add('hidden');
+          quoteResultContainer.classList.add('hidden');
+          orderResultContainer.classList.add('hidden');
+
+          const parts = generateOrderNumberParts(selectedCategoryCode, selectedProductCode, customerCode, poNumber);
+          
+          orderNumberDisplay.textContent = parts.full;
+          orderCategoryDisplay.textContent = parts.categoryName;
+          fullOrderNumberInput.value = parts.full; // Store full number for copy
+
+          orderResultContainer.classList.remove('hidden');
+      });
+
+      // Copy button event listeners
+      copyQuoteButton.addEventListener('click', function() {
+        const textToCopy = fullQuoteNumberInput.value;
+        copyToClipboard(textToCopy, this);
+      });
+
+      copyOrderButton.addEventListener('click', function() {
+        const textToCopy = fullOrderNumberInput.value;
+        copyToClipboard(textToCopy, this);
+      });
+    });
+  </script>
+</body>
+</html>

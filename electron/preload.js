@@ -79,7 +79,8 @@ contextBridge.exposeInMainWorld('schemas', {
   getControl: () => ipcRenderer.invoke('schemas:get-control'),
   getScope: () => ipcRenderer.invoke('schemas:get-scope'),
   getPanelOptions: () => ipcRenderer.invoke('schemas:get-panel-options'),
-  getDefaultIoFields: () => ipcRenderer.invoke('schemas:get-default-io-fields')
+  getDefaultIoFields: () => ipcRenderer.invoke('schemas:get-default-io-fields'),
+  addProduct: (productData) => ipcRenderer.invoke('schemas:add-product', productData)
 })
 
 // Expose customers API

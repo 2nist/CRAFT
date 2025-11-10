@@ -182,48 +182,48 @@ const AssemblyExporter = () => {
 
   return (
     <div className="assembly-exporter p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Assembly Library Export</h2>
-      <p className="text-gray-600 mb-6">
+      <h2 className="text-2xl font-bold mb-4 text-slateish">Assembly Library Export</h2>
+      <p className="text-slateish/80 mb-6">
         Export assembly and sub-assembly libraries to CSV files.
         Files are saved in the OUTPUT/Assemblies directory.
       </p>
 
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-3 text-gray-700">Select Assembly Types to Export</h3>
+        <h3 className="text-lg font-semibold mb-3 text-slateish">Select Assembly Types to Export</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-sand">
             <input
               type="checkbox"
               id="assemblies"
               checked={selectedCategories.assemblies}
               onChange={() => handleCategoryToggle('assemblies')}
-              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="mt-1 h-4 w-4 text-accent focus:ring-accent border-slateish/30 rounded"
             />
             <div className="flex-1">
-              <label htmlFor="assemblies" className="text-sm font-medium text-gray-700 cursor-pointer">
+              <label htmlFor="assemblies" className="text-sm font-medium text-slateish cursor-pointer">
                 Main Assemblies
               </label>
-              <p className="text-xs text-gray-500 mt-1">Complete assembly configurations with components</p>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-slateish/60 mt-1">Complete assembly configurations with components</p>
+              <p className="text-xs text-accent mt-1">
                 {assemblyCounts.assemblies} assemblies available
               </p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+          <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-sand">
             <input
               type="checkbox"
               id="subAssemblies"
               checked={selectedCategories.subAssemblies}
               onChange={() => handleCategoryToggle('subAssemblies')}
-              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="mt-1 h-4 w-4 text-accent focus:ring-accent border-slateish/30 rounded"
             />
             <div className="flex-1">
-              <label htmlFor="subAssemblies" className="text-sm font-medium text-gray-700 cursor-pointer">
+              <label htmlFor="subAssemblies" className="text-sm font-medium text-slateish cursor-pointer">
                 Sub-Assemblies
               </label>
-              <p className="text-xs text-gray-500 mt-1">Modular sub-assembly components and parts</p>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-slateish/60 mt-1">Modular sub-assembly components and parts</p>
+              <p className="text-xs text-accent mt-1">
                 {assemblyCounts.subAssemblies} sub-assemblies available
               </p>
             </div>
@@ -234,13 +234,13 @@ const AssemblyExporter = () => {
       <div className="flex space-x-4 mb-4">
         <button
           onClick={handleExportAssemblies}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          className="ca-btn-primary px-6 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
         >
           Export Selected Assemblies
         </button>
         <button
           onClick={loadAssemblyData}
-          className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+          className="ca-btn-secondary px-6 py-2 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
         >
           Refresh Data
         </button>
@@ -249,20 +249,20 @@ const AssemblyExporter = () => {
       {exportStatus && (
         <div className={`p-3 rounded-lg ${
           exportStatus.includes('Error') || exportStatus.includes('Please select')
-            ? 'bg-red-100 text-red-700 border border-red-300'
+            ? 'bg-danger/10 text-danger border border-danger/30'
             : exportStatus.includes('Successfully')
-            ? 'bg-green-100 text-green-700 border border-green-300'
-            : 'bg-blue-100 text-blue-700 border border-blue-300'
+            ? 'bg-success/10 text-success border border-success/30'
+            : 'bg-info/10 text-info border border-info/30'
         }`}>
           {exportStatus}
         </div>
       )}
 
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h4 className="text-sm font-semibold text-gray-700 mb-2">Export Details</h4>
-        <ul className="text-sm text-gray-600 space-y-1">
-          <li>• Files are saved to: <code className="bg-gray-200 px-1 rounded">OUTPUT/Assemblies/</code></li>
-          <li>• Filename format: <code className="bg-gray-200 px-1 rounded">Assemblies_[Type]_[timestamp].csv</code></li>
+      <div className="mt-6 p-4 bg-sand rounded-lg">
+        <h4 className="text-sm font-semibold text-slateish mb-2">Export Details</h4>
+        <ul className="text-sm text-slateish/80 space-y-1">
+          <li>• Files are saved to: <code className="bg-slateish/10 px-1 rounded">OUTPUT/Assemblies/</code></li>
+          <li>• Filename format: <code className="bg-slateish/10 px-1 rounded">Assemblies_[Type]_[timestamp].csv</code></li>
           <li>• CSV includes assembly details with component breakdowns</li>
           <li>• Each component appears on a separate row with assembly info on the first row</li>
         </ul>

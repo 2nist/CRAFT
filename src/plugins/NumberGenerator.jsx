@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, FileText } from 'lucide-react';
+import loggingService from '../services/LoggingService';
 
 const SelectCode = ({ label, code, options, onCodeChange }) => (
   <div>
@@ -50,6 +51,7 @@ export default function NumberGenerator({ context }) {
   const [schemas, setSchemas] = useState({ industry: [], product: [], control: [], scope: [] });
   const [codes, setCodes] = useState({ industry: '', product: '', control: '', scope: '' });
   const [customer, setCustomer] = useState('');
+  const [customers, setCustomers] = useState([]);
   const [poNumber, setPoNumber] = useState('');
   const [generatedNumber, setGeneratedNumber] = useState(null);
   const [hasCopied, setHasCopied] = useState(false);
@@ -63,7 +65,14 @@ export default function NumberGenerator({ context }) {
       
       setSchemas({ industry, product, control, scope });
     };
+    
+    const loadCustomers = async () => {
+      const data = await window.customers.getAll();
+      setCustomers(data);
+    };
+    
     loadSchemas();
+    loadCustomers();
   }, []);
 
   const handleCodeChange = (part, value) => {
@@ -76,6 +85,24 @@ export default function NumberGenerator({ context }) {
         const data = { customerCode: customer, ...codes };
         const result = await window.calc.getQuoteNumber(data);
         setGeneratedNumber(result.fullId);
+        
+        // Log to frontend logging service
+        const selectedCustomer = customers.find(c => c.id === customer);
+        loggingService.logQuoteActivity(
+          'generate_number',
+          result.fullId,
+          'New Quote',
+          selectedCustomer?.name || 'Unknown',
+          'draft',
+          {
+            mainId: result.mainId,
+            industry: codes.industry,
+            product: codes.product,
+            control: codes.control,
+            scope: codes.scope,
+            source: 'number_generator'
+          }
+        );
       } else {
         // Project number generation
         if (!window.calc.getProjectNumber) {
@@ -86,6 +113,25 @@ export default function NumberGenerator({ context }) {
         const data = { customerCode: customer, poNumber, ...codes };
         const result = await window.calc.getProjectNumber(data);
         setGeneratedNumber(result.fullId);
+        
+        // Log to frontend logging service
+        const selectedCustomer = customers.find(c => c.id === customer);
+        loggingService.logProjectActivity(
+          'generate_number',
+          result.fullId,
+          'New Project',
+          selectedCustomer?.name || 'Unknown',
+          'draft',
+          {
+            mainId: result.mainId,
+            industry: codes.industry,
+            product: codes.product,
+            control: codes.control,
+            scope: codes.scope,
+            poNumber: poNumber,
+            source: 'number_generator'
+          }
+        );
       }
       setHasCopied(false);
     } catch (error) {
@@ -180,7 +226,7 @@ export default function NumberGenerator({ context }) {
 
         {generatedNumber && (
           <div className="pt-4">
-            <label className="block text-sm font-medium text-gray-400">
+            <label className="block text-sm font-medium text-slateish/60">
               Generated {mode === 'quote' ? 'Quote' : 'Project'} Number:
             </label>
             <div className="flex items-center gap-2 mt-1">
@@ -188,16 +234,24 @@ export default function NumberGenerator({ context }) {
                 type="text" 
                 readOnly 
                 value={generatedNumber} 
-                className={`w-full bg-gray-900 border border-gray-700 rounded-md p-3 text-lg font-mono ${
-                  mode === 'quote' ? 'text-blue-400' : 'text-green-400'
+                className={`w-full bg-slateish/5 border border-slateish/30 rounded-md p-3 text-lg font-mono ${
+                  mode === 'quote' ? 'text-accent' : 'text-success'
                 }`}
               />
               <button
                 onClick={handleCopy}
-                className={`flex-shrink-0 px-4 py-3 rounded-md ${hasCopied ? 'bg-green-600' : 'bg-gray-600'} text-white`}
+                className={`flex-shrink-0 px-4 py-3 rounded-md ${hasCopied ? 'ca-btn-success' : 'ca-btn-secondary'} text-white`}
               >
                 {hasCopied ? <Check size={20} /> : <Copy size={20} />}
               </button>
+            </div>
+            <div className="mt-3 p-3 bg-info/10 border border-info/30 rounded-lg flex items-start gap-2">
+              <FileText size={16} className="text-info mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-info">
+                <strong>Logged to OUTPUT/LOGS/{mode === 'quote' ? 'QuoteNumbers' : 'ProjectNumbers'}.csv</strong>
+                <br />
+                All generated numbers are automatically tracked with timestamp, customer, and schema details.
+              </p>
             </div>
           </div>
         )}

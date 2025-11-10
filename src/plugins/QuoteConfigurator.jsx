@@ -3760,13 +3760,9 @@ export default function QuoteConfigurator({ context }) {
     const applyBreakpointState = (target) => {
       const matches = target.matches;
       setIsDesktop(matches);
-      if (matches) {
-        setIsLeftDrawerOpen(true);
-        setIsRightDrawerOpen(true);
-      } else {
-        setIsLeftDrawerOpen(false);
-        setIsRightDrawerOpen(false);
-      }
+      // Default both drawers to closed regardless of breakpoint
+      setIsLeftDrawerOpen(false);
+      setIsRightDrawerOpen(false);
     };
 
     applyBreakpointState(media);

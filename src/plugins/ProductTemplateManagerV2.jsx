@@ -48,6 +48,11 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
   const [showFieldEditor, setShowFieldEditor] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [activeFieldSection, setActiveFieldSection] = useState('digitalIn');
+  
+  // New product creation state
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [newProductData, setNewProductData] = useState({ code: '', description: '' });
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
 
   const IO_SECTIONS = ['digitalIn', 'digitalOut', 'analogIn', 'analogOut'];
   
@@ -351,6 +356,67 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
     setError(null);
     setSuccess(null);
   };
+  
+  const handleCreateNewProduct = async () => {
+    try {
+      setIsCreatingProduct(true);
+      setError(null);
+      
+      const code = parseInt(newProductData.code);
+      const description = newProductData.description.trim();
+      
+      if (!code || !description) {
+        setError('Product code and description are required');
+        return;
+      }
+      
+      // Validate code is within selected category range
+      const categoryRanges = [
+        { min: 100, max: 149, code: 100 },
+        { min: 150, max: 199, code: 150 },
+        { min: 200, max: 249, code: 200 },
+        { min: 250, max: 299, code: 250 },
+        { min: 300, max: 349, code: 300 },
+        { min: 350, max: 399, code: 350 },
+        { min: 400, max: 449, code: 400 },
+        { min: 450, max: 499, code: 450 },
+        { min: 500, max: 549, code: 500 },
+        { min: 550, max: 599, code: 550 }
+      ];
+      
+      const category = categoryRanges.find(cat => cat.code === selectedProductLine);
+      if (!category || code < category.min || code > category.max) {
+        setError(`Product code must be between ${category.min} and ${category.max}`);
+        return;
+      }
+      
+      // Check if code already exists
+      if (productSchema.find(p => p.const === code)) {
+        setError(`Product code ${code} already exists`);
+        return;
+      }
+      
+      // Call backend to add product to schema
+      const result = await window.schemas.addProduct({ const: code, description });
+      
+      if (result.success) {
+        setSuccess(`Product ${code} - ${description} created successfully`);
+        setTimeout(() => setSuccess(null), 3000);
+        setShowNewProductModal(false);
+        setNewProductData({ code: '', description: '' });
+        
+        // Reload data
+        await loadData();
+      } else {
+        setError(result.error || 'Failed to create product');
+      }
+    } catch (err) {
+      console.error('Failed to create product:', err);
+      setError(`Failed to create product: ${err.message}`);
+    } finally {
+      setIsCreatingProduct(false);
+    }
+  };
 
   // Assembly management
   const handleAddAssembly = () => {
@@ -591,13 +657,20 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
             {/* Products View */}
             {viewMode === 'products' && (
               <>
-                <div className="mb-4">
+                <div className="mb-4 flex items-center justify-between">
                   <button
                     onClick={handleBackToCategories}
                     className="flex items-center gap-2 px-4 py-2 bg-transparent text-white rounded-md border border-transparent hover:border-orange-500 hover:bg-transparent"
                   >
                     <X size={18} />
                     Back to Categories
+                  </button>
+                  <button
+                    onClick={() => setShowNewProductModal(true)}
+                    className="ca-btn-primary flex items-center gap-2 px-3 py-1.5 text-sm rounded"
+                  >
+                    <Plus size={16} />
+                    Create New Product
                   </button>
                 </div>
 
@@ -1435,6 +1508,107 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
           </>
         )}
       </div>
+      
+      {/* New Product Modal */}
+      {showNewProductModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slateish rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Plus size={20} />
+                Create New Product
+              </h3>
+              <button
+                onClick={() => {
+                  setShowNewProductModal(false);
+                  setNewProductData({ code: '', description: '' });
+                  setError(null);
+                }}
+                className="text-slateish/60 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-lg flex items-start gap-2">
+                <AlertCircle size={16} className="text-danger mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-danger">{error}</p>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Product Code <span className="text-danger">*</span>
+                </label>
+                <select
+                  value={newProductData.code}
+                  onChange={(e) => setNewProductData({ ...newProductData, code: e.target.value })}
+                  className="w-full bg-slateish/50 border border-slateish/30 rounded px-3 py-2 text-white"
+                  disabled={isCreatingProduct}
+                >
+                  <option value="">Select available number...</option>
+                  {availableNumbers.map(num => (
+                    <option key={num} value={num}>{num}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slateish/60 mt-1">
+                  Choose from {availableNumbers.length} available numbers in this range
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Description <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newProductData.description}
+                  onChange={(e) => setNewProductData({ ...newProductData, description: e.target.value })}
+                  placeholder="e.g., Brewhouse Control Panel"
+                  className="w-full bg-slateish/50 border border-slateish/30 rounded px-3 py-2 text-white"
+                  disabled={isCreatingProduct}
+                />
+              </div>
+              
+              <div className="bg-info/10 border border-info/30 rounded-lg p-3">
+                <p className="text-xs text-info">
+                  <strong>Note:</strong> This will add the product to the schema file. You can then configure a template for it.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleCreateNewProduct}
+                disabled={isCreatingProduct || !newProductData.code || !newProductData.description}
+                className="ca-btn-primary flex-1 px-4 py-2 rounded disabled:opacity-50"
+              >
+                {isCreatingProduct ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader size={16} className="animate-spin" />
+                    Creating...
+                  </span>
+                ) : (
+                  'Create Product'
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowNewProductModal(false);
+                  setNewProductData({ code: '', description: '' });
+                  setError(null);
+                }}
+                disabled={isCreatingProduct}
+                className="ca-btn-secondary px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

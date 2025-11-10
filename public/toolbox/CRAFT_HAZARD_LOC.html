@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hazard Location Guide</title>
+  <!-- Load Bungee and Poppins fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Global Styles from the reference webapp */
+    .font-bungee { font-family: "Bungee", sans-serif; }
+    .font-poppins { font-family: "Poppins", sans-serif; }
+    
+    body, html {
+      height: 100%;
+    }
+
+    #app-root { 
+      min-height: 100vh; 
+      background: #F5E5D0; /* Primary beige background */
+      color: #4a5a63; /* Dark text color */
+      padding-top: 2rem;
+      padding-bottom: 4rem;
+    }
+    
+    .form-input, .form-select {
+      width:100%; 
+      padding:.6rem; /* Slightly more padding for touch */
+      background:#fff; 
+      border:1px solid #d1d5db; 
+      border-radius:.4rem; /* Tighter radius */ 
+      color:#0f172a; 
+      font-size:0.9rem; /* Slightly larger for readability */
+      font-family: "Poppins", sans-serif;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .form-input:focus, .form-select:focus { 
+      outline:none; 
+      border-color:#d67f5c; /* Orange focus */
+      box-shadow:0 0 0 2px rgba(214,127,92,.2); /* Orange focus glow */
+    }
+    .form-input:disabled, .form-select:disabled {
+      background-color: #f3f4f6; /* Gray background when disabled */
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .form-label{
+      display:block;
+      margin-bottom:.2rem; /* Minimal label margin */ 
+      font-size:.85rem; /* Small label font */ 
+      font-weight:600; /* Bolder label */
+      color:#4a5a63
+    }
+    
+    .stat-card{
+      background:#fff;
+      padding:1rem 1.25rem; /* More padding */
+      border-radius:.5rem;
+      box-shadow:0 1px 3px rgba(0,0,0,.08);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      transition: all 0.2s ease;
+      height: 100%; /* Make cards in a grid equal height */
+    }
+    .stat-title{
+      font-size:.75rem; /* Small title */ 
+      font-weight:600;
+      color:#4a5a63;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom: 0.25rem;
+    }
+    .stat-value{
+      font-size:1.25rem; /* Larger result font size */
+      font-weight:700;
+      color:#d67f5c; /* Orange text */
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    
+    /* Custom button style */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 0.8rem 1rem;
+      background-color: #d67f5c; /* Primary orange */
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-family: "Bungee", sans-serif;
+      font-size: 1.1rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background-color 0.3s ease, transform 0.1s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .btn-primary:hover {
+      background-color: #c17151; /* Darker orange on hover */
+    }
+    .btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Styles for the summary block */
+    .summary-block {
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+    .summary-label {
+      font-weight: 500;
+      color: #4a5a63;
+      font-size: 0.9rem;
+    }
+    .summary-data {
+      font-weight: 600;
+      color: #0f172a;
+      font-size: 0.9rem;
+      text-align: right;
+    }
+
+    /* Color-coded rating */
+    .rating-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #ffffff;
+    }
+    .rating-class-i { background-color: #ef4444; } /* Red */
+    .rating-class-ii { background-color: #f97316; } /* Orange */
+    .rating-class-iii { background-color: #f59e0b; } /* Amber */
+    .rating-unknown { background-color: #6b7280; } /* Gray */
+
+    /* Copy button styles */
+    .copy-btn {
+      background-color: #d67f5c;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.5rem;
+    }
+    .copy-btn:hover {
+      background-color: #c17151;
+    }
+    .copy-btn.copied {
+      background-color: #10b981;
+    }
+
+    /* Fade-in animation */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .fade-in {
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+  </style>
+</head>
+<body id="app-root" class="font-poppins">
+
+  <div class="px-4 w-full">
+    <!-- Hazard Selector Card -->
+    <div class="max-w-3xl mx-auto bg-[#f2ebe1] p-6 md:p-8 rounded-lg shadow-xl">
+      <!-- Updated title section with logo -->
+      <div class="flex items-center justify-center gap-3 md:gap-4 mb-6">
+        <img src="https://i.imgur.com/hoFlRbW.png" alt="Craft Automation Logo" class="h-10 md:h-12" onerror="this.src='https://placehold.co/100x100/f5e5d0/4a5a63?text=Logo'; this.onerror=null;">
+        <h2 class="font-bungee text-2xl md:text-3xl text-[#d67f5c] text-center">
+          Hazard Location Analyzer
+        </h2>
+      </div>
+      
+      <form onsubmit="return false;">
+        <!-- Grid layout for inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
+          
+          <!-- Industry -->
+          <div class="md:col-span-2">
+            <label for="industry" class="form-label">Industry</label>
+            <select id="industry" name="industry" class="form-select">
+              <option value="">Select an Industry</option>
+              <option value="brewing">Brewing</option>
+              <option value="distilling">Distilling</option>
+              <option value="fermentation">Fermentation</option>
+              <option value="cannabis">Cannabis</option>
+              <option value="grain-handling">Grain Handling</option>
+              <option value="food-beverage">Food and Beverage</option>
+              <option value="packaging">Packaging</option>
+              <option value="water-treatment">Water Treatment</option>
+              <option value="biochemical">Biochemical</option>
+            </select>
+          </div>
+
+          <!-- Hazard Type -->
+          <div>
+            <label for="hazard-type" class="form-label">Type of Hazardous Material</label>
+            <select id="hazard-type" name="hazard-type" class="form-select" onchange="updateMaterialDropdown()">
+              <option value="">Select Hazard Type</option>
+              <option value="gases">Flammable Gases / Vapors</option>
+              <option value="dusts">Combustible Dusts</option>
+              <option value="fibers">Ignitable Fibers</option>
+            </select>
+          </div>
+          
+          <!-- Hazard Presence -->
+          <div>
+            <label for="hazard-presence" class="form-label">Presence of Hazard</label>
+            <select id="hazard-presence" name="hazard-presence" class="form-select">
+              <option value="">Select Presence Likelihood</option>
+              <option value="present-continuously">Present continuously or frequently</option>
+              <option value="present-infrequently">Present infrequently or abnormally</option>
+            </select>
+          </div>
+          
+          <!-- Specific Material (Dynamic) -->
+          <div class="md:col-span-2">
+            <label for="specific-material" class="form-label">Specific Material</label>
+            <select id="specific-material" name="specific-material" class="form-select" disabled>
+              <option value="">Select Hazard Type First</option>
+              <!-- Options will be populated by JS -->
+            </select>
+          </div>
+
+        </div>
+        
+        <button type="button" class="btn-primary" onclick="generateHazardReport()">
+          Generate Report
+        </button>
+      </form>
+    </div>
+
+    <!-- Output Section -->
+    <div id="output-report" class="max-w-3xl mx-auto mt-8" style="display: none;">
+      
+      <!-- Report: Summary of Selections -->
+      <div class="mb-6">
+        <h3 class="font-bungee text-xl text-[#d67f5c] mb-3">Your Selections</h3>
+        <div class="summary-block">
+          <div class="summary-item">
+            <span class="summary-label">Industry</span>
+            <span id="summary-industry" class="summary-data"></span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Hazard Type</span>
+            <span id="summary-hazard-type" class="summary-data"></span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Hazard Presence</span>
+            <span id="summary-hazard-presence" class="summary-data"></span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Specific Material</span>
+            <span id="summary-material" class="summary-data"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report: Results Grid -->
+      <h3 class="font-bungee text-xl text-[#d67f5c] mb-3">Recommended Rating & Protection</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        
+        <!-- Recommended Classification Card -->
+        <div class="stat-card md:col-span-2 text-center">
+          <p class="stat-title">Recommended Classification</p>
+          <div class="mt-2">
+            <span id="recommended-rating" class="rating-unknown">Select options to see rating</span>
+          </div>
+          <button id="copy-rating-btn" class="copy-btn" onclick="copyRatingToClipboard()" style="display: none;">
+            Copy Classification
+          </button>
+        </div>
+
+        <!-- Hazard Group Card -->
+        <div class="stat-card">
+          <p class="stat-title">Hazard Group</p>
+          <p id="hazard-group" class="stat-value">--</p>
+        </div>
+        
+        <!-- Protection Method Card -->
+        <div class="stat-card">
+          <p class="stat-title">Common Protection Method</p>
+          <p id="protection-method" class="stat-value">--</p>
+        </div>
+
+      </div>
+
+      <!-- Plain English Description Card -->
+      <div class="stat-card mb-6">
+        <p class="stat-title">Description</p>
+        <p id="plain-english-description" class="text-base color-[#4a5a63] mt-2 leading-relaxed">
+          Please make selections above to see a description of the hazardous environment.
+        </p>
+      </div>
+
+      <!-- Note Card -->
+      <div class="stat-card bg-white text-center">
+        <p class="font-semibold text-base text-[#4a5a63]">
+          "Craft Automation provides custom-engineered solutions for automation panels in these hazardous environments, ensuring compliance and operational safety.”
+        </p>
+      </div>
+
+    </div>
+
+    <!-- CTA Section -->
+    <div class="max-w-3xl mx-auto mt-8 bg-[#f2ebe1] p-6 md:p-8 rounded-lg text-center shadow-xl">
+      <h3 class="font-bungee text-2xl text-[#4a5a63] mb-4">
+        Ensure Compliance
+      </h3>
+      <p class="mb-5 text-[#4a5a63] leading-relaxed">
+        Don't leave your facility vulnerable. Use our Guide to understand the requirements for your application and discover how Craft Automation can provide tailored solutions for hazardous environments.
+      </p>
+      <a href="https://www.craftautomation.com/" target="_blank" class="inline-block bg-[#4a5a63] text-white font-bungee py-3 px-6 rounded-lg hover:bg-[#3a4a53] transition-all text-base shadow-md">
+        Explore Craft Automation Solutions →
+      </a>
+    </div>
+
+    <!-- Disclaimer Section -->
+    <div class="max-w-3xl mx-auto mt-6 bg-[#f2ebe1] p-4 md:p-5 rounded-lg shadow-xl">
+      <p class="text-xs text-[#4a5a63] leading-relaxed text-center">
+        <strong>Disclaimer:</strong> This tool is for informational purposes only and should not replace professional engineering assessment or code compliance verification. Hazardous location classifications must be determined by qualified professionals in accordance with NEC Article 500-505, NFPA standards, and local regulations. Always consult licensed engineers and authorities having jurisdiction before making installation decisions.
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Data Definitions ---
+
+    // Materials data mapping: material name -> group
+    const gasGroups = {
+      'acetylene': 'A',
+      'hydrogen': 'B',
+      'ethylene': 'C',
+      'propane': 'D',
+      'gasoline': 'D',
+      'natural-gas': 'D',
+      'ethanol': 'D',
+      'other-gases': 'D' // Default to D if unsure
+    };
+
+    const dustGroups = {
+      'metal-dust': 'E', // e.g., Aluminum, Magnesium
+      'coal-dust': 'F',
+      'grain-dust': 'G',
+      'flour-dust': 'G',
+      'sugar-dust': 'G',
+      'plastic-dust': 'G',
+      'chemical-dust': 'G',
+      'other-dusts': 'G' // Default to G
+    };
+    
+    // Reverse map for display names
+    const materialDisplayNames = {
+      'acetylene': 'Acetylene',
+      'hydrogen': 'Hydrogen, Butadiene',
+      'ethylene': 'Ethylene, Propylene Oxide',
+      'propane': 'Propane, Acetone, Ammonia',
+      'gasoline': 'Gasoline, Hexane, Naphtha',
+      'natural-gas': 'Natural Gas (Methane)',
+      'ethanol': 'Ethanol / Alcohol Vapors',
+      'other-gases': 'Other Gases/Vapors (Specify)',
+      'metal-dust': 'Combustible Metal Dusts',
+      'coal-dust': 'Coal or Carbonaceous Dusts',
+      'grain-dust': 'Grain, Flour, Starch Dusts',
+      'flour-dust': 'Flour or Feed Dusts',
+      'sugar-dust': 'Sugar Dusts',
+      'plastic-dust': 'Plastic or Resin Dusts',
+      'chemical-dust': 'Chemical or Pharmaceutical Dusts',
+      'other-dusts': 'Other Combustible Dusts'
+    };
+
+    // --- Core Functions ---
+
+    /**
+     * Updates the 'Specific Material' dropdown based on the selected 'Hazard Type'.
+     */
+    function updateMaterialDropdown() {
+      const hazardType = document.getElementById('hazard-type').value;
+      const materialSelect = document.getElementById('specific-material');
+      
+      materialSelect.innerHTML = ''; // Clear existing options
+      
+      if (hazardType === 'gases') {
+        materialSelect.disabled = false;
+        materialSelect.add(new Option('Select a Specific Gas/Vapor', ''));
+        for (const key in gasGroups) {
+          materialSelect.add(new Option(materialDisplayNames[key], key));
+        }
+      } else if (hazardType === 'dusts') {
+        materialSelect.disabled = false;
+        materialSelect.add(new Option('Select a Specific Dust', ''));
+        for (const key in dustGroups) {
+          materialSelect.add(new Option(materialDisplayNames[key], key));
+        }
+      } else if (hazardType === 'fibers') {
+        materialSelect.disabled = true; // No groups for fibers
+        materialSelect.add(new Option('N/A for Ignitable Fibers', ''));
+      } else {
+        materialSelect.disabled = true;
+        materialSelect.add(new Option('Select Hazard Type First', ''));
+      }
+    }
+
+    /**
+     * Generates and displays the hazard report based on form inputs.
+     */
+    function generateHazardReport() {
+      // Get all input values
+      const industry = document.getElementById('industry').value;
+      const hazardType = document.getElementById('hazard-type').value;
+      const hazardPresence = document.getElementById('hazard-presence').value;
+      const material = document.getElementById('specific-material').value;
+
+      // Get selected text for summary
+      const industryText = document.getElementById('industry').options[document.getElementById('industry').selectedIndex].text;
+      const hazardTypeText = document.getElementById('hazard-type').options[document.getElementById('hazard-type').selectedIndex].text;
+      const hazardPresenceText = document.getElementById('hazard-presence').options[document.getElementById('hazard-presence').selectedIndex].text;
+      const materialText = document.getElementById('specific-material').options[document.getElementById('specific-material').selectedIndex].text;
+
+      // --- Logic for determining rating ---
+      let ratingClass = '';
+      let ratingDivision = '';
+      let ratingGroup = 'N/A';
+      let protectionMethod = 'Varies';
+      let description = 'Please make a complete selection to see results.';
+      let ratingColorClass = 'rating-unknown';
+
+      if (hazardType === 'gases') {
+        ratingClass = 'Class I';
+        ratingGroup = gasGroups[material] || 'D'; // Default to D if no material
+        ratingColorClass = 'rating-class-i';
+      } else if (hazardType === 'dusts') {
+        ratingClass = 'Class II';
+        ratingGroup = dustGroups[material] || 'G'; // Default to G if no material
+        ratingColorClass = 'rating-class-ii';
+      } else if (hazardType === 'fibers') {
+        ratingClass = 'Class III';
+        ratingGroup = 'N/A'; // No groups for Class III
+        ratingColorClass = 'rating-class-iii';
+      }
+
+      if (hazardPresence === 'present-continuously') {
+        ratingDivision = 'Division 1';
+        protectionMethod = 'Explosion-Proof (XP) or Intrinsic Safety (IS)';
+      } else if (hazardPresence === 'present-infrequently') {
+        ratingDivision = 'Division 2';
+        protectionMethod = 'Non-Incendive or Hermetically Sealed';
+      }
+
+      // --- Build Final Rating String ---
+      let fullRating = 'Select options to see rating';
+      if (ratingClass && ratingDivision) {
+        fullRating = `${ratingClass}, ${ratingDivision}`;
+        if (ratingGroup !== 'N/A') {
+          fullRating += `, Group ${ratingGroup}`;
+        }
+        
+        // Update description
+        description = `This location is classified as ${fullRating}. This indicates an environment where ${hazardTypeText.split('(')[0].toLowerCase()} may be present ${hazardPresence === 'present-continuously' ? 'continuously or frequently' : 'infrequently or under abnormal conditions'}.`;
+        if (material && ratingGroup !== 'N/A') {
+          description += ` The specific material, ${materialText}, places it in Group ${ratingGroup}.`;
+        }
+        if (ratingClass === 'Class III') {
+           description = `This location is classified as ${fullRating}. This indicates an environment where ignitable fibers are present and may settle, but are not likely to be in suspension in the air in quantities sufficient to produce ignitable mixtures.`;
+        }
+        description += ` Common protection methods include ${protectionMethod} enclosures and systems.`;
+      
+      } else {
+        ratingColorClass = 'rating-unknown';
+      }
+
+      // --- Update Summary Fields ---
+      document.getElementById('summary-industry').textContent = industry ? industryText : 'Not Selected';
+      document.getElementById('summary-hazard-type').textContent = hazardType ? hazardTypeText : 'Not Selected';
+      document.getElementById('summary-hazard-presence').textContent = hazardPresence ? hazardPresenceText : 'Not Selected';
+      document.getElementById('summary-material').textContent = material ? materialText : (hazardType === 'fibers' ? 'N/A' : 'Not Selected');
+
+      // --- Update Report Output Fields ---
+      const ratingEl = document.getElementById('recommended-rating');
+      ratingEl.textContent = fullRating;
+      ratingEl.className = `rating-badge ${ratingColorClass}`; // Update color class
+
+      document.getElementById('hazard-group').textContent = ratingGroup;
+      document.getElementById('protection-method').textContent = protectionMethod;
+      document.getElementById('plain-english-description').textContent = description;
+
+      // Show the output section with animation
+      const reportSection = document.getElementById('output-report');
+      reportSection.style.display = 'block';
+      reportSection.classList.remove('fade-in');
+      void reportSection.offsetWidth; // Trigger reflow
+      reportSection.classList.add('fade-in');
+      
+      // Show copy button if we have a valid rating
+      const copyBtn = document.getElementById('copy-rating-btn');
+      if (ratingClass && ratingDivision) {
+        copyBtn.style.display = 'inline-block';
+      } else {
+        copyBtn.style.display = 'none';
+      }
+      
+      // Scroll to the report
+      setTimeout(() => {
+        reportSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+
+    /**
+     * Copy the classification rating to clipboard
+     */
+    function copyRatingToClipboard() {
+      const ratingText = document.getElementById('recommended-rating').textContent;
+      const copyBtn = document.getElementById('copy-rating-btn');
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(ratingText).then(() => {
+        // Change button appearance
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = 'Copied!';
+        copyBtn.classList.add('copied');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+      });
+    }
+
+    // Initialize the material dropdown on page load
+    document.addEventListener('DOMContentLoaded', updateMaterialDropdown);
+
+  </script>
+</body>
+</html>
+

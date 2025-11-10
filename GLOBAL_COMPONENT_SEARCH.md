@@ -4,6 +4,23 @@
 
 The Global Component Search is a centralized, moveable, and resizable modal for finding components across the entire application. This replaces individual plugin search implementations.
 
+## Deployment Considerations
+
+### NAS Deployment
+
+When deployed via NAS using `scripts/publish-to-nas.ps1`:
+- Component database syncs automatically from `public/COMPONENT PRICE LIST [MASTER].csv`
+- Search indexes are built on first launch
+- Updates to component database require re-deploying to NAS
+- All workstations share the same component database
+
+### Environment Setup
+
+The search system respects the `CTH_RUNTIME_ROOT` environment variable:
+- Set via `Set-CTHRuntimeRoot.ps1` (generated during NAS deployment)
+- Points to the `latest` folder on NAS
+- Ensures all users search the same component database
+
 ## Features
 
 ✅ **600x500px default size** (centered on screen)  

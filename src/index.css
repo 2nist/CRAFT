@@ -39,6 +39,14 @@
     --accent-hsl: 217 91% 60%; /* Default blue accent */
     --accent: var(--accent-hsl); /* Use accent-hsl for accent color */
     --accent-foreground: 0 0% 98%;
+    --success: 142 76% 36%; /* Green */
+    --success-foreground: 0 0% 100%;
+    --danger: 0 84% 60%; /* Red */
+    --danger-foreground: 0 0% 100%;
+    --info: 199 89% 48%; /* Blue */
+    --info-foreground: 0 0% 100%;
+    --brown: 30 25% 40%; /* Neutral brown for icons */
+    --olive: 80 25% 40%; /* Neutral olive for icons */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
@@ -265,6 +273,52 @@
   }
   .ca-btn-outline:hover { 
     background-color: hsl(var(--accent-hsl) / 0.08);
+  }
+
+  /* Design System Button Utilities */
+  .ca-btn-primary {
+    @apply px-2 py-1 text-sm font-semibold text-white transition-colors shadow-sm rounded-xs2 border border-transparent;
+    background-color: hsl(var(--accent));
+  }
+  .ca-btn-primary:hover {
+    background-color: hsl(var(--accent) / 0.85);
+  }
+
+  .ca-btn-success {
+    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border border-transparent;
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+  .ca-btn-success:hover {
+    background-color: hsl(var(--success) / 0.85);
+  }
+
+  .ca-btn-danger {
+    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border border-transparent;
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
+  }
+  .ca-btn-danger:hover {
+    background-color: hsl(var(--danger) / 0.85);
+  }
+
+  .ca-btn-info {
+    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border border-transparent;
+    background-color: hsl(var(--info));
+    color: hsl(var(--info-foreground));
+  }
+  .ca-btn-info:hover {
+    background-color: hsl(var(--info) / 0.85);
+  }
+
+  .ca-btn-secondary {
+    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border;
+    background-color: transparent;
+    border-color: #475569;
+    color: inherit;
+  }
+  .ca-btn-secondary:hover {
+    border-color: #fb923c;
   }
 }
 

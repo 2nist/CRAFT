@@ -1,0 +1,6 @@
+[
+  { "title": "Ohm's Law Helper", "path": "/toolbox/sample-calculator.html", "icon": "Calculator" },
+  { "title": "CIP ROI Calculator", "path": "/toolbox/CRAFT_CIP_ROI_calc.html", "icon": "Percent" },
+  { "title": "Hazard Location Reference", "path": "/toolbox/CRAFT_HAZARD_LOC.html", "icon": "Map" },
+  { "title": "Quote & Order Tool", "path": "/toolbox/Quote%20%26%20Order%20%23tool.html", "icon": "FileSpreadsheet" }
+]

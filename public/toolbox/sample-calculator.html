@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sample Calculator</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, sans-serif; margin: 0; padding: 16px; }
+    .card { max-width: 680px; margin: 0 auto; padding: 16px; border: 1px solid rgba(100,116,139,.3); border-radius: 12px; background: rgba(2,6,23,.04); }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    label { display: block; font-size: 13px; margin: 10px 0 4px; opacity: .9; }
+    input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(100,116,139,.5); background: transparent; color: inherit; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .result { margin-top: 12px; padding: 10px 12px; border: 1px dashed rgba(100,116,139,.5); border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .hint { font-size: 12px; opacity: .7; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Ohm's Law Helper</h1>
+    <div class="row">
+      <div>
+        <label for="voltage">Voltage (V)</label>
+        <input type="number" step="any" id="voltage" placeholder="e.g. 24" />
+      </div>
+      <div>
+        <label for="resistance">Resistance (Ω)</label>
+        <input type="number" step="any" id="resistance" placeholder="e.g. 120" />
+      </div>
+    </div>
+    <div class="result" id="result">Current I = ? A</div>
+    <div class="hint">Tip: I = V / R</div>
+  </div>
+  <script>
+    const V = document.getElementById('voltage');
+    const R = document.getElementById('resistance');
+    const out = document.getElementById('result');
+    function update(){
+      const v = parseFloat(V.value);
+      const r = parseFloat(R.value);
+      if(Number.isFinite(v) && Number.isFinite(r) && r !== 0){
+        const i = v / r;
+        out.textContent = `Current I = ${i.toFixed(3)} A`;
+      } else {
+        out.textContent = 'Current I = ? A';
+      }
+    }
+    V.addEventListener('input', update);
+    R.addEventListener('input', update);
+  </script>
+</body>
+</html>

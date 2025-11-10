@@ -17,19 +17,38 @@ Craft Tools Hub is a comprehensive desktop application designed for managing quo
 - 📊 **Quote Configurator** - 6-step wizard for building detailed quotes
 - 🏗️ **Product Template Manager** - 10 product categories with 36+ templates
 - 🔍 **Global Component Search** - Instant search across 1000+ components (Ctrl+K)
-- �� **BOM Management** - Manual builder and CSV import tools
+- 📦 **BOM Management** - Manual builder and CSV import tools
 - ⚡ **FLA Calculator** - Electrical load calculations with NEC references
 - 💰 **Margin Calculator** - Instant profit margin and markup calculations
 - 🎨 **Customizable Dashboard** - Personalized workflow and quick access
 - 🔧 **Assembly Manager** - Organize components by assembly categories
+- 📝 **Smart Manual System** - Lazy-loading component manuals with caching
 
 ---
 
 ## 🚀 Quick Start
 
-### Installation
+### Option 1: Run from NAS (Recommended for Teams)
 
-1. **Download the latest release**
+If your IT has deployed to NAS:
+
+```powershell
+# One-time setup: Set environment variable
+\\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\Set-CTHRuntimeRoot.ps1
+
+# Launch app
+\\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\updates\latest\run-app.bat
+```
+
+**Advantages:**
+- ✅ No local installation needed
+- ✅ Always get latest version
+- ✅ IT manages updates
+- ✅ Shared component database
+
+### Option 2: Local Development
+
+1. **Clone the repository**
    \\\ash
    # Clone the repository
    git clone https://github.com/2nist/craft_tools_hub.git
@@ -58,8 +77,36 @@ npm run build
 npm run electron:build
 \\\
 
-Executable will be in \
-elease/\ folder.
+Executable will be in `release/` folder.
+
+---
+
+## 📦 NAS Deployment (For IT/Admins)
+
+Automate deployment to network share:
+
+```powershell
+# Deploy to NAS with version tracking
+.\scripts\publish-to-nas.ps1 -Version "v1.0rc"
+
+# Quick deploy (use defaults)
+.\scripts\publish-to-nas.ps1
+
+# Skip build (use existing artifacts)
+.\scripts\publish-to-nas.ps1 -SkipBuild
+```
+
+**What this does:**
+- Builds the app (renderer + electron)
+- Deploys to `\\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\updates\[version]`
+- Updates `latest` folder automatically
+- Generates build metadata with Git info
+- Creates workstation setup scripts
+- Preserves previous versions for rollback
+
+**Documentation:**
+- See [ADMIN_GUIDE_DEPLOYMENT.md](ADMIN_GUIDE_DEPLOYMENT.md) for full NAS deployment guide
+- See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for all deployment options
 
 ---
 

@@ -9,7 +9,7 @@ import loggingService from './services/LoggingService';
 
 export default function App() {
   const [plugins, setPlugins] = useState([]);
-  const [activeTab, setActiveTab] = useState('QUOTING');
+  const [activeTab, setActiveTab] = useState('TOOLS');
   const [themeSettings, setThemeSettings] = useState(null);
   const { openSearchModal } = useAppContext();
 
@@ -149,7 +149,7 @@ export default function App() {
 
   return (
     <HashRouter>
-      <div className="flex flex-col h-screen antialiased text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900">
+      <div className="flex flex-col h-screen antialiased text-slateish dark:text-slate-200 bg-sand dark:bg-slate-900">
         <TopTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
         <div className="flex flex-1 overflow-hidden">
           <LeftSidebar plugins={visiblePlugins} />

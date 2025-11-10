@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown, Download, Upload } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown, Download, Upload, FileText, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -29,6 +29,98 @@ export default function ManualBomBuilder() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // === DETAIL MODAL STATE ===
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailType, setDetailType] = useState(null); // 'component' | 'subAssembly'
+  const [detailItem, setDetailItem] = useState(null); // original item (from list)
+  const [detailData, setDetailData] = useState(null); // enriched data (from IPC)
+  const [detailLoading, setDetailLoading] = useState(false);
+  const modalRef = useRef(null);
+
+  const openDetail = useCallback(async (item, type) => {
+    try {
+      setDetailType(type);
+      setDetailItem(item);
+      setDetailOpen(true);
+      setDetailLoading(true);
+      let data = null;
+      if (type === 'component') {
+        const sku = item.sku || item.partNumber;
+        if (sku && window.components?.getBySku) {
+          data = await window.components.getBySku(sku);
+        } else {
+          data = item;
+        }
+      } else if (type === 'subAssembly') {
+        const id = item.subAssemblyId || item.id;
+        if (id && window.subAssemblies?.getById) {
+          data = await window.subAssemblies.getById(id);
+        } else {
+          data = item;
+        }
+      }
+      setDetailData(data || item);
+    } catch (e) {
+      console.error('Failed to load detail data', e);
+      setDetailData(item);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setDetailOpen(false);
+    setDetailType(null);
+    setDetailItem(null);
+    setDetailData(null);
+    setDetailLoading(false);
+  }, []);
+
+  // Accessibility: focus trap + Esc to close
+  useEffect(() => {
+    if (!detailOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeDetail();
+        return;
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    // Initial focus
+    setTimeout(() => {
+      if (modalRef.current) {
+        const first = modalRef.current.querySelector(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        first && first.focus();
+      }
+    }, 0);
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [detailOpen, closeDetail]);
 
   // === EFFECTS ===
   // Recalculate BOM cost when items change
@@ -377,6 +469,7 @@ export default function ManualBomBuilder() {
                 itemKey="subAssemblyId"
                 itemDisplay="description"
                 onAdd={(item) => addItem(item, 'subAssembly')}
+                onShowDetail={(item) => openDetail(item, 'subAssembly')}
               />
             </TabsContent>
             <TabsContent value="components">
@@ -385,6 +478,7 @@ export default function ManualBomBuilder() {
                 itemKey="sku"
                 itemDisplay="description"
                 onAdd={(item) => addItem(item, 'component')}
+                onShowDetail={(item) => openDetail(item, 'component')}
               />
             </TabsContent>
           </Tabs>
@@ -447,6 +541,7 @@ export default function ManualBomBuilder() {
             type="subAssembly"
             updateQuantity={updateQuantity}
             removeItem={removeItem}
+            onShowDetail={(item) => openDetail(item, 'subAssembly')}
           />
           
           {/* Components List */}
@@ -457,6 +552,7 @@ export default function ManualBomBuilder() {
             type="component"
             updateQuantity={updateQuantity}
             removeItem={removeItem}
+            onShowDetail={(item) => openDetail(item, 'component')}
           />
           
           {/* Total Material Cost - Prominent Display */}
@@ -498,13 +594,154 @@ export default function ManualBomBuilder() {
           
         </CardContent>
       </Card>
+
+      {/* Detail Modal */}
+      {detailOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onMouseDown={(e) => { if (e.target === e.currentTarget) closeDetail(); }}>
+          <div ref={modalRef} role="dialog" aria-modal="true" className="w-full max-w-2xl mx-4 rounded-lg shadow-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <Info size={18} className="text-accent" />
+                <h3 className="text-lg font-semibold">{detailType === 'component' ? 'Component Details' : 'Sub-Assembly Details'}</h3>
+              </div>
+              <button className="ca-btn-secondary px-2 py-1 rounded" onClick={closeDetail}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              {detailLoading ? (
+                <div className="text-sm text-slateish/60">Loading…</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-sm text-slateish/60">{detailType === 'component' ? 'Part #' : 'ID'}</div>
+                      <div className="font-mono">{detailType === 'component' ? (detailData?.sku || detailItem?.sku || detailItem?.partNumber) : (detailData?.subAssemblyId || detailItem?.subAssemblyId)}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-slateish/60">Vendor</div>
+                      <div>{detailData?.manufacturer || detailData?.vendor || '—'}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm text-slateish/60">Description</div>
+                    <div className="font-medium">{detailData?.description || detailItem?.description || '—'}</div>
+                  </div>
+
+                  {detailType === 'component' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-slateish/60">Category</div>
+                        <div>{detailData?.category || '—'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-slateish/60">Price</div>
+                        <div className="font-semibold">{detailData?.price != null ? `$${Number(detailData.price).toFixed(2)}` : '—'}</div>
+                      </div>
+                      {detailData?.voltage && (
+                        <div>
+                          <div className="text-sm text-slateish/60">Voltage</div>
+                          <div>{detailData.voltage}</div>
+                        </div>
+                      )}
+                      {detailData?.stock != null && (
+                        <div className="text-right">
+                          <div className="text-sm text-slateish/60">Stock</div>
+                          <div>{detailData.stock}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <button
+                      className="ca-btn-primary px-3 py-1.5 rounded"
+                      onClick={() => {
+                        const item = detailType === 'component' ? {
+                          sku: detailData?.sku || detailItem?.sku || detailItem?.partNumber,
+                          description: detailData?.description || detailItem?.description,
+                          manufacturer: detailData?.manufacturer || detailData?.vendor
+                        } : {
+                          subAssemblyId: detailData?.subAssemblyId || detailItem?.subAssemblyId,
+                          description: detailData?.description || detailItem?.description,
+                          category: detailData?.category
+                        };
+                        addItem(item, detailType);
+                        closeDetail();
+                      }}
+                    >
+                      <Plus size={16} className="inline mr-1" /> Add to BOM
+                    </button>
+                    <button
+                      className="ca-btn-secondary px-3 py-1.5 rounded"
+                      onClick={() => {
+                        const text = detailType === 'component'
+                          ? (detailData?.sku || detailItem?.sku || detailItem?.partNumber)
+                          : (detailData?.subAssemblyId || detailItem?.subAssemblyId);
+                        navigator.clipboard.writeText(String(text || ''));
+                      }}
+                    >
+                      <Copy size={16} className="inline mr-1" /> Copy {detailType === 'component' ? 'SKU' : 'ID'}
+                    </button>
+                    <button
+                      className="ca-btn-secondary px-3 py-1.5 rounded"
+                      onClick={() => {
+                        const prefill = detailType === 'component'
+                          ? (detailData?.sku || detailItem?.sku || detailItem?.description)
+                          : (detailData?.description || detailItem?.description);
+                        // Try known openers first
+                        if (window.openSearchModal) {
+                          try { window.openSearchModal(prefill); return; } catch {}
+                        }
+                        if (window.eventBus?.publish) {
+                          try { window.eventBus.publish('SEARCH_OPEN_REQUEST', { query: prefill }); return; } catch {}
+                        }
+                        // Fallback: dispatch DOM event
+                        try {
+                          window.dispatchEvent(new CustomEvent('cth:open-global-search', { detail: { query: prefill } }));
+                        } catch {}
+                      }}
+                    >
+                      <Search size={16} className="inline mr-1" /> Open in Global Search
+                    </button>
+                    {detailType === 'component' && (
+                      <button
+                        className="ca-btn-secondary px-3 py-1.5 rounded"
+                        onClick={async () => {
+                          try {
+                            // Try local/manual system
+                            const info = { sku: detailData?.sku || detailItem?.sku, manufacturer: detailData?.manufacturer || detailData?.vendor };
+                            if (window.manuals?.smartSearch) {
+                              const res = await window.manuals.smartSearch(info);
+                              if (res?.url) {
+                                window.open(res.url, '_blank');
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Manual open failed', e);
+                          }
+                        }}
+                      >
+                        <BookOpen size={16} className="inline mr-1" /> View Manual
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // === Sub-Components ===
 
-function SearchableList({ searchFn, itemKey, itemDisplay, onAdd }) {
+function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -618,7 +855,8 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd }) {
                 {sortedResults.map(item => (
                   <tr 
                     key={item[itemKey]} 
-                    className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                    className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                    onClick={() => onShowDetail && onShowDetail(item)}
                   >
                     {itemKey === 'sku' && <td className="px-2 py-1.5 font-mono text-xs">{item.sku || item.partNumber || '-'}</td>}
                     <td className="px-2 py-1.5">{item[itemDisplay]}</td>
@@ -626,7 +864,7 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd }) {
                     {itemKey === 'sku' && <td className="px-2 py-1.5 text-right font-medium">{item.price ? `$${item.price.toFixed(2)}` : '-'}</td>}
                     {itemKey !== 'sku' && <td className="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-400">{item.category || '-'}</td>}
                     <td className="px-2 py-1.5 text-center">
-                      <Button size="sm" variant="ghost" onClick={() => onAdd(item)} className="h-6 w-6 p-0">
+                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onAdd(item); }} className="h-6 w-6 p-0">
                         <Plus size={14} />
                       </Button>
                     </td>
@@ -641,14 +879,14 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd }) {
   );
 }
 
-function BomSection({ title, items, itemKey, type, updateQuantity, removeItem }) {
+function BomSection({ title, items, itemKey, type, updateQuantity, removeItem, onShowDetail }) {
   return (
     <div>
       <h3 className="text-lg font-semibold mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{title} ({items.length})</h3>
       <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
         {items.length === 0 && <p className="text-sm text-slate-500 dark:text-slate-400">No items added.</p>}
         {items.map(item => (
-          <div key={item[itemKey]} className="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+          <div key={item[itemKey]} className="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg cursor-pointer" onClick={() => onShowDetail && onShowDetail(item)}>
             <Input 
               type="number" 
               value={item.quantity} 
@@ -659,7 +897,7 @@ function BomSection({ title, items, itemKey, type, updateQuantity, removeItem })
               <div className="text-sm font-medium">{item.description || item[itemKey]}</div>
               <div className="text-xs text-slate-500 dark:text-slate-400">{item[itemKey]}</div>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => removeItem(item[itemKey], type)}>
+            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeItem(item[itemKey], type); }}>
               <X size={16} className="text-red-500" />
             </Button>
           </div>

@@ -5,7 +5,31 @@
 ### Prerequisites
 - Install Node.js (v18 or higher): https://nodejs.org/
 
-### Quick Start
+### Quick Start Options
+
+#### Option 1: Run from NAS (Recommended for Teams)
+
+**If your IT has deployed to NAS:**
+
+1. **Set Environment Variable** (one-time setup):
+   ```powershell
+   # Run the setup script from NAS
+   \\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\Set-CTHRuntimeRoot.ps1
+   ```
+
+2. **Launch App**:
+   ```
+   \\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\updates\latest\run-app.bat
+   ```
+   Or create a desktop shortcut to this location.
+
+**Advantages:**
+- ✅ No local installation needed
+- ✅ Always get latest version
+- ✅ Shared component database
+- ✅ IT manages updates
+
+#### Option 2: Local Development
 
 **Option 1: Double-click to run**
 1. Double-click `run-app.bat`

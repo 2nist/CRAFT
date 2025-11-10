@@ -7,6 +7,67 @@
 
 ---
 
+## 📦 NAS Deployment Integration
+
+**Date**: 2025-11-10  
+**Feature**: Automated NAS deployment with version tracking
+
+### Deployment Script: `scripts/publish-to-nas.ps1`
+
+**Features Implemented:**
+- ✅ Automated build and deployment pipeline
+- ✅ Version folder structure (`updates/v1.0rc/`, `updates/latest/`)
+- ✅ Git metadata tracking (commit, branch, timestamp)
+- ✅ Robocopy-based efficient file syncing
+- ✅ Environment setup script generation
+- ✅ Automatic `latest` folder updates
+- ✅ Rollback capability (previous versions preserved)
+
+**Usage:**
+```powershell
+# Deploy to default NAS location
+.\scripts\publish-to-nas.ps1
+
+# Deploy specific version
+.\scripts\publish-to-nas.ps1 -Version "v1.1.0"
+
+# Skip build (use existing artifacts)
+.\scripts\publish-to-nas.ps1 -SkipBuild
+
+# Custom NAS path
+.\scripts\publish-to-nas.ps1 -TargetPath "\\NAS\CustomPath"
+```
+
+**NAS Structure:**
+```
+\\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\
+├── updates/
+│   ├── v1.0rc/           # Versioned deployment
+│   └── latest/           # Auto-updated pointer
+├── Set-CTHRuntimeRoot.ps1
+├── Set-CTHRuntimeRoot.bat
+└── runtime.env.example
+```
+
+**Build Metadata (`build-info.json`):**
+```json
+{
+  "version": "v1.0rc",
+  "commit": "37d6216...",
+  "branch": "quote_config",
+  "timestampUtc": "2025-11-10T10:30:00Z",
+  "source": "C:\\Users\\...\\craft_tools_hub"
+}
+```
+
+**Workstation Setup:**
+- Users run `Set-CTHRuntimeRoot.ps1` or `.bat` to configure environment
+- Sets `CTH_RUNTIME_ROOT` pointing to `latest` folder
+- Launch via `run-app.bat` from NAS
+- User data remains in `%APPDATA%`
+
+---
+
 ## 🎯 What Was Built
 
 ### Frontend (React Component)
