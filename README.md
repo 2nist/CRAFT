@@ -105,17 +105,23 @@ Automate deployment to network share:
 - Preserves previous versions for rollback
 
 **Documentation:**
-- See [ADMIN_GUIDE_DEPLOYMENT.md](ADMIN_GUIDE_DEPLOYMENT.md) for full NAS deployment guide
-- See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for all deployment options
+- See [ADMIN_GUIDE_DEPLOYMENT.md](docs/user/ADMIN_GUIDE_DEPLOYMENT.md) for full NAS deployment guide
+- See [DEPLOYMENT_GUIDE.md](docs/user/DEPLOYMENT_GUIDE.md) for all deployment options
 
 ---
 
 ## 📚 Documentation
 
-- **[User Guide](USER_GUIDE.md)** - Comprehensive guide for all features
-- **[Quick Start](QUICK_START.md)** - Get up and running quickly
-- **[BOM Importer Guide](BOM_IMPORTER_GUIDE.md)** - Import BOMs from spreadsheets
-- **[Global Search](GLOBAL_COMPONENT_SEARCH.md)** - Using the component search system
+All user-facing documents have been consolidated under `docs/user/` for a cleaner repository root.
+
+- **[User Guide](docs/user/USER_GUIDE.md)** – Comprehensive guide for all features
+- **[Quick Start](docs/user/QUICK_START.md)** – Get up and running quickly
+- **[BOM Importer Guide](docs/user/BOM_IMPORTER_GUIDE.md)** – Import BOMs from spreadsheets
+- **[Global Search](docs/user/GLOBAL_COMPONENT_SEARCH.md)** – Using the component search system
+- **[Manual System](docs/user/MANUAL_SYSTEM.md)** – Smart manual lookup & caching
+- **[Troubleshoot UI](docs/user/TROUBLESHOOT_UI.md)** – Common interface issues & fixes
+- **[Implementation Summary](docs/user/IMPLEMENTATION_SUMMARY.md)** – High-level architecture recap
+- **[Assembly Category Mapping](docs/user/BOM_ASSEMBLY_CATEGORY_MAPPING.md)** – Assembly → category reference
 
 ---
 
@@ -170,7 +176,7 @@ The system organizes products into 10 specialized categories:
 
 ---
 
-## �� Technology Stack
+## 🧩 Technology Stack
 
 ### Frontend
 - **React 18** - UI framework
@@ -221,7 +227,7 @@ User settings are stored in:
 
 ---
 
-## �� Data Files
+## 📂 Data Files
 
 ### Component Database
 \\\
@@ -279,7 +285,7 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 
 For questions or support:
 - **Internal Wiki**: [Link to internal documentation]
-- **Repository**: github.com/2nist/craft_tools_hub
+- **Repository**: https://github.com/matthewp-craft/Craft_Tool_Hub
 - **Contact**: Craft Automation Sales Team
 
 ---
