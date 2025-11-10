@@ -1,0 +1,29 @@
+{
+  "title": "Craft Tools Hub Manual",
+  "author": "Craft Auto Team",
+  "versionFromPackage": true,
+  "outputHtml": "docs/manual/Manual.html",
+  "outputMd": "docs/manual/Manual.md",
+  "outputPdf": "docs/manual/Craft_Tools_Hub_Manual.pdf",
+  "sourceDir": "docs/user",
+  "include": [
+    "QUICK_START.md",
+    "USER_GUIDE.md",
+    "GLOBAL_COMPONENT_SEARCH.md",
+    "BOM_IMPORTER_QUICK_START.md",
+    "BOM_IMPORTER_GUIDE.md",
+    "MANUAL_SYSTEM.md",
+    "TROUBLESHOOT_UI.md",
+    "DEPLOYMENT_GUIDE.md",
+    "ADMIN_GUIDE_DEPLOYMENT.md",
+    "ADMIN_GUIDE_FILE_LOCATIONS.md",
+    "ADMIN_GUIDE_MAINTENANCE.md",
+    "IMPLEMENTATION_SUMMARY.md",
+    "ARCHITECTURAL_AUDIT_AND_PLAN.md",
+    "GIT_COMMIT_SUMMARY.md",
+    "COMPONENT_MANUALS_STRATEGY.md",
+    "FORCE_RELOAD.md",
+    "TEMPLATE_SIMPLE_MODE_IMPLEMENTATION.md",
+    "BOM_ASSEMBLY_CATEGORY_MAPPING.md"
+  ]
+}

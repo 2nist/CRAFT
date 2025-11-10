@@ -16,7 +16,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "prepare": "husky",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "manual:build": "node scripts/build-manual.mjs"
   },
   "keywords": [
     "electron",
@@ -58,7 +59,9 @@
     "typescript": "^5.9.3",
     "vite": "^5.0.12",
     "vite-plugin-electron": "^0.28.2",
-    "wait-on": "^7.2.0"
+    "wait-on": "^7.2.0",
+    "marked": "^12.0.2",
+    "puppeteer": "^23.7.0"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
