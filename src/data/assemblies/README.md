@@ -12,29 +12,32 @@ This directory contains assembly templates (kits of components) and their schema
 Each assembly is a template/kit that groups components together with quantities.
 
 ### Required Fields
-- `assemblyId` (string) - Unique identifier (e.g., "ASM-VFD-1.5HP")
+- `subAssemblyId` (string) - Unique identifier (e.g., "ASM-VFD-1.5HP")
 - `description` (string) - Human-readable name (e.g., "1.5HP VFD Starter Kit")
 - `components` (array) - List of components with SKUs and quantities
 
 ### Optional Fields
 - `category` (string) - Standardized category from enum
+- `assemblyId` (string) - Legacy identifier preserved for backward compatibility
 - `estimatedLaborHours` (number) - Time to build the assembly
+- `attributes` (object) - Searchable attributes (voltage, amps, type, etc.)
 
 ## Categories
 
 Assemblies can be categorized as:
-- Enclosure
-- Disconnect
-- Fuse
-- Branch Breaker
+- ENCLOSURE
+- DISCONNECT
+- FUSE
+- BRANCH BREAKER
 - PWRDST
-- Control
+- CONTROL
 - SAFETY
 - PLC/COM
 - MOTOR CONTROL/HEATER CONTROL
 - WIRING
 - INSTRUMENT
 - PNU
+- Uncategorized
 
 ## Component References
 
@@ -70,6 +73,7 @@ const expanded = await window.assemblies.expand('ASM-VFD-1.5HP');
 
 ```json
 {
+  "subAssemblyId": "ASM-VFD-1.5HP",
   "assemblyId": "ASM-VFD-1.5HP",
   "description": "1.5HP VFD Starter Kit",
   "category": "MOTOR CONTROL/HEATER CONTROL",
@@ -87,8 +91,12 @@ const expanded = await window.assemblies.expand('ASM-VFD-1.5HP');
     {
       "sku": "VFD-1.5HP",
       "quantity": 1
-    }
-  ],
+    },
+    "attributes": {
+      "type": "VFD",
+      "voltage": "480V"
+    },
+    "estimatedLaborHours": 3.5
   "estimatedLaborHours": 3.5
 }
 ```

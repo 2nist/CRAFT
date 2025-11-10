@@ -1,79 +1,145 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Assembly",
-  "description": "A reusable template or 'kit' of components and their quantities.",
+  "title": "Assembly Schema",
+  "description": "Schema for logical process assemblies (I/O containers)",
   "type": "object",
+  "required": ["assemblyId", "displayName"],
   "properties": {
     "assemblyId": {
-      "description": "A unique identifier for this assembly template (e.g., 'ASM-VFD-1.5HP').",
-      "type": "string"
+      "type": "string",
+      "description": "Unique identifier for the assembly (e.g., 'proc_acid_bath')",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable name for the assembly (e.g., 'Acid Bath Process')",
+      "minLength": 1,
+      "maxLength": 100
     },
     "description": {
-      "description": "A human-readable name for this assembly (e.g., '1.5HP VFD Starter Kit').",
-      "type": "string"
+      "type": "string",
+      "description": "Detailed description of what this assembly represents",
+      "maxLength": 500
     },
     "category": {
-      "description": "A standardized category for sorting assemblies.",
       "type": "string",
-      "enum": [
-        "ENCLOSURE",
-        "DISCONNECT",
-        "FUSE",
-        "BRANCH BREAKER",
-        "PWRDST",
-        "CONTROL",
-        "SAFETY",
-        "PLC/COM",
-        "MOTOR CONTROL/HEATER CONTROL",
-        "WIRING",
-        "INSTRUMENT",
-        "PNU",
-        "Uncategorized"
-      ]
-    },
-    "attributes": {
-      "description": "A key-value map of queryable attributes for this assembly.",
-      "type": "object",
-      "properties": {
-        "voltage": { "type": ["number", "string", "null"] },
-        "amps": { "type": ["number", "string", "null"] },
-        "protection": { "type": ["string", "null"] },
-        "type": { "type": ["string", "null"] }
-      },
-      "additionalProperties": true
-    },
-    "components": {
-      "description": "A list of components (from the catalog) required for this assembly.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "sku": {
-            "description": "The 'sku' of the component, linking to the component_catalog.json.",
-            "type": "string"
-          },
-          "quantity": {
-            "description": "The number of this component required.",
-            "type": "integer",
-            "minimum": 1
-          },
-          "notes": {
-            "description": "Optional notes (e.g., 'Mount on left side').",
-            "type": "string"
-          }
-        },
-        "required": ["sku", "quantity"]
-      }
+      "description": "Category for organization (e.g., 'PROCESS', 'UTILITY', 'SAFETY')",
+      "enum": ["PROCESS", "UTILITY", "SAFETY", "CONTROL", "INSTRUMENT", "MOTOR CONTROL", "HEATER CONTROL", "PNU", "PLC/COM", "ENCLOSURE", "DISCONNECT", "OTHER"]
     },
     "estimatedLaborHours": {
-      "description": "Estimated time in hours to build this one assembly. (For future use).",
       "type": "number",
-      "minimum": 0
+      "description": "Estimated labor hours to configure this assembly",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "fields": {
+      "type": "object",
+      "description": "I/O field definitions organized by type",
+      "properties": {
+        "digitalIn": {
+          "type": "array",
+          "description": "Digital input fields",
+          "items": {
+            "$ref": "#/definitions/ioField"
+          }
+        },
+        "digitalOut": {
+          "type": "array",
+          "description": "Digital output fields",
+          "items": {
+            "$ref": "#/definitions/ioField"
+          }
+        },
+        "analogIn": {
+          "type": "array",
+          "description": "Analog input fields",
+          "items": {
+            "$ref": "#/definitions/ioField"
+          }
+        },
+        "analogOut": {
+          "type": "array",
+          "description": "Analog output fields",
+          "items": {
+            "$ref": "#/definitions/ioField"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Additional attributes for the assembly",
+      "additionalProperties": true
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for searching and filtering",
+      "items": {
+        "type": "string"
+      }
     }
   },
-  "required": [
-    "assemblyId",
-    "description",
-    "components"
-  ]
+  "definitions": {
+    "ioField": {
+      "type": "object",
+      "required": ["fieldName", "fieldType", "quantity"],
+      "properties": {
+        "fieldName": {
+          "type": "string",
+          "description": "Name of the I/O field (e.g., 'Temp Sensor (RTD)')",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "fieldType": {
+          "type": "string",
+          "description": "Type of the field",
+          "enum": ["Boolean", "Number", "Text", "List"]
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Number of this I/O type needed",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "parameters": {
+          "type": "array",
+          "description": "Parameter values for Number type fields (e.g., HP values for motors)",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "listOptions": {
+          "type": "array",
+          "description": "Options for List type fields",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "bomLogic": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "bomLogic": {
+          "type": "object",
+          "description": "BOM generation logic for this field",
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
 }

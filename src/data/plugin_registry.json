@@ -21,10 +21,10 @@
     "icon": "Hash"
   },
   {
-    "id": "assembly-manager",
-    "title": "Assembly Manager",
-    "path": "/assembly-manager",
-    "description": "Build & edit assembly 'kits' from components",
+    "id": "sub-assembly-manager",
+    "title": "Sub-Assembly Manager",
+    "path": "/sub-assembly-manager",
+    "description": "Build & edit sub-assembly 'kits' from components",
     "icon": "PackagePlus"
   },
   {

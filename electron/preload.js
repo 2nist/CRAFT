@@ -49,15 +49,16 @@ contextBridge.exposeInMainWorld('components', {
   syncFromCsv: (csvContent) => ipcRenderer.invoke('components:sync-from-csv', csvContent)
 })
 
-// Expose assemblies API
-contextBridge.exposeInMainWorld('assemblies', {
-  getAll: () => ipcRenderer.invoke('assemblies:getAll'),
-  save: (assemblyObj) => ipcRenderer.invoke('assemblies:save', assemblyObj),
-  delete: (assemblyId) => ipcRenderer.invoke('assemblies:delete', assemblyId),
-  search: (filters) => ipcRenderer.invoke('assemblies:search', filters),
-  getById: (assemblyId) => ipcRenderer.invoke('assemblies:getById', assemblyId),
-  expand: (assemblyId) => ipcRenderer.invoke('assemblies:expand', assemblyId),
-  getCategories: () => ipcRenderer.invoke('assemblies:getCategories'),
+// Expose sub-assemblies API
+contextBridge.exposeInMainWorld('subAssemblies', {
+  getAll: () => ipcRenderer.invoke('sub-assemblies:getAll'),
+  save: (subAssemblyObj) => ipcRenderer.invoke('sub-assemblies:save', subAssemblyObj),
+  delete: (subAssemblyId) => ipcRenderer.invoke('sub-assemblies:delete', subAssemblyId),
+  search: (filters) => ipcRenderer.invoke('sub-assemblies:search', filters),
+  searchMany: (filtersArray) => ipcRenderer.invoke('sub-assemblies:searchMany', filtersArray),
+  getById: (subAssemblyId) => ipcRenderer.invoke('sub-assemblies:getById', subAssemblyId),
+  expand: (subAssemblyId) => ipcRenderer.invoke('sub-assemblies:expand', subAssemblyId),
+  getCategories: () => ipcRenderer.invoke('sub-assemblies:getCategories'),
 })
 
 // Expose quotes API
@@ -66,6 +67,9 @@ contextBridge.exposeInMainWorld('quotes', {
   getAll: () => ipcRenderer.invoke('quote:get-all'),
   getById: (id) => ipcRenderer.invoke('quote:get-by-id', id),
   delete: (id) => ipcRenderer.invoke('quote:delete', id),
+  evaluateSubAssemblyRules: (quoteObj) => ipcRenderer.invoke('quotes:evaluate-subassembly-rules', quoteObj),
+  generateOperationalItems: (quoteObj) => ipcRenderer.invoke('quotes:generate-oi', quoteObj),
+  validate: (quoteObj) => ipcRenderer.invoke('quotes:validate', quoteObj)
 })
 
 // Expose schemas API
@@ -80,7 +84,10 @@ contextBridge.exposeInMainWorld('schemas', {
 
 // Expose customers API
 contextBridge.exposeInMainWorld('customers', {
-  getAll: () => ipcRenderer.invoke('customers:get-all')
+  getAll: () => ipcRenderer.invoke('customers:get-all'),
+  add: (data) => ipcRenderer.invoke('customers:add', data),
+  update: (data) => ipcRenderer.invoke('customers:update', data),
+  delete: (customerId) => ipcRenderer.invoke('customers:delete', customerId)
 })
 
 // Expose calculator API
@@ -107,7 +114,13 @@ contextBridge.exposeInMainWorld('boms', {
 contextBridge.exposeInMainWorld('app', {
   showOpenDialog: (options) => ipcRenderer.invoke('app:show-open-dialog', options),
   readFile: (filePath) => ipcRenderer.invoke('app:read-file', filePath),
-  writeFile: (filePath, content) => ipcRenderer.invoke('app:write-file', filePath, content)
+  writeFile: (filePath, content) => ipcRenderer.invoke('app:write-file', filePath, content),
+  logMarginCalculation: (data) => ipcRenderer.invoke('app:log-margin-calculation', data)
+})
+
+// Expose runtime status API
+contextBridge.exposeInMainWorld('runtime', {
+  getStatus: () => ipcRenderer.invoke('runtime:get-status')
 })
 
 // Expose pipedrive API

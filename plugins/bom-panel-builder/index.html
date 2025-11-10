@@ -345,18 +345,12 @@
 
                     const csvContent = csvHeader + csvRows;
 
-                    // Create and download file
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', `BOM_${currentBOM.bomId}_${new Date().toISOString().split('T')[0]}.csv`);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    // Save to OUTPUT/BOMs folder instead of browser download
+                    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                    const filename = `BOM_${currentBOM.bomId}_${timestamp}.csv`;
+                    await window.app.writeFile(`OUTPUT/BOMs/${filename}`, csvContent);
 
-                    alert('BOM exported successfully!');
+                    alert(`BOM exported successfully to OUTPUT/BOMs/${filename}!`);
                 } catch (err) {
                     console.error('Error exporting BOM:', err);
                     alert('Error exporting BOM. Check console for details.');

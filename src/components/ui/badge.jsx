@@ -1,34 +1,20 @@
-import * as React from "react"
-import { cva } from "class-variance-authority";
+import React from 'react';
+import { cn } from './cn';
 
-import { cn } from "@/lib/utils"
+export const Badge = React.forwardRef(function Badge({ className, variant = 'default', ...props }, ref) {
+  const styles = {
+    default: 'bg-blue-600/20 text-blue-200 border border-blue-500/40',
+    secondary: 'bg-slate-800 text-slate-200 border border-slate-700',
+    success: 'bg-emerald-600/15 text-emerald-200 border border-emerald-500/40',
+    warning: 'bg-amber-600/15 text-amber-200 border border-amber-500/40',
+    destructive: 'bg-rose-600/15 text-rose-200 border border-rose-500/40'
+  };
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-function Badge({
-  className,
-  variant,
-  ...props
-}) {
-  return (<div className={cn(badgeVariants({ variant }), className)} {...props} />);
-}
-
-export { Badge, badgeVariants }
+  return (
+    <span
+      ref={ref}
+      className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium uppercase tracking-wide', styles[variant] || styles.default, className)}
+      {...props}
+    />
+  );
+});

@@ -2,7 +2,7 @@
   "id": "manual-bom-builder",
   "name": "Manual BOM Builder",
   "version": "1.0.0",
-  "description": "Create and manage Bills of Materials manually with assemblies and components",
+  "description": "Create and manage Bills of Materials manually with sub-assemblies and components",
   "author": "Craft Automation",
   "entry": "index.html",
   "icon": "ListPlus",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ export default function ManualBomBuilder() {
     name: "",
     description: "",
     tags: [],
-    assemblies: [],
+    subAssemblies: [],
     components: [],
   });
   const [bomId, setBomId] = useState(null);
@@ -34,14 +34,14 @@ export default function ManualBomBuilder() {
   // Recalculate BOM cost when items change
   useEffect(() => {
     const expandBom = async () => {
-      const { assemblies, components } = bom;
-      if (assemblies.length === 0 && components.length === 0) {
+      const { subAssemblies, components } = bom;
+      if (subAssemblies.length === 0 && components.length === 0) {
         setCostData(prev => ({ ...prev, totalMaterialCost: 0, finalPrice: 0 }));
         return;
       }
       
       try {
-        const result = await window.boms.expand({ assemblies, components });
+        const result = await window.boms.expand({ subAssemblies, components });
         if (result.success) {
           setCostData(prev => ({
             ...prev,
@@ -56,7 +56,7 @@ export default function ManualBomBuilder() {
       }
     };
     expandBom();
-  }, [bom.assemblies, bom.components]);
+  }, [bom.subAssemblies, bom.components]);
   
   // Recalculate price when margin changes
   const handleMarginChange = (e) => {
@@ -87,8 +87,8 @@ export default function ManualBomBuilder() {
   // === BOM ITEM HANDLERS ===
   const addItem = (item, type) => {
     setBom(prev => {
-      const list = type === 'assembly' ? 'assemblies' : 'components';
-      const key = type === 'assembly' ? 'assemblyId' : 'sku';
+      const list = type === 'subAssembly' ? 'subAssemblies' : 'components';
+      const key = type === 'subAssembly' ? 'subAssemblyId' : 'sku';
       
       const existing = prev[list].find(i => i[key] === item[key]);
       let newList;
@@ -108,8 +108,8 @@ export default function ManualBomBuilder() {
 
   const removeItem = (id, type) => {
     setBom(prev => {
-      const list = type === 'assembly' ? 'assemblies' : 'components';
-      const key = type === 'assembly' ? 'assemblyId' : 'sku';
+      const list = type === 'subAssembly' ? 'subAssemblies' : 'components';
+      const key = type === 'subAssembly' ? 'subAssemblyId' : 'sku';
       const newList = prev[list].filter(i => i[key] !== id);
       return { ...prev, [list]: newList };
     });
@@ -120,8 +120,8 @@ export default function ManualBomBuilder() {
     if (qty < 1) return; // Don't allow less than 1
     
     setBom(prev => {
-      const list = type === 'assembly' ? 'assemblies' : 'components';
-      const key = type === 'assembly' ? 'assemblyId' : 'sku';
+      const list = type === 'subAssembly' ? 'subAssemblies' : 'components';
+      const key = type === 'subAssembly' ? 'subAssemblyId' : 'sku';
       const newList = prev[list].map(i => 
         i[key] === id ? { ...i, quantity: qty } : i
       );
@@ -188,6 +188,179 @@ export default function ManualBomBuilder() {
     }
   };
 
+  // Export BOM to CSV
+  const handleExportBomToCsv = async () => {
+    if (!bom.name && bom.subAssemblies.length === 0 && bom.components.length === 0) {
+      alert('No BOM data to export. Please add items to the BOM first.');
+      return;
+    }
+
+    try {
+      const csvRows = [];
+
+      // Header row
+      csvRows.push('Section,Field,Value,Index');
+
+      // Basic BOM metadata
+      const basicFields = ['name', 'description', 'bomId', 'version', 'parentId'];
+      basicFields.forEach(field => {
+        csvRows.push(`BOM,${field},${bom[field] || ''},`);
+      });
+
+      // Tags
+      if (bom.tags && bom.tags.length > 0) {
+        bom.tags.forEach((tag, index) => {
+          csvRows.push(`BOM,tags[${index}],${tag},`);
+        });
+      }
+
+      // Cost data
+      if (costData) {
+        Object.entries(costData).forEach(([key, value]) => {
+          csvRows.push(`CostData,${key},${value || ''},`);
+        });
+      }
+
+      // Sub-assemblies
+      if (bom.subAssemblies) {
+        bom.subAssemblies.forEach((assembly, index) => {
+          Object.entries(assembly).forEach(([key, value]) => {
+            csvRows.push(`SubAssemblies,${key},${value || ''},${index}`);
+          });
+        });
+      }
+
+      // Components
+      if (bom.components) {
+        bom.components.forEach((component, index) => {
+          Object.entries(component).forEach(([key, value]) => {
+            csvRows.push(`Components,${key},${value || ''},${index}`);
+          });
+        });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+      const safeName = (bom.name || 'Unnamed_BOM').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'Unnamed_BOM';
+      const filename = `ManualBOM_${safeName}_${timestamp}.csv`;
+
+      await window.app.writeFile(`OUTPUT/ManualBOMs/${filename}`, csvRows.join('\n'));
+
+      alert(`BOM exported successfully to OUTPUT/ManualBOMs/${filename}\n\nThis CSV can be imported back to restore the BOM.`);
+    } catch (error) {
+      console.error('Failed to export BOM:', error);
+      alert(`Failed to export BOM: ${error.message}`);
+    }
+  };
+
+  // Import BOM from CSV
+  const handleImportBomFromCsv = async () => {
+    try {
+      const result = await window.app.showOpenDialog({
+        title: 'Select BOM CSV File',
+        filters: [{ name: 'CSV Files', extensions: ['csv'] }],
+        properties: ['openFile']
+      });
+
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return;
+      }
+
+      const filePath = result.filePaths[0];
+      const csvContent = await window.app.readFile(filePath);
+
+      if (!csvContent) {
+        alert('Failed to read the selected file.');
+        return;
+      }
+
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      if (lines.length < 2) {
+        alert('Invalid CSV file format.');
+        return;
+      }
+
+      // Parse CSV
+      const headers = lines[0].split(',');
+      if (headers.length < 3 || headers[0] !== 'Section' || headers[1] !== 'Field') {
+        alert('Invalid CSV format. Expected columns: Section,Field,Value,Index');
+        return;
+      }
+
+      const parsedData = {};
+      const tags = [];
+      const subAssemblies = [];
+      const components = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',');
+        if (cols.length < 3) continue;
+
+        const section = cols[0];
+        const field = cols[1];
+        const value = cols[2];
+        const index = cols[3] ? parseInt(cols[3]) : null;
+
+        if (section === 'BOM') {
+          if (field.includes('[') && field.includes(']')) {
+            // Handle array notation like tags[0]
+            const arrayMatch = field.match(/^(.+)\[(\d+)\]$/);
+            if (arrayMatch) {
+              const arrayName = arrayMatch[1];
+              const arrayIndex = parseInt(arrayMatch[2]);
+              if (arrayName === 'tags') {
+                tags[arrayIndex] = value;
+              }
+            }
+          } else {
+            parsedData[field] = value;
+          }
+        } else if (section === 'CostData') {
+          if (!parsedData.costData) parsedData.costData = {};
+          // Convert numeric values
+          const numValue = !isNaN(value) && value !== '' ? parseFloat(value) : value;
+          parsedData.costData[field] = numValue;
+        } else if (section === 'SubAssemblies' && index !== null) {
+          if (!subAssemblies[index]) subAssemblies[index] = {};
+          // Convert numeric values
+          const numValue = !isNaN(value) && value !== '' ? parseFloat(value) : value;
+          subAssemblies[index][field] = numValue;
+        } else if (section === 'Components' && index !== null) {
+          if (!components[index]) components[index] = {};
+          // Convert numeric values
+          const numValue = !isNaN(value) && value !== '' ? parseFloat(value) : value;
+          components[index][field] = numValue;
+        }
+      }
+
+      // Reconstruct the BOM object
+      const importedBom = {
+        name: parsedData.name || '',
+        description: parsedData.description || '',
+        tags: tags.filter(tag => tag), // Remove empty entries
+        subAssemblies: subAssemblies.filter(item => Object.keys(item).length > 0),
+        components: components.filter(item => Object.keys(item).length > 0),
+      };
+
+      // Set the imported BOM
+      setBom(importedBom);
+
+      // Update metadata if present
+      if (parsedData.bomId) setBomId(parsedData.bomId);
+      if (parsedData.version) setVersion(parseInt(parsedData.version) || 1);
+      if (parsedData.parentId) setParentId(parsedData.parentId);
+
+      // Update cost data if present
+      if (parsedData.costData) {
+        setCostData(parsedData.costData);
+      }
+
+      alert(`BOM imported successfully from ${filePath.split('\\').pop() || filePath.split('/').pop()}`);
+    } catch (error) {
+      console.error('Failed to import BOM:', error);
+      alert(`Failed to import BOM: ${error.message}`);
+    }
+  };
+
   return (
     <div className="flex h-full max-h-screen overflow-hidden bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-4 gap-4">
       {/* Left Column (2/3): Add to BOM Search */}
@@ -195,15 +368,15 @@ export default function ManualBomBuilder() {
         <CardContent className="flex-1 overflow-y-auto p-4">
           <Tabs defaultValue="components">
             <TabsList className="grid w-full grid-cols-2 max-w-md">
-              <TabsTrigger value="assemblies">Assemblies</TabsTrigger>
+              <TabsTrigger value="subAssemblies">Sub-Assemblies</TabsTrigger>
               <TabsTrigger value="components">Components</TabsTrigger>
             </TabsList>
-            <TabsContent value="assemblies">
+            <TabsContent value="subAssemblies">
               <SearchableList 
-                searchFn={window.assemblies.search}
-                itemKey="assemblyId"
+                searchFn={window.subAssemblies.search}
+                itemKey="subAssemblyId"
                 itemDisplay="description"
-                onAdd={(item) => addItem(item, 'assembly')}
+                onAdd={(item) => addItem(item, 'subAssembly')}
               />
             </TabsContent>
             <TabsContent value="components">
@@ -266,12 +439,12 @@ export default function ManualBomBuilder() {
             </div>
           </div>
           
-          {/* Assemblies List */}
+          {/* Sub-Assemblies List */}
           <BomSection 
-            title="Assemblies"
-            items={bom.assemblies}
-            itemKey="assemblyId"
-            type="assembly"
+            title="Sub-Assemblies"
+            items={bom.subAssemblies}
+            itemKey="subAssemblyId"
+            type="subAssembly"
             updateQuantity={updateQuantity}
             removeItem={removeItem}
           />
@@ -300,6 +473,17 @@ export default function ManualBomBuilder() {
           <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-2">
             {error && <div className="text-red-500 text-sm flex items-center"><AlertCircle size={16} className="mr-2" /> {error}</div>}
             {success && <div className="text-green-500 text-sm">{success}</div>}
+            
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={handleExportBomToCsv} className="w-full bg-purple-600 hover:bg-purple-700">
+                <Download size={16} className="mr-2" />
+                Export CSV
+              </Button>
+              <Button onClick={handleImportBomFromCsv} variant="outline" className="w-full">
+                <Upload size={16} className="mr-2" />
+                Import CSV
+              </Button>
+            </div>
             
             <Button onClick={() => handleSave(false)} disabled={isLoading} className="w-full">
               <Save size={16} className="mr-2" />

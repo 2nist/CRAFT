@@ -5,6 +5,7 @@ import LeftSidebar from './components/LeftSidebar';
 import PluginRenderer from './PluginRenderer';
 import GlobalComponentSearch from './components/GlobalComponentSearch';
 import { useAppContext } from './context/AppContext';
+import loggingService from './services/LoggingService';
 
 export default function App() {
   const [plugins, setPlugins] = useState([]);
@@ -14,8 +15,8 @@ export default function App() {
 
   // Plugin categories
   const pluginCategories = {
-    'TOOLS': ['fla-calc', 'margin-calc', 'manual-bom-builder', 'number-generator', 'bom-importer'],
-    'PRODUCTS': ['assembly-manager', 'product-template-manager', 'component-manager'],
+    'TOOLS': ['fla-calc', 'margin-calc', 'manual-bom-builder', 'number-generator'],
+    'PRODUCTS': ['sub-assembly-manager', 'product-template-manager', 'component-manager', 'bom-importer'],
     'QUOTING': ['quote-configurator', 'number-generator', 'margin-calc']
   };
 
@@ -120,6 +121,31 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [openSearchModal]);
+
+  // Listen for messages from plugins (for logging)
+  useEffect(() => {
+    const handlePluginMessage = (event) => {
+      if (event.data && typeof event.data === 'object') {
+        const { type, data } = event.data;
+
+        if (type === 'LOG_MARGIN_ACTIVITY') {
+          loggingService.logMarginActivity(
+            data.action,
+            data.cost,
+            data.marginPercent,
+            data.finalPrice,
+            data.details
+          );
+        }
+      }
+    };
+
+    window.addEventListener('message', handlePluginMessage);
+
+    return () => {
+      window.removeEventListener('message', handlePluginMessage);
+    };
+  }, []);
 
   return (
     <HashRouter>

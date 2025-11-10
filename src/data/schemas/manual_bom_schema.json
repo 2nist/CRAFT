@@ -35,16 +35,16 @@
       "type": "string",
       "format": "date-time"
     },
-    "assemblies": {
-      "description": "A list of assembly 'kits' included in this BOM.",
+    "subAssemblies": {
+      "description": "A list of sub-assembly kits included in this BOM.",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "assemblyId": { "type": "string" },
+          "subAssemblyId": { "type": "string" },
           "quantity": { "type": "integer", "minimum": 1 }
         },
-        "required": ["assemblyId", "quantity"]
+        "required": ["subAssemblyId", "quantity"]
       }
     },
     "components": {
@@ -69,5 +69,5 @@
       }
     }
   },
-  "required": ["bomId", "name", "version", "createdAt", "assemblies", "components"]
+  "required": ["bomId", "name", "version", "createdAt", "subAssemblies", "components"]
 }

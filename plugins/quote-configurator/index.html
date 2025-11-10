@@ -41,11 +41,17 @@
         const { useState, useEffect, useMemo, createContext, useContext } = React;
 
         // --- API Functions ---
+        const normalizeSchemaOptions = (options = []) =>
+            options.map(option => {
+                const code = option.code ?? option.const;
+                return code !== undefined ? { ...option, code } : option;
+            });
+
         const getSchemas = async () => ({
-            industry: await window.schemas.getIndustry(),
-            product: await window.schemas.getProduct(),
-            control: await window.schemas.getControl(),
-            scope: await window.schemas.getScope(),
+            industry: normalizeSchemaOptions(await window.schemas.getIndustry()),
+            product: normalizeSchemaOptions(await window.schemas.getProduct()),
+            control: normalizeSchemaOptions(await window.schemas.getControl()),
+            scope: normalizeSchemaOptions(await window.schemas.getScope()),
         });
 
         const getCustomers = async () => await window.customers.getAll();
@@ -63,10 +69,10 @@
             };
 
             const getSchemas = () => ({
-                industry: window.schemas.getIndustry(),
-                product: window.schemas.getProduct(),
-                control: window.schemas.getControl(),
-                scope: window.schemas.getScope(),
+                industry: window.schemas.getIndustry().then(normalizeSchemaOptions),
+                product: window.schemas.getProduct().then(normalizeSchemaOptions),
+                control: window.schemas.getControl().then(normalizeSchemaOptions),
+                scope: window.schemas.getScope().then(normalizeSchemaOptions),
             });
 
             const getCustomers = () => window.customers.getAll();
@@ -106,8 +112,16 @@ function SelectCode({ label, value, onFieldChange, options, fieldName, filter = 
             <label className="label">{label}</label>
             <select
                 className="input-base"
-                value={value || ""}
-                onChange={e => onFieldChange(fieldName, parseInt(e.target.value))}
+                value={value ?? ""}
+                onChange={e => {
+                    const selectedValue = e.target.value;
+                    if (selectedValue === "") {
+                        onFieldChange(fieldName, "");
+                        return;
+                    }
+                    const parsedValue = parseInt(selectedValue, 10);
+                    onFieldChange(fieldName, Number.isNaN(parsedValue) ? "" : parsedValue);
+                }}
             >
                 <option value="" disabled>Select...</option>
                 {groupedOptions ? (
@@ -575,7 +589,7 @@ function BomAssistance({ quote, setQuote }) {
         
         setIsSearching(true);
         try {
-            const results = await window.assemblies.search(searchTerm);
+            const results = await window.assemblies.search({ description: searchTerm.trim() });
             setSearchResults(results);
             setShowResults(true);
         } catch (error) {

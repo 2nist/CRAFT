@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileCode, Plus, Edit, Save, X, AlertCircle, Loader, Trash2, Settings, Eye, Search, Filter, CheckCircle, Circle, Package, Beer, Martini, Wine, Wheat, Cog, Gauge, Droplets, Airplay, Flame, Layers } from 'lucide-react';
+import { FileCode, Plus, Edit, Save, X, AlertCircle, Loader, Trash2, Settings, Eye, Search, Filter, CheckCircle, Circle, Package, Beer, Martini, Wine, Wheat, Cog, Gauge, Droplets, Airplay, Flame, Layers, Download } from 'lucide-react';
 
 export default function ProductTemplateManager({ context, onNavigate }) {
   const [productSchema, setProductSchema] = useState([]);
@@ -38,7 +38,7 @@ export default function ProductTemplateManager({ context, onNavigate }) {
     try {
       const [products, assembliesData] = await Promise.all([
         window.schemas.getProduct(),
-        window.assemblies.getAll()
+        window.subAssemblies.getAll()
       ]);
       
       // Products is now a simple array of { const, description }
@@ -518,6 +518,97 @@ export default function ProductTemplateManager({ context, onNavigate }) {
     }
   };
 
+  // Export functions
+  const handleExportTemplates = async (filterOptions = {}) => {
+    try {
+      let templatesToExport = { ...existingTemplates };
+
+      // Apply filters
+      if (filterOptions.category) {
+        const categoryCode = filterOptions.category;
+        const min = categoryCode * 100;
+        const max = min + 99;
+        templatesToExport = Object.fromEntries(
+          Object.entries(templatesToExport).filter(([key]) => {
+            const code = parseInt(key);
+            return code >= min && code <= max;
+          })
+        );
+      }
+
+      if (filterOptions.configuredOnly) {
+        // Only export configured templates (which is already filtered)
+      }
+
+      // Create export data structure
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        totalTemplates: Object.keys(templatesToExport).length,
+        categories: {},
+        templates: {}
+      };
+
+      // Group by category
+      Object.entries(templatesToExport).forEach(([productCode, template]) => {
+        const code = parseInt(productCode);
+        const categoryCode = Math.floor(code / 100) * 100;
+        const categoryName = productLines.find(l => l.code === categoryCode)?.name || 'Unknown';
+
+        if (!exportData.categories[categoryCode]) {
+          exportData.categories[categoryCode] = {
+            name: categoryName,
+            templateCount: 0
+          };
+        }
+        exportData.categories[categoryCode].templateCount++;
+        exportData.templates[productCode] = template;
+      });
+
+      // Convert to CSV format
+      const csvRows = [];
+      csvRows.push('Section,Data');
+
+      // Export metadata
+      csvRows.push(`Metadata,${JSON.stringify({
+        exportDate: exportData.exportDate,
+        totalTemplates: exportData.totalTemplates,
+        categories: exportData.categories
+      }).replace(/"/g, '""')}`);
+
+      // Export each template
+      Object.entries(exportData.templates).forEach(([productCode, template]) => {
+        csvRows.push(`Template_${productCode},${JSON.stringify(template).replace(/"/g, '""')}`);
+      });
+
+      // Generate filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+      const filterDesc = filterOptions.category ? `_${productLines.find(l => l.code === filterOptions.category)?.name.toLowerCase().replace(/\s+/g, '')}` : '';
+      const filename = `ProductTemplates${filterDesc}_${timestamp}.csv`;
+
+      // Create Templates directory if it doesn't exist
+      try {
+        await window.app.writeFile(`OUTPUT/Templates/.gitkeep`, '');
+      } catch (err) {
+        // Directory might already exist, ignore
+      }
+
+      // Save file
+      await window.app.writeFile(`OUTPUT/Templates/${filename}`, csvRows.join('\n'));
+
+      addLog(`Exported ${Object.keys(templatesToExport).length} templates to OUTPUT/Templates/${filename}`, 'success');
+      alert(`Exported ${Object.keys(templatesToExport).length} templates to OUTPUT/Templates/${filename}`);
+    } catch (error) {
+      console.error('Failed to export templates:', error);
+      addLog(`Export failed: ${error.message}`, 'error');
+      alert(`Failed to export templates: ${error.message}`);
+    }
+  };
+
+  const addLog = (message, type = 'info') => {
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -534,13 +625,33 @@ export default function ProductTemplateManager({ context, onNavigate }) {
           <>
             {/* Product Selection View - Compact Overview */}
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-white mb-2">Product Template Manager</h1>
-              <p className="text-gray-400">
-                {viewMode === 'categories' 
-                  ? `Select a product category • ${productLines.length} categories • ${Object.keys(existingTemplates).length}/${productSchema.length} configured`
-                  : `${productLines.find(l => l.code === selectedProductLine)?.name || ''} • ${filteredProducts.length} products`
-                }
-              </p>
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h1 className="text-3xl font-bold text-white">Product Template Manager</h1>
+                  <p className="text-gray-400">
+                    {viewMode === 'categories' 
+                      ? `Select a product category • ${productLines.length} categories • ${Object.keys(existingTemplates).length}/${productSchema.length} configured`
+                      : `${productLines.find(l => l.code === selectedProductLine)?.name || ''} • ${filteredProducts.length} products`
+                    }
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => handleExportTemplates()}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <Download size={18} />
+                    Export All
+                  </button>
+                  <button 
+                    onClick={() => handleExportTemplates({ configuredOnly: true })}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Download size={18} />
+                    Export Configured
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Category View */}
@@ -556,12 +667,12 @@ export default function ProductTemplateManager({ context, onNavigate }) {
                     <button
                       key={line.code}
                       onClick={() => handleSelectCategory(line.code)}
-                      className="p-5 bg-gray-800 rounded-lg text-left hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-blue-500 group"
+                      className="relative p-5 bg-gray-800 rounded-lg text-left hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-blue-500 group overflow-hidden"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-blue-900/30 rounded-lg group-hover:bg-blue-900/50 transition-colors">
-                            <IconComponent className="text-blue-400" size={48} />
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center justify-center w-16 h-16 bg-blue-900/30 rounded-xl group-hover:bg-blue-900/50 transition-colors shrink-0">
+                            <IconComponent className="text-blue-400" size={40} />
                           </div>
                           <div>
                             <h3 className="text-xl font-bold text-white font-mono">{line.code}s</h3>

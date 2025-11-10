@@ -1,4 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Settings, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { IOLibraryDrawer, PIDIcons } from '@/components/IOLibraryDrawer';
+import loggingService from '../services/LoggingService';
+
+const DESKTOP_BREAKPOINT = '(min-width: 1280px)';
+const LEFT_DRAWER_HANDLE_WIDTH = 28;
+const LEFT_DRAWER_WIDTH = 360;
+const LEFT_DRAWER_OFFSETS = { top: 65, left: 150, bottomGap: 0 };
+const RIGHT_DRAWER_HANDLE_WIDTH = 20;
+const RIGHT_DRAWER_WIDTH = 352;
+const RIGHT_DRAWER_OFFSETS = { top: 65, right: 24, bottomGap: 0 };
 
 // Normalizes schema entries so dropdowns always receive a `code` field.
 const normalizeSchemaOptions = (options = []) =>
@@ -298,7 +310,6 @@ const SelectCode = ({ label, value, onFieldChange, options, fieldName }) => {
 
   return (
     <div className="w-full">
-      <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-slate-400">{label}</label>
       <select
         className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         value={value ?? ""}
@@ -312,7 +323,7 @@ const SelectCode = ({ label, value, onFieldChange, options, fieldName }) => {
           onFieldChange(fieldName, Number.isNaN(parsed) ? "" : parsed);
         }}
       >
-        <option value="" disabled>Select...</option>
+        <option value="" disabled>{label}</option>
         {renderOptions(options)}
       </select>
     </div>
@@ -322,7 +333,6 @@ const SelectCode = ({ label, value, onFieldChange, options, fieldName }) => {
 const SelectCustomer = ({ label, value, onFieldChange, customers }) => {
   return (
     <div className="w-full">
-      <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-slate-400">{label}</label>
       <select
         className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         value={value || ""}
@@ -333,7 +343,7 @@ const SelectCustomer = ({ label, value, onFieldChange, customers }) => {
           onFieldChange("projectName", (prev) => prev || `${cust.name} - New Project`);
         }}
       >
-        <option value="" disabled>Select customer...</option>
+        <option value="" disabled>{label}</option>
         {customers.map(customer => (
           <option key={customer.id} value={customer.id}>
             {customer.name} ({customer.id})
@@ -344,10 +354,9 @@ const SelectCustomer = ({ label, value, onFieldChange, customers }) => {
   );
 };
 
-const Input = ({ label, value, onFieldChange, fieldName, type = "text", placeholder = "" }) => {
+const Input = ({ value, onFieldChange, fieldName, type = "text", placeholder = "" }) => {
   return (
     <div className="w-full">
-      <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-slate-400">{label}</label>
       <input
         type={type}
         placeholder={placeholder}
@@ -362,12 +371,12 @@ const Input = ({ label, value, onFieldChange, fieldName, type = "text", placehol
 const Select = ({ label, value, onFieldChange, fieldName, children }) => {
   return (
     <div className="w-full">
-      <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-slate-400">{label}</label>
       <select
         className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
         value={value || ""}
         onChange={e => onFieldChange(fieldName, e.target.value)}
       >
+        <option value="" disabled>{label}</option>
         {children}
       </select>
     </div>
@@ -375,15 +384,26 @@ const Select = ({ label, value, onFieldChange, fieldName, children }) => {
 };
 
 // Step 1: Project Details
-function ProjectDetails({ quote, setQuote, schemas, customers, generatedNumber, setGeneratedNumber }) {
-  
+function ProjectDetails({
+  quote,
+  setQuote,
+  schemas,
+  customers,
+  generatedNumber,
+  setGeneratedNumber,
+  panelOptions,
+  onToggleLeftDrawer,
+  onToggleRightDrawer,
+  isLeftDrawerOpen,
+  isRightDrawerOpen
+}) {
   const handleFieldChange = (field, value) => {
     setQuote(prev => ({
       ...prev,
       [field]: typeof value === 'function' ? value(prev[field]) : value
     }));
   };
-  
+
   const handleCodeChange = (field, value) => {
     setQuote(prev => ({
       ...prev,
@@ -391,105 +411,7 @@ function ProjectDetails({ quote, setQuote, schemas, customers, generatedNumber, 
     }));
   };
 
-  const generateQuoteId = async () => {
-    const data = {
-      customerCode: quote.customer,
-      ...quote.projectCodes
-    };
-    
-    const result = await window.calc.getQuoteNumber(data);
-    setGeneratedNumber(result.fullId);
-    setQuote(prev => ({ ...prev, quoteId: result.fullId }));
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="p-6 border shadow rounded-2xl border-slate-800 bg-slate-900/60">
-        <h3 className="mb-4 text-lg font-semibold text-white">Core Project Details</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <SelectCustomer
-            label="Customer"
-            value={quote.customer}
-            onFieldChange={handleFieldChange}
-            customers={customers}
-          />
-          <Input
-            label="Project Name"
-            fieldName="projectName"
-            value={quote.projectName}
-            onFieldChange={handleFieldChange}
-            placeholder="E.g., Brewhouse Expansion"
-          />
-          <Input
-            label="Sales Rep"
-            fieldName="salesRep"
-            value={quote.salesRep}
-            onFieldChange={handleFieldChange}
-            placeholder="Your name"
-          />
-          <Select label="Status" fieldName="status" value={quote.status} onFieldChange={handleFieldChange}>
-            <option value="Draft">Draft</option>
-            <option value="Quoted">Quoted</option>
-            <option value="Approved">Approved</option>
-            <option value="Lost">Lost</option>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="p-6 border shadow rounded-2xl border-slate-800 bg-slate-900/60">
-        <h3 className="mb-4 text-lg font-semibold text-white">Project Codes</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <SelectCode
-            label="Industry"
-            fieldName="industry"
-            value={quote.projectCodes.industry}
-            onFieldChange={handleCodeChange}
-            options={schemas.industry}
-          />
-          <SelectCode
-            label="Product"
-            fieldName="product"
-            value={quote.projectCodes.product}
-            onFieldChange={handleCodeChange}
-            options={schemas.product}
-          />
-          <SelectCode
-            label="Control"
-            fieldName="control"
-            value={quote.projectCodes.control}
-            onFieldChange={handleCodeChange}
-            options={schemas.control}
-          />
-          <SelectCode
-            label="Scope"
-            fieldName="scope"
-            value={quote.projectCodes.scope}
-            onFieldChange={handleCodeChange}
-            options={schemas.scope}
-          />
-        </div>
-        <div className="flex items-center gap-4 mt-6">
-          <button
-            onClick={generateQuoteId}
-            disabled={!quote.customer}
-            className="gap-2"
-          >
-            Generate Quote Number
-          </button>
-          {generatedNumber && (
-            <div className="px-3 py-2 border rounded-xl border-emerald-500/30 bg-emerald-500/10">
-              <span className="font-mono text-lg text-emerald-300">{generatedNumber}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Step 2: Panel Configuration
-function PanelConfig({ quote, setQuote, panelOptions }) {
-  const handleFieldChange = (field, value) => {
+  const handlePanelFieldChange = (field, value) => {
     setQuote(prev => ({
       ...prev,
       controlPanelConfig: {
@@ -499,108 +421,218 @@ function PanelConfig({ quote, setQuote, panelOptions }) {
     }));
   };
 
+  const generateQuoteId = async () => {
+    const data = {
+      customerCode: quote.customer,
+      ...quote.projectCodes
+    };
+
+    const result = await window.calc.getQuoteNumber(data);
+    setGeneratedNumber(result.fullId);
+    setQuote(prev => ({ ...prev, quoteId: result.fullId }));
+  };
+
+  const safePanelOptions = {
+    voltage: Array.isArray(panelOptions?.voltage) ? panelOptions.voltage : [],
+    phase: Array.isArray(panelOptions?.phase) ? panelOptions.phase : [],
+    enclosureType: Array.isArray(panelOptions?.enclosureType) ? panelOptions.enclosureType : [],
+    enclosureRating: Array.isArray(panelOptions?.enclosureRating) ? panelOptions.enclosureRating : [],
+    hmiSize: Array.isArray(panelOptions?.hmiSize) ? panelOptions.hmiSize : [],
+    plcPlatform: Array.isArray(panelOptions?.plcPlatform) ? panelOptions.plcPlatform : []
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="p-6 border shadow rounded-2xl border-slate-800 bg-slate-900/60">
-        <h3 className="mb-4 text-lg font-semibold text-white">Panel Specifications</h3>
-        <p className="mb-6 text-sm text-slate-400">Configure the control panel for this project</p>
-        
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Voltage */}
+    <div className="border shadow-lg rounded-2xl border-slate-800 bg-slate-900/60 shadow-slate-950/30">
+      <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-slate-900/70">
+        <h3 className="text-lg font-semibold text-white">Core Project Details</h3>
+        {(onToggleLeftDrawer || onToggleRightDrawer) && (
+          <div className="flex items-center gap-2 sm:hidden">
+            {onToggleLeftDrawer && (
+              <button
+                type="button"
+                onClick={onToggleLeftDrawer}
+                aria-pressed={!!isLeftDrawerOpen}
+                className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                aria-label={isLeftDrawerOpen ? 'Collapse quote editor drawer' : 'Expand quote editor drawer'}
+              >
+                {isLeftDrawerOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+              </button>
+            )}
+            {onToggleRightDrawer && (
+              <button
+                type="button"
+                onClick={onToggleRightDrawer}
+                aria-pressed={!!isRightDrawerOpen}
+                className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                aria-label={isRightDrawerOpen ? 'Collapse summary drawer' : 'Expand summary drawer'}
+              >
+                {isRightDrawerOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-6 space-y-8">
+        <section className="space-y-4">
+          <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Project Basics</p>
+          <SelectCustomer
+            label="Select customer..."
+            value={quote.customer}
+            onFieldChange={handleFieldChange}
+            customers={customers}
+          />
+          <Input
+            fieldName="projectName"
+            value={quote.projectName}
+            onFieldChange={handleFieldChange}
+            placeholder="E.g., Brewhouse Expansion"
+          />
+          <Input
+            fieldName="salesRep"
+            value={quote.salesRep}
+            onFieldChange={handleFieldChange}
+            placeholder="Your name"
+          />
+        </section>
+
+        <section className="space-y-4">
+          <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Project Codes</p>
+          <SelectCode
+            label="Select industry..."
+            fieldName="industry"
+            value={quote.projectCodes.industry}
+            onFieldChange={handleCodeChange}
+            options={schemas.industry}
+          />
+          <SelectCode
+            label="Select product..."
+            fieldName="product"
+            value={quote.projectCodes.product}
+            onFieldChange={handleCodeChange}
+            options={schemas.product}
+          />
+          <SelectCode
+            label="Select control..."
+            fieldName="control"
+            value={quote.projectCodes.control}
+            onFieldChange={handleCodeChange}
+            options={schemas.control}
+          />
+          <SelectCode
+            label="Select scope..."
+            fieldName="scope"
+            value={quote.projectCodes.scope}
+            onFieldChange={handleCodeChange}
+            options={schemas.scope}
+          />
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+            <button
+              onClick={generateQuoteId}
+              disabled={!quote.customer}
+              className="gap-2"
+            >
+              Generate Quote Number
+            </button>
+            {generatedNumber && (
+              <div className="inline-flex items-center px-3 py-2 border rounded-xl border-emerald-500/30 bg-emerald-500/10">
+                <span className="font-mono text-lg text-emerald-300">{generatedNumber}</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Panel Specifications</p>
           <Select 
-            label="Voltage" 
+            label="Select voltage..." 
             fieldName="voltage" 
             value={quote.controlPanelConfig.voltage} 
-            onFieldChange={handleFieldChange}
+            onFieldChange={handlePanelFieldChange}
           >
-            <option value="">Select voltage...</option>
-            {panelOptions.voltage.map(option => (
+            <option value="" disabled>Select voltage...</option>
+            {safePanelOptions.voltage.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
 
-          {/* Phase */}
           <Select 
-            label="Phase" 
+            label="Select phase..." 
             fieldName="phase" 
             value={quote.controlPanelConfig.phase} 
-            onFieldChange={handleFieldChange}
+            onFieldChange={handlePanelFieldChange}
           >
-            <option value="">Select phase...</option>
-            {panelOptions.phase.map(option => (
+            <option value="" disabled>Select phase...</option>
+            {safePanelOptions.phase.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
 
-          {/* Enclosure Type */}
           <Select 
-            label="Enclosure Type" 
+            label="Select enclosure type..." 
             fieldName="enclosureType" 
             value={quote.controlPanelConfig.enclosureType} 
-            onFieldChange={handleFieldChange}
+            onFieldChange={handlePanelFieldChange}
           >
-            <option value="">Select enclosure type...</option>
-            {panelOptions.enclosureType.map(option => (
+            <option value="" disabled>Select enclosure type...</option>
+            {safePanelOptions.enclosureType.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
 
-          {/* Enclosure Rating */}
           <Select 
-            label="Enclosure Rating" 
+            label="Select enclosure rating..." 
             fieldName="enclosureRating" 
             value={quote.controlPanelConfig.enclosureRating} 
-            onFieldChange={handleFieldChange}
+            onFieldChange={handlePanelFieldChange}
           >
-            <option value="">Select rating...</option>
-            {panelOptions.enclosureRating.map(option => (
+            <option value="" disabled>Select rating...</option>
+            {safePanelOptions.enclosureRating.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
 
-          {/* HMI Size */}
           <Select 
-            label="HMI Size" 
+            label="Select HMI size..." 
             fieldName="hmiSize" 
             value={quote.controlPanelConfig.hmiSize} 
-            onFieldChange={handleFieldChange}
+            onFieldChange={handlePanelFieldChange}
           >
-            <option value="">Select HMI size...</option>
-            {panelOptions.hmiSize.map(option => (
+            <option value="" disabled>Select HMI size...</option>
+            {safePanelOptions.hmiSize.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
 
-          {/* PLC Platform */}
           <Select 
-            label="PLC Platform" 
+            label="Select PLC platform..." 
             fieldName="plcPlatform" 
             value={quote.controlPanelConfig.plcPlatform} 
-            onFieldChange={handleFieldChange}
+            onFieldChange={handlePanelFieldChange}
           >
-            <option value="">Select PLC platform...</option>
-            {panelOptions.plcPlatform.map(option => (
+            <option value="" disabled>Select PLC platform...</option>
+            {safePanelOptions.plcPlatform.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
-        </div>
+        </section>
       </div>
     </div>
   );
 }
 
+// Step 2: Panel Configuration
 // Step 3: Product Configuration Form (Dynamic Form Renderer)
 function ProductConfigurationForm({ currentTemplate, productConfiguration, setProductConfiguration, defaultIOFields }) {
   // CRITICAL DEBUG: Log when component loads
@@ -644,6 +676,9 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
   const [customAssemblyDescription, setCustomAssemblyDescription] = React.useState('');
   const [customAllowMultiple, setCustomAllowMultiple] = React.useState(true);
   const [activeInstanceModal, setActiveInstanceModal] = React.useState(null);
+  const [dropTargetInstance, setDropTargetInstance] = React.useState(null);
+  const [editingField, setEditingField] = React.useState(null); // { assemblyId, instanceId, sectionKey, fieldIndex }
+  const [draggedField, setDraggedField] = React.useState(null); // { assemblyId, instanceId, sectionKey, fieldIndex }
 
   const ioSectionKeys = React.useMemo(() => ['digitalIn', 'analogIn', 'digitalOut', 'analogOut'], []);
 
@@ -850,11 +885,193 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
 
     const handleOpenInstanceModal = React.useCallback((assemblyId, instanceId) => {
       setActiveInstanceModal({ assemblyId, instanceId });
+    setActiveAssembly({ assemblyId, instanceId });
     }, []);
 
     const handleCloseInstanceModal = React.useCallback(() => {
       setActiveInstanceModal(null);
+    setActiveAssembly(null);
     }, []);
+
+  // Drag-drop handlers for I/O Library integration
+  const handleDragOver = React.useCallback((e, assemblyId, instanceId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetInstance({ assemblyId, instanceId });
+  }, []);
+
+  const handleDragLeave = React.useCallback((e) => {
+    e.preventDefault();
+    setDropTargetInstance(null);
+  }, []);
+
+  const handleDrop = React.useCallback((e, assemblyId, instanceId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetInstance(null);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      
+      setProductConfiguration(prev => {
+        const instances = Array.isArray(prev[assemblyId]) ? prev[assemblyId] : [];
+        const instanceIndex = instances.findIndex(inst => inst.instanceId === instanceId);
+        
+        if (instanceIndex === -1) return prev;
+
+        const updatedInstances = [...instances];
+        const instance = updatedInstances[instanceIndex];
+        const ioSelections = instance.ioSelections || { 
+          digitalIn: [], analogIn: [], digitalOut: [], analogOut: [] 
+        };
+        
+        // Add the new field to the appropriate category
+        const category = data.category || 'digitalIn';
+        const newField = cloneIoFieldDefinition(data, 'custom');
+        
+        updatedInstances[instanceIndex] = {
+          ...instance,
+          ioSelections: {
+            ...ioSelections,
+            [category]: [...(ioSelections[category] || []), newField]
+          }
+        };
+
+        return {
+          ...prev,
+          [assemblyId]: updatedInstances
+        };
+      });
+    } catch (error) {
+      console.error('Failed to parse dropped data:', error);
+    }
+  }, [setProductConfiguration]);
+
+  const handleRemoveIOField = React.useCallback((assemblyId, instanceId, category, fieldIndex) => {
+    setProductConfiguration(prev => {
+      const instances = Array.isArray(prev[assemblyId]) ? prev[assemblyId] : [];
+      const instanceIndex = instances.findIndex(inst => inst.instanceId === instanceId);
+      
+      if (instanceIndex === -1) return prev;
+
+      const updatedInstances = [...instances];
+      const instance = updatedInstances[instanceIndex];
+      const ioSelections = instance.ioSelections || {};
+      const categoryFields = ioSelections[category] || [];
+
+      updatedInstances[instanceIndex] = {
+        ...instance,
+        ioSelections: {
+          ...ioSelections,
+          [category]: categoryFields.filter((_, idx) => idx !== fieldIndex)
+        }
+      };
+
+      return {
+        ...prev,
+        [assemblyId]: updatedInstances
+      };
+    });
+  }, [setProductConfiguration]);
+
+  // Field editing handlers
+  const handleStartEditField = React.useCallback((assemblyId, instanceId, sectionKey, fieldIndex) => {
+    setEditingField({ assemblyId, instanceId, sectionKey, fieldIndex });
+  }, []);
+
+  const handleUpdateField = React.useCallback((assemblyId, instanceId, sectionKey, fieldIndex, updates) => {
+    setProductConfiguration(prev => {
+      const instances = Array.isArray(prev[assemblyId]) ? prev[assemblyId] : [];
+      const instanceIndex = instances.findIndex(inst => inst.instanceId === instanceId);
+      
+      if (instanceIndex === -1) return prev;
+
+      const updatedInstances = [...instances];
+      const instance = updatedInstances[instanceIndex];
+      const ioSelections = instance.ioSelections || {};
+      const categoryFields = [...(ioSelections[sectionKey] || [])];
+
+      if (fieldIndex >= 0 && fieldIndex < categoryFields.length) {
+        categoryFields[fieldIndex] = {
+          ...categoryFields[fieldIndex],
+          ...updates
+        };
+      }
+
+      updatedInstances[instanceIndex] = {
+        ...instance,
+        ioSelections: {
+          ...ioSelections,
+          [sectionKey]: categoryFields
+        }
+      };
+
+      return {
+        ...prev,
+        [assemblyId]: updatedInstances
+      };
+    });
+  }, [setProductConfiguration]);
+
+  const handleStopEditField = React.useCallback(() => {
+    setEditingField(null);
+  }, []);
+
+  // Field reordering handlers
+  const handleFieldDragStart = React.useCallback((assemblyId, instanceId, sectionKey, fieldIndex) => {
+    setDraggedField({ assemblyId, instanceId, sectionKey, fieldIndex });
+  }, []);
+
+  const handleFieldDragOver = React.useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleFieldDrop = React.useCallback((assemblyId, instanceId, sectionKey, targetIndex) => {
+    if (!draggedField || 
+        draggedField.assemblyId !== assemblyId || 
+        draggedField.instanceId !== instanceId || 
+        draggedField.sectionKey !== sectionKey ||
+        draggedField.fieldIndex === targetIndex) {
+      setDraggedField(null);
+      return;
+    }
+
+    setProductConfiguration(prev => {
+      const instances = Array.isArray(prev[assemblyId]) ? prev[assemblyId] : [];
+      const instanceIndex = instances.findIndex(inst => inst.instanceId === instanceId);
+      
+      if (instanceIndex === -1) {
+        setDraggedField(null);
+        return prev;
+      }
+
+      const updatedInstances = [...instances];
+      const instance = updatedInstances[instanceIndex];
+      const ioSelections = instance.ioSelections || {};
+      const categoryFields = [...(ioSelections[sectionKey] || [])];
+
+      const sourceIndex = draggedField.fieldIndex;
+      if (sourceIndex >= 0 && sourceIndex < categoryFields.length && targetIndex >= 0 && targetIndex < categoryFields.length) {
+        const [movedField] = categoryFields.splice(sourceIndex, 1);
+        categoryFields.splice(targetIndex, 0, movedField);
+      }
+
+      updatedInstances[instanceIndex] = {
+        ...instance,
+        ioSelections: {
+          ...ioSelections,
+          [sectionKey]: categoryFields
+        }
+      };
+
+      setDraggedField(null);
+      return {
+        ...prev,
+        [assemblyId]: updatedInstances
+      };
+    });
+  }, [draggedField, setProductConfiguration]);
   
   // Initialize assembly instances when template or custom assemblies change
   React.useEffect(() => {
@@ -946,9 +1163,12 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
     }));
   };
 
-  // Render a single field based on its type
-  const renderField = (field) => {
-    const value = productConfiguration[field.fieldName] || '';
+  const renderField = (field = {}) => {
+    if (!field?.fieldName) {
+      return null;
+    }
+
+    const value = productConfiguration[field.fieldName] ?? '';
 
     switch (field.fieldType) {
       case 'List':
@@ -1251,27 +1471,104 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {fields.map((field, idx) => (
-              <div
-                key={idx}
-                className="p-4 space-y-3 border rounded-lg border-slate-800/60 bg-slate-900/60"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-100">{field.fieldName}</p>
-                    {field.description && (
-                      <p className="mt-1 text-xs text-slate-400">{field.description}</p>
-                    )}
-                  </div>
-                  {field.defaultValue !== undefined && field.defaultValue !== '' && (
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
-                      Default: {field.defaultValue}
-                    </span>
+            {fields.map((field, idx) => {
+              const isEditing = editingField && 
+                editingField.assemblyId === assemblyId && 
+                editingField.instanceId === instanceId && 
+                editingField.sectionKey === sectionKey && 
+                editingField.fieldIndex === idx;
+              
+              const isDragging = draggedField && 
+                draggedField.assemblyId === assemblyId && 
+                draggedField.instanceId === instanceId && 
+                draggedField.sectionKey === sectionKey && 
+                draggedField.fieldIndex === idx;
+
+              return (
+                <div
+                  key={idx}
+                  draggable={!!assemblyId && !!instanceId}
+                  onDragStart={() => assemblyId && instanceId && handleFieldDragStart(assemblyId, instanceId, sectionKey, idx)}
+                  onDragOver={handleFieldDragOver}
+                  onDrop={() => assemblyId && instanceId && handleFieldDrop(assemblyId, instanceId, sectionKey, idx)}
+                  className={`p-4 space-y-3 border rounded-lg transition-all cursor-move ${
+                    isDragging 
+                      ? 'opacity-50 border-blue-400' 
+                      : 'border-slate-800/60 bg-slate-900/60 hover:border-slate-700'
+                  }`}
+                >
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={field.fieldName}
+                        onChange={(e) => handleUpdateField(assemblyId, instanceId, sectionKey, idx, { fieldName: e.target.value })}
+                        placeholder="Field Name"
+                        className="w-full px-2 py-1 text-sm font-semibold text-white border rounded bg-slate-800 border-slate-600 focus:border-blue-500 focus:outline-none"
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        value={field.description || ''}
+                        onChange={(e) => handleUpdateField(assemblyId, instanceId, sectionKey, idx, { description: e.target.value })}
+                        placeholder="Description (optional)"
+                        className="w-full px-2 py-1 text-xs text-white border rounded bg-slate-800 border-slate-600 focus:border-blue-500 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={field.defaultValue || ''}
+                        onChange={(e) => handleUpdateField(assemblyId, instanceId, sectionKey, idx, { defaultValue: e.target.value })}
+                        placeholder="Default Value (optional)"
+                        className="w-full px-2 py-1 text-xs text-white border rounded bg-slate-800 border-slate-600 focus:border-blue-500 focus:outline-none"
+                      />
+                      <button
+                        onClick={handleStopEditField}
+                        className="px-2 py-1 text-xs text-white bg-blue-600 rounded hover:bg-blue-700"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-100">{field.fieldName}</p>
+                          {field.description && (
+                            <p className="mt-1 text-xs text-slate-400">{field.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {assemblyId && instanceId && (
+                            <>
+                              <button
+                                onClick={() => handleStartEditField(assemblyId, instanceId, sectionKey, idx)}
+                                className="p-1 text-slate-400 hover:text-blue-400"
+                                title="Edit field"
+                              >
+                                <Settings className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveIOField(assemblyId, instanceId, sectionKey, idx)}
+                                className="p-1 text-slate-400 hover:text-red-400"
+                                title="Remove field"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                          {field.defaultValue !== undefined && field.defaultValue !== '' && (
+                            <span className="text-[10px] font-semibold uppercase text-slate-400 ml-1">
+                              Default: {field.defaultValue}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {fieldHandler(field)}
+                    </>
                   )}
                 </div>
-                {fieldHandler(field)}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
@@ -1480,9 +1777,21 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                   const nonIoCount = nonIoSections.reduce((total, [, fields]) => total + (Array.isArray(fields) ? fields.length : 0), 0);
                   const hasConfiguration = summarySections.length > 0 || nonIoCount > 0;
                   const instanceLabel = instance.instanceLabel || `${assembly.displayName || assemblyId} ${instanceIndex + 1}`;
+                  const isDropTarget = dropTargetInstance?.assemblyId === assemblyId && dropTargetInstance?.instanceId === instanceId;
 
                   return (
-                    <div key={instanceId} className="p-4 border rounded-2xl border-slate-800 bg-slate-900/70">
+                    <div 
+                      key={instanceId} 
+                      className={cn(
+                        "p-4 border rounded-2xl transition-all",
+                        isDropTarget 
+                          ? "border-blue-500 bg-blue-500/5 border-dashed" 
+                          : "border-slate-800 bg-slate-900/70"
+                      )}
+                      onDragOver={(e) => handleDragOver(e, assemblyId, instanceId)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, assemblyId, instanceId)}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -1492,6 +1801,9 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                             <div>
                               <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Assembly Instance</p>
                               <h3 className="text-lg font-semibold text-white">{assembly.displayName || assemblyId}</h3>
+                              {isDropTarget && (
+                                <p className="text-xs text-blue-400">Drop I/O field here</p>
+                              )}
                             </div>
                           </div>
                           <div className="pt-2">
@@ -2098,7 +2410,7 @@ function AssemblySelection({
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
     const filename = `BOM_OperationalItems_${safeIdentifier}_${timestamp}.csv`;
 
-    await window.app.writeFile(`OUTPUT/${filename}`, csvRows.join('\n'));
+    await window.app.writeFile(`OUTPUT/BOMs/${filename}`, csvRows.join('\n'));
 
     return { filename, itemCount: items.length };
   };
@@ -2108,7 +2420,7 @@ function AssemblySelection({
     if (operationalItems && operationalItems.length > 0) {
       try {
         const { filename, itemCount } = await exportOperationalItemsCsv(operationalItems);
-        alert(`BOM exported successfully to OUTPUT/${filename}\n\nExported ${itemCount} operational items.`);
+        alert(`BOM exported successfully to OUTPUT/BOMs/${filename}\n\nExported ${itemCount} operational items.`);
       } catch (error) {
         console.error('Error exporting BOM:', error);
         alert(`Failed to export BOM: ${error.message}`);
@@ -2187,13 +2499,307 @@ function AssemblySelection({
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
       const filename = `BOM_Assemblies_${safeIdentifier}_${timestamp}.csv`;
 
-      await window.app.writeFile(`OUTPUT/${filename}`, csvContent);
+      await window.app.writeFile(`OUTPUT/BOMs/${filename}`, csvContent);
 
-        alert(`BOM exported successfully to OUTPUT/${filename}\n\nNote: Using assembly-based export. Generate BOM for consolidated operational items.`);
+        alert(`BOM exported successfully to OUTPUT/BOMs/${filename}\n\nNote: Using assembly-based export. Generate BOM for consolidated operational items.`);
     } catch (error) {
       console.error('Error exporting BOM:', error);
       alert(`Failed to export BOM: ${error.message}`);
       }
+    }
+  };
+
+  // Export quote to CSV
+  const handleExportQuoteToCsv = async () => {
+    if (!quote || !quote.quoteId) {
+      alert('No quote data to export. Please create or load a quote first.');
+      return;
+    }
+
+    try {
+      const csvRows = [];
+      
+      // Header row
+      csvRows.push('Section,Field,Value,Index');
+      
+      // Basic quote metadata
+      const basicFields = [
+        'quoteId', 'projectId', 'projectName', 'customer', 'salesRep', 'oem', 'status'
+      ];
+      
+      basicFields.forEach(field => {
+        csvRows.push(`Quote,${field},${quote[field] || ''},`);
+      });
+      
+      // Project codes
+      if (quote.projectCodes) {
+        csvRows.push(`Quote,projectCodes.industry,${quote.projectCodes.industry || ''},`);
+        csvRows.push(`Quote,projectCodes.product,${quote.projectCodes.product || ''},`);
+        csvRows.push(`Quote,projectCodes.control,${quote.projectCodes.control || ''},`);
+        csvRows.push(`Quote,projectCodes.scope,${quote.projectCodes.scope || ''},`);
+      }
+      
+      // Control panel config
+      if (quote.controlPanelConfig) {
+        Object.entries(quote.controlPanelConfig).forEach(([key, value]) => {
+          if (typeof value === 'object' && value !== null) {
+            // Handle nested objects like ioCapacity
+            Object.entries(value).forEach(([subKey, subValue]) => {
+              csvRows.push(`ControlPanel,${key}.${subKey},${subValue || ''},`);
+            });
+          } else if (Array.isArray(value)) {
+            // Handle arrays like networkProtocols
+            value.forEach((item, index) => {
+              csvRows.push(`ControlPanel,${key}[${index}],${item || ''},`);
+            });
+          } else {
+            csvRows.push(`ControlPanel,${key},${value || ''},`);
+          }
+        });
+      }
+      
+      // Product configuration
+      if (quote.productConfiguration) {
+        ['motors', 'heaters', 'inputs', 'outputs'].forEach(arrayField => {
+          if (quote.productConfiguration[arrayField]) {
+            quote.productConfiguration[arrayField].forEach((item, index) => {
+              Object.entries(item).forEach(([key, value]) => {
+                csvRows.push(`ProductConfig,${arrayField}[${index}].${key},${value || ''},`);
+              });
+            });
+          }
+        });
+      }
+      
+      // Selected sub-assemblies
+      if (quote.selectedSubAssemblies) {
+        quote.selectedSubAssemblies.forEach((assembly, index) => {
+          Object.entries(assembly).forEach(([key, value]) => {
+            if (typeof value === 'object' && value !== null) {
+              // Handle nested objects like configuration
+              Object.entries(value).forEach(([subKey, subValue]) => {
+                csvRows.push(`SubAssemblies,${key}.${subKey},${subValue || ''},${index}`);
+              });
+            } else if (Array.isArray(value)) {
+              // Handle arrays like selectedFeatures
+              value.forEach((item, subIndex) => {
+                csvRows.push(`SubAssemblies,${key}[${subIndex}],${item || ''},${index}`);
+              });
+            } else {
+              csvRows.push(`SubAssemblies,${key},${value || ''},${index}`);
+            }
+          });
+        });
+      }
+      
+      // Custom features
+      if (quote.customFeatures) {
+        quote.customFeatures.forEach((feature, index) => {
+          Object.entries(feature).forEach(([key, value]) => {
+            csvRows.push(`CustomFeatures,${key},${value || ''},${index}`);
+          });
+        });
+      }
+      
+      // Operational items
+      if (quote.operationalItems) {
+        quote.operationalItems.forEach((item, index) => {
+          Object.entries(item).forEach(([key, value]) => {
+            csvRows.push(`OperationalItems,${key},${value || ''},${index}`);
+          });
+        });
+      }
+      
+      // Pricing
+      if (quote.pricing) {
+        Object.entries(quote.pricing).forEach(([key, value]) => {
+          csvRows.push(`Pricing,${key},${value || ''},`);
+        });
+      }
+      
+      // Additional fields
+      ['pipedrive_deal_id', 'pipedrive_person_id', 'historical_margin_avg'].forEach(field => {
+        if (quote[field] !== undefined && quote[field] !== null) {
+          csvRows.push(`Quote,${field},${quote[field]},`);
+        }
+      });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+      const filename = `Quote_${quote.quoteId || 'Unknown'}_${timestamp}.csv`;
+
+      await window.app.writeFile(`OUTPUT/Projects/${filename}`, csvRows.join('\n'));
+
+      alert(`Quote exported successfully to OUTPUT/Projects/${filename}\n\nThis CSV can be imported back to restore the quote.`);
+    } catch (error) {
+      console.error('Failed to export quote:', error);
+      alert(`Failed to export quote: ${error.message}`);
+    }
+  };
+
+  // Import quote from CSV
+  const handleImportQuoteFromCsv = async () => {
+    try {
+      const result = await window.app.showOpenDialog({
+        title: 'Select Quote CSV File',
+        filters: [{ name: 'CSV Files', extensions: ['csv'] }],
+        properties: ['openFile']
+      });
+
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return;
+      }
+
+      const filePath = result.filePaths[0];
+      const csvContent = await window.app.readFile(filePath);
+      
+      if (!csvContent) {
+        alert('Failed to read the selected file.');
+        return;
+      }
+
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      if (lines.length < 2) {
+        alert('Invalid CSV file format.');
+        return;
+      }
+
+      // Parse CSV
+      const headers = lines[0].split(',');
+      if (headers.length < 3 || headers[0] !== 'Section' || headers[1] !== 'Field') {
+        alert('Invalid CSV format. Expected columns: Section,Field,Value,Index');
+        return;
+      }
+
+      const parsedData = {};
+      const subAssemblies = [];
+      const customFeatures = [];
+      const operationalItems = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',');
+        if (cols.length < 3) continue;
+        
+        const section = cols[0];
+        const field = cols[1];
+        const value = cols[2];
+        const index = cols[3] ? parseInt(cols[3]) : null;
+
+        if (section === 'Quote') {
+          if (field.includes('.')) {
+            const [parent, child] = field.split('.');
+            if (!parsedData[parent]) parsedData[parent] = {};
+            parsedData[parent][child] = value;
+          } else {
+            parsedData[field] = value;
+          }
+        } else if (section === 'ControlPanel') {
+          if (!parsedData.controlPanelConfig) parsedData.controlPanelConfig = {};
+          
+          if (field.includes('.')) {
+            const [parent, child] = field.split('.');
+            if (parent.includes('[')) {
+              // Handle array notation like networkProtocols[0]
+              const arrayMatch = parent.match(/^(.+)\[(\d+)\]$/);
+              if (arrayMatch) {
+                const arrayName = arrayMatch[1];
+                const arrayIndex = parseInt(arrayMatch[2]);
+                if (!parsedData.controlPanelConfig[arrayName]) parsedData.controlPanelConfig[arrayName] = [];
+                parsedData.controlPanelConfig[arrayName][arrayIndex] = value;
+              }
+            } else {
+              if (!parsedData.controlPanelConfig[parent]) parsedData.controlPanelConfig[parent] = {};
+              parsedData.controlPanelConfig[parent][child] = value;
+            }
+          } else {
+            parsedData.controlPanelConfig[field] = value;
+          }
+        } else if (section === 'ProductConfig') {
+          if (!parsedData.productConfiguration) parsedData.productConfiguration = {};
+          
+          const arrayMatch = field.match(/^(.+)\[(\d+)\]\.(.+)$/);
+          if (arrayMatch) {
+            const arrayName = arrayMatch[1];
+            const arrayIndex = parseInt(arrayMatch[2]);
+            const propName = arrayMatch[3];
+            
+            if (!parsedData.productConfiguration[arrayName]) parsedData.productConfiguration[arrayName] = [];
+            if (!parsedData.productConfiguration[arrayName][arrayIndex]) parsedData.productConfiguration[arrayName][arrayIndex] = {};
+            parsedData.productConfiguration[arrayName][arrayIndex][propName] = value;
+          }
+        } else if (section === 'SubAssemblies' && index !== null) {
+          if (!subAssemblies[index]) subAssemblies[index] = {};
+          
+          if (field.includes('.')) {
+            const [parent, child] = field.split('.');
+            if (!subAssemblies[index][parent]) subAssemblies[index][parent] = {};
+            subAssemblies[index][parent][child] = value;
+          } else if (field.includes('[')) {
+            const arrayMatch = field.match(/^(.+)\[(\d+)\]$/);
+            if (arrayMatch) {
+              const arrayName = arrayMatch[1];
+              const arrayIndex = parseInt(arrayMatch[2]);
+              if (!subAssemblies[index][arrayName]) subAssemblies[index][arrayName] = [];
+              subAssemblies[index][arrayName][arrayIndex] = value;
+            }
+          } else {
+            subAssemblies[index][field] = value;
+          }
+        } else if (section === 'CustomFeatures' && index !== null) {
+          if (!customFeatures[index]) customFeatures[index] = {};
+          customFeatures[index][field] = value;
+        } else if (section === 'OperationalItems' && index !== null) {
+          if (!operationalItems[index]) operationalItems[index] = {};
+          operationalItems[index][field] = value;
+        } else if (section === 'Pricing') {
+          if (!parsedData.pricing) parsedData.pricing = {};
+          parsedData.pricing[field] = value;
+        }
+      }
+
+      // Reconstruct the quote object
+      const importedQuote = {
+        ...parsedData,
+        selectedSubAssemblies: subAssemblies.filter(item => Object.keys(item).length > 0),
+        customFeatures: customFeatures.filter(item => Object.keys(item).length > 0),
+        operationalItems: operationalItems.filter(item => Object.keys(item).length > 0),
+        projectCodes: parsedData.projectCodes || {},
+        controlPanelConfig: parsedData.controlPanelConfig || {},
+        productConfiguration: parsedData.productConfiguration || {},
+        pricing: parsedData.pricing || {},
+        status: parsedData.status || 'draft'
+      };
+
+      // Convert numeric fields back to numbers
+      if (importedQuote.projectCodes) {
+        Object.keys(importedQuote.projectCodes).forEach(key => {
+          const value = importedQuote.projectCodes[key];
+          if (value && !isNaN(value)) {
+            importedQuote.projectCodes[key] = parseInt(value);
+          }
+        });
+      }
+
+      if (importedQuote.pricing) {
+        Object.keys(importedQuote.pricing).forEach(key => {
+          const value = importedQuote.pricing[key];
+          if (value && !isNaN(value)) {
+            importedQuote.pricing[key] = parseFloat(value);
+          }
+        });
+      }
+
+      // Set the imported quote
+      setQuote(importedQuote);
+      
+      // Update generated number if quoteId is present
+      if (importedQuote.quoteId) {
+        setGeneratedNumber(importedQuote.quoteId);
+      }
+
+      alert(`Quote imported successfully from ${filePath.split('\\').pop() || filePath.split('/').pop()}`);
+    } catch (error) {
+      console.error('Failed to import quote:', error);
+      alert(`Failed to import quote: ${error.message}`);
     }
   };
 
@@ -2268,7 +2874,7 @@ function AssemblySelection({
           if (itemCount > 0) {
             try {
               const { filename } = await exportOperationalItemsCsv(items);
-              exportMessage = `\n\nSaved automatically to OUTPUT/${filename}.`;
+              exportMessage = `\n\nSaved automatically to OUTPUT/BOMs/${filename}.`;
             } catch (exportError) {
               console.error('Automatic BOM export failed:', exportError);
               exportMessage = '\n\nAutomatic CSV export failed. Use the Export CSV button to save the BOM.';
@@ -2357,7 +2963,20 @@ function AssemblySelection({
               disabled={selectedAssemblies.length === 0}
               className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Export CSV
+              Export BOM CSV
+            </button>
+            <button
+              onClick={handleExportQuoteToCsv}
+              disabled={!quote || !quote.quoteId}
+              className="px-4 py-2 text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Export Quote CSV
+            </button>
+            <button
+              onClick={handleImportQuoteFromCsv}
+              className="px-4 py-2 text-white bg-orange-600 rounded-md hover:bg-orange-700"
+            >
+              Import Quote CSV
             </button>
             <button
               onClick={handleGenerateBom}
@@ -2892,7 +3511,7 @@ function AssemblySelection({
   );
 }
 
-function SummaryPanel({ quote, schemas, customers, generatedNumber, operationalItems }) {
+function SummaryPanel({ quote, schemas, customers, generatedNumber, operationalItems, className }) {
   const customerName = useMemo(() => {
     if (!quote.customer) return 'Unassigned customer';
     const match = customers.find(c => c.id === quote.customer);
@@ -2943,7 +3562,7 @@ function SummaryPanel({ quote, schemas, customers, generatedNumber, operationalI
   ];
 
   return (
-    <aside className="flex-col hidden gap-4 xl:flex">
+    <aside className={cn('flex w-full flex-col gap-4', className)}>
       <div className="p-6 border shadow-sm rounded-2xl border-slate-800 bg-slate-900/60">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -3078,15 +3697,39 @@ export default function QuoteConfigurator({ context }) {
   const [customers, setCustomers] = useState([]);
   const [panelOptions, setPanelOptions] = useState({ voltage: [], phase: [], enclosureType: [], enclosureRating: [], hmiSize: [], plcPlatform: [] });
   const [defaultIOFields, setDefaultIOFields] = useState({ digitalIn: [], analogIn: [], digitalOut: [], analogOut: [] });
+  const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [activeAssembly, setActiveAssembly] = useState(null);
+  const [configHistory, setConfigHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
   const updateProductConfiguration = useCallback((configOrUpdater) => {
-    setQuote(prev => ({
-      ...prev,
-      productConfiguration: typeof configOrUpdater === 'function'
+    setQuote(prev => {
+      const newConfig = typeof configOrUpdater === 'function'
         ? configOrUpdater(prev.productConfiguration)
-        : configOrUpdater
-    }));
-  }, [setQuote]);
+        : configOrUpdater;
+      
+      // Add to history for undo/redo
+      setConfigHistory(history => {
+        const newHistory = history.slice(0, historyIndex + 1);
+        newHistory.push(newConfig);
+        // Keep only last 50 states
+        if (newHistory.length > 50) {
+          newHistory.shift();
+        }
+        return newHistory;
+      });
+      setHistoryIndex(idx => Math.min(idx + 1, 49));
+      
+      return {
+        ...prev,
+        productConfiguration: newConfig
+      };
+    });
+  }, [setQuote, historyIndex]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -3108,6 +3751,28 @@ export default function QuoteConfigurator({ context }) {
       }
     };
     loadData();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia(DESKTOP_BREAKPOINT);
+
+    const applyBreakpointState = (target) => {
+      const matches = target.matches;
+      setIsDesktop(matches);
+      if (matches) {
+        setIsLeftDrawerOpen(true);
+        setIsRightDrawerOpen(true);
+      } else {
+        setIsLeftDrawerOpen(false);
+        setIsRightDrawerOpen(false);
+      }
+    };
+
+    applyBreakpointState(media);
+    const handleChange = (event) => applyBreakpointState(event);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
   }, []);
 
   // Sync selectedAssemblies to quote.bom with full details
@@ -3222,10 +3887,8 @@ export default function QuoteConfigurator({ context }) {
   }, [quote.projectCodes.product]);
 
   const steps = [
-    { id: 1, title: 'Project Setup', description: 'Capture the opportunity details and classification codes.' },
-    { id: 2, title: 'Panel Config', description: 'Define the control panel architecture and hardware requirements.' },
-    { id: 3, title: 'Product Config', description: 'Configure motors, I/O, and assemblies unique to this product.' },
-    { id: 4, title: 'BOM Assistance', description: 'Assemble the bill of materials and generate consolidated outputs.' }
+    { id: 1, title: 'Product Config', description: 'Configure motors, I/O, and assemblies unique to this product.' },
+    { id: 2, title: 'BOM Assistance', description: 'Assemble the bill of materials and generate consolidated outputs.' }
   ];
 
   const activeStep = steps.find(step => step.id === currentStep) || steps[0];
@@ -3233,29 +3896,11 @@ export default function QuoteConfigurator({ context }) {
   const nextLabel = currentStep === steps.length
     ? (isLoading ? 'Saving…' : 'Save & Finish')
     : `Continue${nextStep ? ` · ${nextStep}` : ''}`;
+  const upcomingStep = steps.find(step => step.id === currentStep + 1) || null;
 
   const stepContent = (() => {
     switch (currentStep) {
       case 1:
-        return (
-          <ProjectDetails
-            quote={quote}
-            setQuote={setQuote}
-            schemas={schemas}
-            customers={customers}
-            generatedNumber={generatedNumber}
-            setGeneratedNumber={setGeneratedNumber}
-          />
-        );
-      case 2:
-        return (
-          <PanelConfig
-            quote={quote}
-            setQuote={setQuote}
-            panelOptions={panelOptions}
-          />
-        );
-      case 3:
         return (
           <ProductConfigurationForm
             currentTemplate={currentTemplate}
@@ -3264,7 +3909,7 @@ export default function QuoteConfigurator({ context }) {
             defaultIOFields={defaultIOFields}
           />
         );
-      case 4:
+      case 2:
         return (
           <AssemblySelection
             currentTemplate={currentTemplate}
@@ -3288,6 +3933,14 @@ export default function QuoteConfigurator({ context }) {
   })();
 
   const displayQuoteNumber = quote.quoteId || generatedNumber || '';
+  const selectedCustomer = useMemo(() => {
+    if (!Array.isArray(customers)) {
+      return null;
+    }
+    return customers.find(customer => customer.id === quote.customer) || null;
+  }, [customers, quote.customer]);
+  const operationalCount = Array.isArray(operationalItems) ? operationalItems.length : 0;
+  const selectedAssemblyCount = Array.isArray(selectedAssemblies) ? selectedAssemblies.length : 0;
 
   const handleNext = async () => {
     if (currentStep < steps.length) {
@@ -3303,6 +3956,13 @@ export default function QuoteConfigurator({ context }) {
       setCurrentStep(currentStep - 1);
     }
   };
+
+  const handleGoToStep = useCallback((targetStep) => {
+    if (typeof targetStep !== 'number' || targetStep < 1 || targetStep > steps.length) {
+      return;
+    }
+    setCurrentStep(targetStep);
+  }, [steps.length]);
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -3374,8 +4034,52 @@ export default function QuoteConfigurator({ context }) {
         historical_margin_avg: quote.historical_margin_avg || null
       };
 
+      // Log margin calculation
+      if (window.app && window.app.logMarginCalculation) {
+        await window.app.logMarginCalculation({
+          quoteId: updatedQuote.quoteId || updatedQuote.id,
+          materialCost,
+          laborCost,
+          totalCOGS,
+          marginPercent,
+          finalPrice
+        });
+      }
+
       // Save the updated quote
       await window.quotes.save(updatedQuote);
+      
+      // Log the successful quote save
+      loggingService.logQuoteActivity(
+        'save',
+        updatedQuote.quoteId || updatedQuote.id,
+        updatedQuote.projectName,
+        updatedQuote.customer,
+        updatedQuote.status || 'draft',
+        {
+          materialCost,
+          laborCost,
+          totalCOGS,
+          finalPrice,
+          marginPercent,
+          operationalItemsCount: operationalItems.length
+        }
+      );
+
+      // Log the margin calculation
+      loggingService.logMarginActivity(
+        'calculate',
+        totalCOGS,
+        marginPercent,
+        finalPrice,
+        {
+          quoteId: updatedQuote.quoteId || updatedQuote.id,
+          materialCost,
+          laborCost,
+          projectName: updatedQuote.projectName,
+          customer: updatedQuote.customer
+        }
+      );
       
       // Update local quote state
       setQuote(updatedQuote);
@@ -3388,6 +4092,62 @@ export default function QuoteConfigurator({ context }) {
       setIsLoading(false);
     }
   };
+
+  // Undo/Redo handlers for configuration history
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      const previousConfig = configHistory[newIndex];
+      setHistoryIndex(newIndex);
+      setProductConfiguration(previousConfig);
+      // Update quote with previous configuration
+      setQuote(prev => ({
+        ...prev,
+        productConfiguration: previousConfig
+      }));
+    }
+  }, [historyIndex, configHistory]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < configHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      const nextConfig = configHistory[newIndex];
+      setHistoryIndex(newIndex);
+      setProductConfiguration(nextConfig);
+      // Update quote with next configuration
+      setQuote(prev => ({
+        ...prev,
+        productConfiguration: nextConfig
+      }));
+    }
+  }, [historyIndex, configHistory]);
+
+  // Keyboard shortcuts for save, undo, redo
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+S or Cmd+S - Save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (!isSaving) {
+          setIsSaving(true);
+          handleSave().finally(() => setIsSaving(false));
+        }
+      }
+      // Ctrl+Z or Cmd+Z - Undo
+      else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Ctrl+Y or Cmd+Shift+Z - Redo
+      else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave, handleUndo, handleRedo, isSaving]);
 
   const handleLoadQuote = async () => {
     const quoteId = window.prompt('Enter a Quote ID to load');
@@ -3453,96 +4213,382 @@ export default function QuoteConfigurator({ context }) {
     }
   };
 
+  const leftDrawerStyles = isDesktop
+    ? {
+        top: LEFT_DRAWER_OFFSETS.top,
+        left: LEFT_DRAWER_OFFSETS.left,
+        bottom: LEFT_DRAWER_OFFSETS.bottomGap,
+        width: isLeftDrawerOpen ? `${LEFT_DRAWER_WIDTH}px` : `${LEFT_DRAWER_HANDLE_WIDTH}px`,
+        transition: 'width 0.3s ease'
+      }
+    : {
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: 'min(22rem, calc(100vw - 24px))',
+        transform: isLeftDrawerOpen ? 'translateX(0)' : 'translateX(-100%)'
+      };
+
+  const rightDrawerStyles = isDesktop
+    ? {
+        top: RIGHT_DRAWER_OFFSETS.top,
+        right: RIGHT_DRAWER_OFFSETS.right,
+        bottom: RIGHT_DRAWER_OFFSETS.bottomGap,
+        width: isRightDrawerOpen ? `${RIGHT_DRAWER_WIDTH}px` : `${RIGHT_DRAWER_HANDLE_WIDTH}px`,
+        transition: 'width 0.3s ease',
+        pointerEvents: 'auto'
+      }
+    : {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: `min(${RIGHT_DRAWER_WIDTH}px, calc(100vw - 24px))`,
+        transform: isRightDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
+        pointerEvents: isRightDrawerOpen ? 'auto' : 'none'
+      };
+
+  const mainContentStyle = useMemo(() => {
+    if (isDesktop) {
+      return {
+        paddingLeft: LEFT_DRAWER_HANDLE_WIDTH + 8,
+        paddingRight: 24
+      };
+    }
+
+    return {
+      paddingLeft: 16,
+      paddingRight: 16
+    };
+  }, [isDesktop]);
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-900/80 bg-slate-950/70 backdrop-blur">
-        <div className="px-6 py-6 mx-auto max-w-7xl">
-          <h1 className="text-3xl font-semibold text-white">{quote.projectName || 'Untitled Quote'}</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            {displayQuoteNumber ? `Quote #${displayQuoteNumber}` : 'Quote number pending'}
-          </p>
-        </div>
-      </header>
-
-      <main className="px-6 py-8 mx-auto max-w-7xl">
-        {message && (
-          <div
-            className={`mb-6 rounded-2xl border px-4 py-4 text-sm ${
-              message.toLowerCase().includes('success')
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                : 'border-rose-500/40 bg-rose-500/10 text-rose-200'
-            }`}
-          >
-            {message}
-          </div>
+    <div className="relative min-h-screen overflow-x-hidden bg-slate-950 text-slate-100">
+      {!isDesktop && (
+        <div
+          className={cn(
+            'fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden',
+            isLeftDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          )}
+          onClick={() => setIsLeftDrawerOpen(false)}
+        />
+      )}
+      {!isDesktop && (
+        <div
+          className={cn(
+            'fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 xl:hidden',
+            isRightDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          )}
+          onClick={() => setIsRightDrawerOpen(false)}
+        />
+      )}
+      <aside
+        className={cn(
+          'fixed z-20 flex flex-col overflow-hidden border border-slate-900/80 bg-slate-950/95 shadow-2xl transition-transform duration-300'
         )}
+        style={leftDrawerStyles}
+        aria-hidden={!isLeftDrawerOpen && isDesktop}
+      >
+        {isDesktop && (
+          <button
+            type="button"
+            onClick={() => setIsLeftDrawerOpen(prev => !prev)}
+            className={cn(
+              'absolute inset-y-0 right-0 flex items-center justify-center border-l border-slate-900/70 bg-slate-950/95 text-slate-300 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40',
+              isLeftDrawerOpen ? 'border-slate-800' : 'border-slate-900/70'
+            )}
+            style={{ width: `${LEFT_DRAWER_HANDLE_WIDTH}px` }}
+            aria-label={isLeftDrawerOpen ? 'Collapse quote editor drawer' : 'Expand quote editor drawer'}
+          >
+            {isLeftDrawerOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+          </button>
+        )}
+        <div
+          className="flex flex-col h-full"
+          style={isDesktop ? { paddingRight: isLeftDrawerOpen ? `${LEFT_DRAWER_HANDLE_WIDTH}px` : '0px' } : undefined}
+        >
+          {(!isDesktop || isLeftDrawerOpen) && (
+            <IOLibraryDrawer
+              isOpen={isLeftDrawerOpen}
+              onClose={() => setIsLeftDrawerOpen(false)}
+              onAddToAssembly={(ioItem) => {
+                if (!activeAssembly) {
+                  console.warn('No active assembly selected for quick-add');
+                  return;
+                }
+                
+                const { assemblyId, instanceId } = activeAssembly;
+                const instanceList = Array.isArray(productConfiguration[assemblyId]) ? productConfiguration[assemblyId] : [];
+                const instanceIndex = instanceList.findIndex(inst => inst.instanceId === instanceId);
+                
+                if (instanceIndex === -1) {
+                  console.error('Active assembly instance not found');
+                  return;
+                }
+                
+                const instance = instanceList[instanceIndex];
+                const assembly = assemblyDefinitionMap.get(assemblyId);
+                
+                if (!assembly) {
+                  console.error('Assembly definition not found');
+                  return;
+                }
+                
+                // Ensure ioSelections exists
+                if (!instance.ioSelections) {
+                  instance.ioSelections = ensureIoSelections(instance, assembly, defaultIOFields);
+                }
+                
+                // Add the I/O field to the appropriate category
+                const category = ioItem.category || 'digitalInputs';
+                if (!instance.ioSelections[category]) {
+                  instance.ioSelections[category] = [];
+                }
+                
+                // Create new field from ioItem
+                const newField = {
+                  fieldName: ioItem.fieldName || ioItem.label || 'New Field',
+                  description: ioItem.description || '',
+                  defaultValue: ioItem.defaultValue || '',
+                  unit: ioItem.unit || '',
+                  type: ioItem.type || 'text'
+                };
+                
+                // Add to category
+                instance.ioSelections[category].push(newField);
+                
+                // Update configuration
+                const updatedInstanceList = [...instanceList];
+                updatedInstanceList[instanceIndex] = { ...instance };
+                
+                updateProductConfiguration({
+                  ...productConfiguration,
+                  [assemblyId]: updatedInstanceList
+                });
+                
+                console.log(`Added ${newField.fieldName} to ${category}`);
+              }}
+              defaultIOFields={defaultIOFields}
+            />
+          )}
+        </div>
+      </aside>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),320px]">
-          <section className="space-y-6">
-            <div className="border shadow-xl rounded-2xl border-slate-800 bg-slate-900/60 shadow-slate-950/40">
-              <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5 border-b border-slate-800/70">
+      <aside
+        className={cn(
+          'fixed z-20 flex flex-col overflow-hidden border border-slate-900/80 bg-slate-950/95 shadow-2xl transition-transform duration-300'
+        )}
+        style={rightDrawerStyles}
+        aria-hidden={!isRightDrawerOpen && isDesktop}
+      >
+        {isDesktop && (
+          <button
+            type="button"
+            onClick={() => setIsRightDrawerOpen(prev => !prev)}
+            className={cn(
+              'absolute inset-y-0 left-0 flex items-center justify-center border-r border-slate-900/70 bg-slate-950/95 text-slate-300 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40',
+              isRightDrawerOpen ? 'border-slate-800' : 'border-slate-900/70'
+            )}
+            style={{ width: `${RIGHT_DRAWER_HANDLE_WIDTH}px` }}
+            aria-label={isRightDrawerOpen ? 'Collapse summary drawer' : 'Expand summary drawer'}
+          >
+            {isRightDrawerOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          </button>
+        )}
+        <div
+          className="flex flex-col h-full"
+          style={isDesktop ? { paddingLeft: isRightDrawerOpen ? `${RIGHT_DRAWER_HANDLE_WIDTH}px` : '0px' } : undefined}
+        >
+          {(!isDesktop || isRightDrawerOpen) && (
+            <>
+              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-900/70">
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-100">{activeStep.title}</h2>
-                  {activeStep.description && (
-                    <p className="mt-2 text-sm text-slate-400">
-                      {activeStep.description}
-                    </p>
+                  <p className="text-xs font-semibold tracking-wide text-blue-200 uppercase">Live BOM</p>
+                  <p className="mt-1 text-xs text-slate-400">Real-time bill of materials with totals</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRightDrawerOpen(false)}
+                  className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-slate-800 bg-slate-900/80 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  aria-label="Close BOM drawer"
+                >
+                  <PanelRightClose className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar">
+                <div className="px-4 py-4 space-y-3">
+                  {operationalItems.length === 0 ? (
+                    <div className="px-4 py-8 text-center border rounded-lg border-slate-800/60 bg-slate-900/40">
+                      <p className="text-sm text-slate-400">No BOM items yet</p>
+                      <p className="mt-1 text-xs text-slate-500">Complete configuration steps to generate BOM</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        {operationalItems.map((item, index) => (
+                          <div
+                            key={`${item.sku}-${index}`}
+                            className="p-3 space-y-2 border rounded-lg border-slate-800/60 bg-slate-900/60 hover:border-slate-700/80"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-mono text-xs text-blue-300 truncate">{item.sku}</p>
+                                <p className="mt-1 text-sm font-medium leading-tight text-white line-clamp-2">
+                                  {item.displayName || item.description}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs font-medium text-slate-400">Qty: {item.quantity}</p>
+                                <p className="mt-1 text-sm font-semibold text-white">
+                                  ${(item.totalPrice || 0).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                            {item.sectionGroup && (
+                              <div className="flex items-center gap-2">
+                                <span className="inline-block px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-slate-800/80 text-slate-400">
+                                  {item.sectionGroup}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="sticky bottom-0 pt-3 mt-3 border-t border-slate-800 bg-slate-950/95">
+                        <div className="p-4 border rounded-lg border-slate-700 bg-slate-900/80">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-slate-300">Total Items:</span>
+                            <span className="text-sm font-semibold text-white">{operationalItems.length}</span>
+                          </div>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-slate-300">Total Qty:</span>
+                            <span className="text-sm font-semibold text-white">
+                              {operationalItems.reduce((sum, item) => sum + (item.quantity || 0), 0)}
+                            </span>
+                          </div>
+                          <div className="pt-3 border-t border-slate-700">
+                            <div className="flex items-center justify-between">
+                              <span className="text-base font-semibold text-blue-200">Material Cost:</span>
+                              <span className="text-lg font-bold text-white">
+                                ${operationalItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
-                  <button
-                    type="button"
-                    onClick={handlePrev}
-                    disabled={currentStep === 1 || isLoading}
-                    className="gap-2 text-slate-300 hover:text-white disabled:opacity-40"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={isLoading}
-                    className="gap-2 font-semibold text-slate-100 hover:text-white disabled:opacity-60"
-                  >
-                    {nextLabel}
-                  </button>
-                  <span className="hidden w-px h-5 mx-2 bg-slate-800 md:inline-block" aria-hidden="true" />
-                  <button
-                    type="button"
-                    onClick={handleLoadQuote}
-                    className="gap-2 text-slate-300 hover:text-white"
-                  >
-                    Load Quote
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={isLoading}
-                    className="gap-2 font-semibold text-slate-100 hover:text-white disabled:opacity-70"
-                  >
-                    {isLoading ? 'Saving…' : 'Save Quote'}
-                  </button>
-                </div>
               </div>
-              <div className="px-6 py-6">
-                {stepContent || (
-                  <p className="text-sm text-slate-400">
-                    Select a step to begin configuring the quote.
-                  </p>
-                )}
+            </>
+          )}
+        </div>
+      </aside>
+
+        <div className="relative flex flex-col flex-1 min-h-screen">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto no-scrollbar">
+            <div className="w-full py-6 space-y-6" style={mainContentStyle}>
+              {message && (
+                <div
+                  className={cn(
+                    'rounded-2xl border px-4 py-4 text-sm shadow-lg',
+                    message.toLowerCase().includes('success')
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                      : 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+                  )}
+                >
+                  {message}
+                </div>
+              )}
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(255px,295px)_minmax(0,1fr)_minmax(240px,300px)]">
+                <aside className="space-y-6">
+                  <ProjectDetails
+                    quote={quote}
+                    setQuote={setQuote}
+                    schemas={schemas}
+                    customers={customers}
+                    generatedNumber={generatedNumber}
+                    setGeneratedNumber={setGeneratedNumber}
+                    panelOptions={panelOptions}
+                    onToggleLeftDrawer={() => setIsLeftDrawerOpen(prev => !prev)}
+                    onToggleRightDrawer={() => setIsRightDrawerOpen(prev => !prev)}
+                    isLeftDrawerOpen={isLeftDrawerOpen}
+                    isRightDrawerOpen={isRightDrawerOpen}
+                  />
+                </aside>
+
+                <section className="space-y-6">
+                  <div className="border shadow-xl rounded-2xl border-slate-800 bg-slate-900/60 shadow-slate-950/40">
+                    <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5 border-b border-slate-800/70">
+                      <div>
+                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">
+                          Current Step
+                        </p>
+                        <h2 className="mt-1 text-2xl font-semibold text-slate-100">{activeStep.title}</h2>
+                        {activeStep.description && (
+                          <p className="mt-2 text-sm text-slate-400">{activeStep.description}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
+                        <button
+                          type="button"
+                          onClick={handlePrev}
+                          disabled={currentStep === 1 || isLoading}
+                          className="gap-2 text-slate-300 hover:text-white disabled:opacity-40"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleNext}
+                          disabled={isLoading}
+                          className="gap-2 font-semibold text-slate-100 hover:text-white disabled:opacity-60"
+                        >
+                          {nextLabel}
+                        </button>
+                        <span className="hidden w-px h-5 bg-slate-800 md:inline-block" aria-hidden="true" />
+                        <button
+                          type="button"
+                          onClick={handleLoadQuote}
+                          className="gap-2 text-slate-300 hover:text-white"
+                        >
+                          Load Quote
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSave}
+                          disabled={isLoading}
+                          className="gap-2 font-semibold text-slate-100 hover:text-white disabled:opacity-70"
+                        >
+                          {isLoading ? 'Saving…' : 'Save Quote'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="px-6 py-6">
+                      {stepContent || (
+                        <p className="text-sm text-slate-400">
+                          Select a step to begin configuring the quote.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </section>
+
+                <aside className="space-y-4">
+                  <SummaryPanel
+                    quote={quote}
+                    schemas={schemas}
+                    customers={customers}
+                    generatedNumber={generatedNumber}
+                    operationalItems={operationalItems}
+                    className="gap-5"
+                  />
+                </aside>
               </div>
             </div>
-          </section>
-
-          <SummaryPanel
-            quote={quote}
-            schemas={schemas}
-            customers={customers}
-            generatedNumber={generatedNumber}
-            operationalItems={operationalItems}
-          />
+          </main>
         </div>
-      </main>
     </div>
   );
 }

@@ -22,7 +22,9 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      external: ['electron', 'path', 'fs', 'fs/promises', 'url'],
+      external: ['electron', 'path', 'fs', 'fs/promises', 'url', 'crypto'],
+      // Don't bundle the services - they'll be dynamically imported at runtime
+      // This allows them to be imported from src/services/ in development
     },
     emptyOutDir: true,
   },

@@ -5,9 +5,10 @@ export default {
     '<rootDir>/TEST/**/*.test.(js|jsx|ts|tsx)',
     '<rootDir>/TEST/**/*.spec.(js|jsx|ts|tsx)'
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/TEST/__mocks__/fileMock.js'
+    '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/TEST/__mocks__/fileMock.js',
+    '^@\/(.*)$': '<rootDir>/src/$1'
   },
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest'

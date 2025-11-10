@@ -19,6 +19,7 @@ export default function GlobalComponentSearch() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [manualStatus, setManualStatus] = useState(null); // 'checking', 'found', 'searching', 'confirm-save'
   const [manualUrl, setManualUrl] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
   const searchInputRef = useRef(null);
   const resultsContainerRef = useRef(null);
 
@@ -47,6 +48,28 @@ export default function GlobalComponentSearch() {
     if (isSearchModalOpen && searchInputRef.current) {
       setTimeout(() => searchInputRef.current?.focus(), 100);
     }
+  }, [isSearchModalOpen]);
+
+  // Prevent global shortcuts from hijacking keystrokes while typing in the modal
+  useEffect(() => {
+    if (!isSearchModalOpen) {
+      return;
+    }
+
+    const stopGlobalShortcuts = (event) => {
+      const tagName = event.target?.tagName?.toLowerCase();
+      const isTextTarget = tagName === 'input' || tagName === 'textarea' || event.target?.isContentEditable;
+      if (!isTextTarget) {
+        return;
+      }
+
+      if (event.key !== 'Escape') {
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener('keydown', stopGlobalShortcuts);
+    return () => window.removeEventListener('keydown', stopGlobalShortcuts);
   }, [isSearchModalOpen]);
 
   // Scroll to top when results change
@@ -91,6 +114,60 @@ export default function GlobalComponentSearch() {
     }
   };
 
+  const escapeCsvValue = (value) => {
+    if (value === undefined || value === null) {
+      return '';
+    }
+
+    const stringValue = typeof value === 'string' ? value : String(value);
+    if (stringValue.includes('"') || stringValue.includes(',') || /[\r\n]/.test(stringValue)) {
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+
+    return stringValue;
+  };
+
+  const handleExportResults = async () => {
+    if (!Array.isArray(results) || results.length === 0) {
+      alert('No search results to export. Run a search before exporting.');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const csvRows = [];
+      csvRows.push('SKU,Description,Manufacturer,Vendor,VN#,Category,Price,Notes');
+
+      results.forEach((component) => {
+        const row = [
+          component?.sku || component?.partNumber || component?.id || '',
+          component?.description || '',
+          component?.manufacturer || '',
+          component?.vendor || '',
+          component?.vndrnum || '',
+          component?.category || '',
+          typeof component?.price === 'number' ? component.price.toFixed(2) : component?.price || '',
+          component?.notes || ''
+        ].map(escapeCsvValue);
+
+        csvRows.push(row.join(','));
+      });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+      const querySegment = (searchQuery || '').trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'results';
+      const filename = `ComponentSearch_${querySegment}_${timestamp}.csv`;
+
+      await window.app.writeFile(`OUTPUT/Components/${filename}`, csvRows.join('\n'));
+
+      alert(`Exported ${results.length} result${results.length === 1 ? '' : 's'} to OUTPUT/Components/${filename}`);
+    } catch (error) {
+      console.error('Failed to export search results:', error);
+      alert(`Failed to export search results: ${error.message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Handle component selection
   const handleSelectComponent = (component) => {
     // Show detail dialog instead of closing immediately
@@ -129,28 +206,44 @@ export default function GlobalComponentSearch() {
       alert('Manual system not available. Please restart the application.');
       return;
     }
+
+    const { checkLocal, openLocal, smartSearch } = window.manuals || {};
+    if (!checkLocal || !openLocal || !smartSearch) {
+      alert('Manual system is missing required capabilities. Please restart the application.');
+      return;
+    }
     
     setManualStatus('checking');
     
     try {
       // Step 1: Check if manual exists locally
-      const localCheck = await window.manuals.checkLocal({
+      const localCheck = await checkLocal({
         sku: selectedComponent.sku,
         manufacturer: selectedComponent.manufacturer || selectedComponent.vendor,
         description: selectedComponent.description
       });
       
       if (localCheck.found) {
-        // Manual exists - open it
+        // Manual already referenced; open locally or remotely
         setManualStatus('found');
-        await window.manuals.openLocal(localCheck.path);
+        if (localCheck.path) {
+          await openLocal(localCheck.path);
+        } else if (localCheck.url) {
+          if (window.api?.openExternal) {
+            await window.api.openExternal(localCheck.url);
+          } else if (window.electron?.shell?.openExternal) {
+            await window.electron.shell.openExternal(localCheck.url);
+          } else {
+            window.open(localCheck.url, '_blank', 'noopener');
+          }
+        }
         setTimeout(() => setManualStatus(null), 2000);
         return;
       }
       
       // Step 2: Manual not found - do smart search
       setManualStatus('searching');
-      const searchResult = await window.manuals.smartSearch({
+      const searchResult = await smartSearch({
         sku: selectedComponent.sku,
         manufacturer: selectedComponent.manufacturer || selectedComponent.vendor,
         vndrnum: selectedComponent.vndrnum,
@@ -161,7 +254,14 @@ export default function GlobalComponentSearch() {
         // Open browser with search results
         setManualUrl(searchResult.url);
         setManualStatus('confirm-save');
-        await window.api.openExternal(searchResult.url);
+        if (window.api?.openExternal) {
+          await window.api.openExternal(searchResult.url);
+        } else if (window.electron?.shell?.openExternal) {
+          await window.electron.shell.openExternal(searchResult.url);
+        } else {
+          console.warn('No external opener available for manual search URL');
+          window.open(searchResult.url, '_blank', 'noopener');
+        }
       } else {
         setManualStatus(null);
         alert('Could not find manual online. Please search manually.');
@@ -169,8 +269,9 @@ export default function GlobalComponentSearch() {
       
     } catch (error) {
       console.error('Manual handler error:', error);
+      const message = typeof error?.message === 'string' ? error.message : 'Unknown error';
       setManualStatus(null);
-      alert('Error accessing manual system.');
+      alert(`Error accessing manual system: ${message}`);
     }
   };
 
@@ -182,10 +283,17 @@ export default function GlobalComponentSearch() {
       return;
     }
     
+    if (!manualUrl || manualUrl.trim() === '') {
+      alert('Please paste the manual URL before saving.');
+      return;
+    }
+
     try {
       // User confirmed - save the manual URL/info
-      await window.manuals.saveManualReference({
+      await window.manuals.saveReference({
         sku: selectedComponent.sku,
+        vndrnum: selectedComponent.vndrnum,
+        id: selectedComponent.id,
         manufacturer: selectedComponent.manufacturer || selectedComponent.vendor,
         manualUrl: manualUrl,
         savedDate: new Date().toISOString()
@@ -267,13 +375,24 @@ export default function GlobalComponentSearch() {
                 ({searchService.getTotalCount()} total)
               </span>
             </div>
-            <button
-              onClick={closeSearchModal}
-              className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
-              title="Close (Esc)"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportResults}
+                disabled={isExporting || results.length === 0}
+                className="flex items-center gap-2 px-3 py-1 text-sm text-gray-300 rounded-md hover:bg-gray-700/60 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title={results.length === 0 ? 'Search first to enable CSV export' : 'Export current search results to CSV'}
+              >
+                <Download size={16} />
+                <span>{isExporting ? 'Exporting…' : 'Export CSV'}</span>
+              </button>
+              <button
+                onClick={closeSearchModal}
+                className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+                title="Close (Esc)"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           {/* Search Input */}
@@ -294,7 +413,7 @@ export default function GlobalComponentSearch() {
               <button
                 onClick={handleSearch}
                 disabled={!searchQuery.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                className="flex items-center gap-2"
                 title="Search (or press Enter)"
               >
                 <Search size={16} />
@@ -561,14 +680,22 @@ export default function GlobalComponentSearch() {
             </div>
             <div className="p-6">
               <p className="text-gray-300 mb-4">
-                I opened a browser with search results for <span className="font-mono text-blue-400">{selectedComponent?.sku}</span>.
+                I opened a browser with search results for <span className="font-mono text-blue-400">{selectedComponent?.sku || selectedComponent?.vndrnum || selectedComponent?.id}</span>.
               </p>
               <p className="text-gray-400 text-sm mb-4">
-                Is this the correct manual? Click <strong>Save Reference</strong> to remember this location for next time.
+                Paste the direct manual link (PDF if available) below, then click <strong>Save Reference</strong> to reopen it instantly next time.
               </p>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Manual URL</label>
+              <input
+                type="url"
+                value={manualUrl || ''}
+                onChange={(e) => setManualUrl(e.target.value)}
+                placeholder="https://"
+                className="w-full px-3 py-2 mb-4 text-sm text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <div className="bg-blue-900/20 border border-blue-700 rounded p-3 mb-4">
                 <p className="text-xs text-blue-300">
-                  💡 Next time you click "View Manual" for this component, it will open directly!
+                  💡 Next time you click "View Manual" for this component, it will open this saved link.
                 </p>
               </div>
             </div>

@@ -79,6 +79,23 @@
                     } else {
                         setMarkup(''); // Avoid "Infinity" if cost is 0
                     }
+
+                    // Log margin calculation if we have valid inputs
+                    if (window.parent && window.parent.postMessage) {
+                        window.parent.postMessage({
+                            type: 'LOG_MARGIN_ACTIVITY',
+                            data: {
+                                action: 'calculate',
+                                cost: c,
+                                marginPercent: m,
+                                finalPrice: newPrice,
+                                details: {
+                                    source: 'margin_calculator_plugin',
+                                    calculationType: 'cost_and_margin'
+                                }
+                            }
+                        }, '*');
+                    }
                 } else {
                     setPrice('');
                     setProfit('');
@@ -106,6 +123,23 @@
                     if (markup !== '') {
                       setMarkup(newMarkup.toFixed(2));
                     }
+
+                    // Log margin calculation
+                    if (window.parent && window.parent.postMessage) {
+                        window.parent.postMessage({
+                            type: 'LOG_MARGIN_ACTIVITY',
+                            data: {
+                                action: 'calculate',
+                                cost: c,
+                                marginPercent: newMargin,
+                                finalPrice: p,
+                                details: {
+                                    source: 'margin_calculator_plugin',
+                                    calculationType: 'price_input'
+                                }
+                            }
+                        }, '*');
+                    }
                 } else {
                     setProfit('');
                     setMargin('');
@@ -132,6 +166,23 @@
                         setMargin(newMargin.toFixed(2));
                     } else {
                         setMargin(''); // Avoid "NaN" if price is 0
+                    }
+
+                    // Log margin calculation
+                    if (window.parent && window.parent.postMessage) {
+                        window.parent.postMessage({
+                            type: 'LOG_MARGIN_ACTIVITY',
+                            data: {
+                                action: 'calculate',
+                                cost: c,
+                                marginPercent: newMargin,
+                                finalPrice: newPrice,
+                                details: {
+                                    source: 'margin_calculator_plugin',
+                                    calculationType: 'markup_input'
+                                }
+                            }
+                        }, '*');
                     }
                 }
             };

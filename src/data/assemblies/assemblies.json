@@ -1,20 +1,135 @@
 [
   {
-    "assemblyId": "ASM-EXAMPLE-001",
-    "description": "Example Assembly - Replace with your assemblies",
-    "category": "Control",
-    "components": [
-      {
-        "sku": "ENC",
-        "quantity": 1,
-        "notes": "Main enclosure"
-      },
-      {
-        "sku": "PAN",
-        "quantity": 1,
-        "notes": "Mounting panel"
-      }
-    ],
-    "estimatedLaborHours": 2.5
+    "assemblyId": "proc_acid_bath",
+    "displayName": "Acid Bath Process",
+    "description": "Chemical treatment process for metal surface preparation",
+    "category": "PROCESS",
+    "estimatedLaborHours": 8,
+    "fields": {
+      "digitalIn": [
+        {
+          "fieldName": "Level Switch (High)",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "INSTRUMENT", "type": "Level Switch" }
+        },
+        {
+          "fieldName": "Level Switch (Low)",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "INSTRUMENT", "type": "Level Switch" }
+        }
+      ],
+      "digitalOut": [
+        {
+          "fieldName": "Motor (On/Off)",
+          "fieldType": "Number",
+          "quantity": 2,
+          "parameters": [5, 3],
+          "bomLogic": { "category": "MOTOR CONTROL", "type": "CONTACTOR" }
+        },
+        {
+          "fieldName": "Heater (SSR)",
+          "fieldType": "Number",
+          "quantity": 1,
+          "parameters": [12],
+          "bomLogic": { "category": "HEATER CONTROL", "type": "SSR" }
+        }
+      ],
+      "analogIn": [
+        {
+          "fieldName": "Temp Sensor (RTD)",
+          "fieldType": "Boolean",
+          "quantity": 2,
+          "bomLogic": { "category": "PLC/COM", "type": "AI-RTD-Card" }
+        },
+        {
+          "fieldName": "pH Sensor (Analog)",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+        }
+      ],
+      "analogOut": [
+        {
+          "fieldName": "Modulating Valve (4-20mA)",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "PLC/COM", "type": "AO-4-20-Card" }
+        }
+      ]
+    },
+    "attributes": {
+      "voltage": "480V",
+      "phase": "3-phase"
+    },
+    "tags": ["chemical", "treatment", "metal", "surface"]
+  },
+  {
+    "assemblyId": "proc_vorlauf",
+    "displayName": "Vorlauf Process",
+    "description": "Mashing process for beer production with temperature control",
+    "category": "PROCESS",
+    "estimatedLaborHours": 12,
+    "fields": {
+      "digitalIn": [
+        {
+          "fieldName": "Level Switch (High)",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "INSTRUMENT", "type": "Level Switch" }
+        },
+        {
+          "fieldName": "Flow Switch",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "INSTRUMENT", "type": "Flow Switch" }
+        }
+      ],
+      "digitalOut": [
+        {
+          "fieldName": "Motor (VFD)",
+          "fieldType": "Number",
+          "quantity": 3,
+          "parameters": [10, 5, 3],
+          "bomLogic": { "category": "MOTOR CONTROL", "type": "VFD" }
+        },
+        {
+          "fieldName": "Heater (SSR)",
+          "fieldType": "Number",
+          "quantity": 2,
+          "parameters": [15, 15],
+          "bomLogic": { "category": "HEATER CONTROL", "type": "SSR" }
+        }
+      ],
+      "analogIn": [
+        {
+          "fieldName": "Temp Sensor (RTD)",
+          "fieldType": "Boolean",
+          "quantity": 4,
+          "bomLogic": { "category": "PLC/COM", "type": "AI-RTD-Card" }
+        },
+        {
+          "fieldName": "Pressure Transmitter (4-20mA)",
+          "fieldType": "Boolean",
+          "quantity": 1,
+          "bomLogic": { "category": "PLC/COM", "type": "AI-4-20-Card" }
+        }
+      ],
+      "analogOut": [
+        {
+          "fieldName": "VFD Speed Control (4-20mA)",
+          "fieldType": "Boolean",
+          "quantity": 2,
+          "bomLogic": { "category": "PLC/COM", "type": "AO-4-20-Card" }
+        }
+      ]
+    },
+    "attributes": {
+      "voltage": "480V",
+      "phase": "3-phase",
+      "industry": "brewing"
+    },
+    "tags": ["brewing", "mashing", "temperature", "process"]
   }
 ]

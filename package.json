@@ -2,13 +2,13 @@
   "name": "electron-vite-react-app",
   "version": "1.0.0",
   "description": "Electron app with Vite, React, and Tailwind CSS",
-  "main": "dist-electron/main.js",
+  "main": "electron/main.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "npm run electron:build",
     "preview": "vite preview",
-    "electron:dev": "concurrently --no-kill-others \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "npm run build:electron && concurrently --no-kill-others \"vite --port 5174\" \"wait-on http://localhost:5174 && electron .\"",
     "electron:build": "npm run build:electron && npm run build:renderer",
     "build:electron": "vite build --config vite.config.electron.js",
     "build:renderer": "vite build",
@@ -31,16 +31,29 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "babel-jest": "^30.2.0",
     "concurrently": "^8.2.2",
     "electron": "^28.2.0",
     "electron-builder": "^24.9.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-tailwindcss": "^3.18.2",
+    "husky": "^9.1.7",
     "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "lint-staged": "^16.2.6",
     "postcss": "^8.4.33",
+    "prettier": "^2.8.8",
+    "prettier-plugin-tailwindcss": "^0.2.8",
     "tailwindcss": "^3.4.1",
+    "typescript": "^5.9.3",
     "vite": "^5.0.12",
     "vite-plugin-electron": "^0.28.2",
     "wait-on": "^7.2.0"
@@ -78,6 +91,10 @@
       "target": [
         "dir"
       ]
-    }
+    },
+    "extraMetadata": {
+      "main": "dist-electron/main.cjs"
+    },
+    "afterPack": "scripts/after-pack.js"
   }
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Project Quote Configuration",
-  "description": "A schema for configuring a new project or quote, based on panel, assembly, and custom features.",
+  "description": "A schema for configuring a new project or quote, based on panel, sub-assembly, and custom features.",
   "type": "object",
   "properties": {
     "quoteId": {
@@ -169,7 +169,7 @@
       "required": ["voltage", "phase", "enclosureType", "hmiSize", "plcPlatform"]
     },
     "productConfiguration": {
-      "description": "Product-specific inputs used to auto-generate the assembly list (Your Step 3).",
+      "description": "Product-specific inputs used to auto-generate the sub-assembly list (Your Step 3).",
       "type": "object",
       "properties": {
         "motors": {
@@ -221,20 +221,20 @@
       },
       "default": {}
     },
-    "selectedAssemblies": {
-      "description": "List of assemblies from the library to include in this panel.",
+    "selectedSubAssemblies": {
+      "description": "List of sub-assemblies from the library to include in this panel.",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "assemblyId": {
-            "description": "Links to the assemblyId in assembly_schema.json.",
+          "subAssemblyId": {
+            "description": "Links to the subAssemblyId in sub_assembly_schema.json.",
             "type": "string"
           },
           "quantity": { "type": "integer", "default": 1 },
           "customName": { "type": "string" },
           "configuration": {
-            "description": "Key-value pairs for assembly-specific options.",
+            "description": "Key-value pairs for sub-assembly-specific options.",
             "type": "object",
             "additionalProperties": true
           },
@@ -247,7 +247,7 @@
             "items": { "type": "string" }
           }
         },
-        "required": ["assemblyId", "quantity"]
+        "required": ["subAssemblyId", "quantity"]
       },
       "default": []
     },
@@ -266,6 +266,113 @@
         "required": ["id", "name", "cost"]
       },
       "default": []
+    },
+    "bom": {
+      "description": "Legacy BOM structure - array of sub-assembly IDs with quantities. Deprecated in favor of operationalItems.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assemblyId": { 
+            "type": "string",
+            "description": "Legacy field - use subAssemblyId in new code. Maintained for backward compatibility."
+          },
+          "subAssemblyId": {
+            "type": "string",
+            "description": "Sub-assembly ID linking to sub_assembly_schema.json"
+          },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "notes": { "type": "string" }
+        },
+        "required": ["quantity"]
+      },
+      "default": []
+    },
+    "operationalItems": {
+      "description": "Consolidated list of operational items (components) with quantities, pricing, and presentation attributes.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku": { "type": "string" },
+          "description": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "unitPrice": { "type": "number", "minimum": 0 },
+          "totalPrice": { "type": "number", "minimum": 0 },
+          "vendor": { "type": "string" },
+          "vndrnum": { "type": "string" },
+          "category": { "type": "string" },
+          "sectionGroup": {
+            "type": "string",
+            "enum": ["Hardware", "Components", "Labor", "Other"],
+            "description": "Grouping for quote document presentation"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Human-readable name for quote document (e.g., 'Main PLC', 'VFD Starter - Motor 1')"
+          },
+          "sourceSubAssembly": {
+            "type": "string",
+            "description": "Sub-assembly ID that contributed this component (if applicable)"
+          },
+          "sourceRule": {
+            "type": "string",
+            "description": "Rule ID that generated this component (if applicable, e.g., 'ioFieldRule.motor_vfd')"
+          },
+          "notes": { "type": "string" }
+        },
+        "required": ["sku", "quantity", "unitPrice", "totalPrice"]
+      },
+      "default": []
+    },
+    "validationErrors": {
+      "description": "Configuration validation errors and warnings.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": { "type": "string", "enum": ["error", "warning", "info"] },
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "field": { "type": "string" },
+          "suggestion": { "type": "string" }
+        },
+        "required": ["severity", "code", "message"]
+      },
+      "default": []
+    },
+    "pricing": {
+      "description": "Calculated pricing breakdown for this quote.",
+      "type": "object",
+      "properties": {
+        "materialCost": { "type": "number", "minimum": 0 },
+        "laborCost": { "type": "number", "minimum": 0 },
+        "totalCOGS": { "type": "number", "minimum": 0 },
+        "finalPrice": { "type": "number", "minimum": 0 },
+        "marginPercent": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "default": {
+        "materialCost": 0,
+        "laborCost": 0,
+        "totalCOGS": 0,
+        "finalPrice": 0,
+        "marginPercent": 0
+      }
+    },
+    "pipedrive_deal_id": {
+      "description": "Pipedrive deal ID if this quote is linked to a Pipedrive deal (Phase 2 integration).",
+      "type": ["string", "null"],
+      "default": null
+    },
+    "pipedrive_person_id": {
+      "description": "Pipedrive person ID if this quote is linked to a Pipedrive person (Phase 2 integration).",
+      "type": ["string", "null"],
+      "default": null
+    },
+    "historical_margin_avg": {
+      "description": "Historical average margin for similar quotes (Phase 2 integration).",
+      "type": ["number", "null"],
+      "default": null
     }
   },
   "required": [

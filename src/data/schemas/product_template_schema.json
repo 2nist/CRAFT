@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Product Template",
-  "description": "Defines the configurable 'smart' form and logic for a specific Product Code.",
+  "description": "Defines the configurable 'smart' form and logic for a specific Product Code. Uses the new v2.0 Assembly (Process Card) architecture.",
   "type": "object",
   "properties": {
     "productCode": {
@@ -13,7 +13,7 @@
       "type": "string"
     },
     "estimatedBaseLaborHours": {
-      "description": "The default starting labor hours for this product, before assemblies.",
+      "description": "The default starting labor hours for this product, before assemblies and sub-assemblies.",
       "type": "number",
       "minimum": 0
     },
@@ -21,47 +21,161 @@
       "description": "Internal engineering notes about this product template.",
       "type": "string"
     },
-    "fields": {
-      "description": "The dynamic form fields for each I/O section.",
-      "type": "object",
-      "properties": {
-        "digitalIn": { "$ref": "#/definitions/fieldArray" },
-        "analogIn": { "$ref": "#/definitions/fieldArray" },
-        "digitalOut": { "$ref": "#/definitions/fieldArray" },
-        "analogOut": { "$ref": "#/definitions/fieldArray" }
-      }
-    },
     "assemblies": {
-      "description": "Assembly requirements for this product.",
-      "type": "object",
-      "properties": {
-        "required": {
-          "description": "Assemblies that are *always* added to the BOM.",
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "recommended": {
-          "description": "Assemblies recommended but not required.",
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "optional": {
-          "description": "Assemblies available to be added.",
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      }
-    }
-  },
-  "required": ["productCode", "productName", "fields", "assemblies"],
-  "definitions": {
-    "fieldArray": {
+      "description": "Array of Assembly (Process Card) objects. Each Assembly represents a configurable process unit (e.g., HLT, Mash Tun, Kettle). Each Assembly has its own I/O fields, sub-assemblies, and rules.",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "fieldName": { "type": "string" },
-          "fieldType": { "type": "string", "enum": ["Text", "Number", "Boolean", "List"] },
+          "assemblyId": {
+            "description": "Unique identifier for this Assembly (e.g., 'hlt', 'mash_tun', 'kettle').",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Human-readable name for this Assembly (e.g., 'Hot Liquor Tank (HLT)', 'Mash Tun').",
+            "type": "string"
+          },
+          "description": {
+            "description": "Description of this Assembly for use in quotes.",
+            "type": "string"
+          },
+          "allowMultiple": {
+            "description": "Whether multiple instances of this Assembly can be added to a quote.",
+            "type": "boolean",
+            "default": false
+          },
+          "features": {
+            "description": "Array of feature strings that can be selected for this Assembly in quotes.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "fields": {
+            "description": "The dynamic form fields for each I/O section for this Assembly. These fields were previously at the template level and are now scoped to each Assembly.",
+            "type": "object",
+            "properties": {
+              "digitalIn": { "$ref": "#/definitions/fieldArray" },
+              "analogIn": { "$ref": "#/definitions/fieldArray" },
+              "digitalOut": { "$ref": "#/definitions/fieldArray" },
+              "analogOut": { "$ref": "#/definitions/fieldArray" }
+            },
+            "default": {}
+          },
+          "subAssemblies": {
+            "description": "Sub-assembly requirements for this Assembly. These subAssemblyIds (like 'SA-PUMP-1HP') are attached to this specific Assembly.",
+            "type": "object",
+            "properties": {
+              "required": {
+                "description": "Sub-assembly IDs that are *always* added when this Assembly is included. These are automatically added during BOM generation.",
+                "type": "array",
+                "items": { 
+                  "type": "string",
+                  "description": "A subAssemblyId (e.g., 'SA-PUMP-1HP', 'SA-VFD-1.5HP')"
+                },
+                "default": []
+              },
+              "optional": {
+                "description": "Sub-assembly IDs that can be optionally added to this Assembly. These are recommended but not automatically added.",
+                "type": "array",
+                "items": { 
+                  "type": "string",
+                  "description": "A subAssemblyId (e.g., 'SA-PUMP-1HP', 'SA-VFD-1.5HP')"
+                },
+                "default": []
+              }
+            },
+            "default": {
+              "required": [],
+              "optional": []
+            }
+          },
+          "ioFieldRules": {
+            "description": "Rules for auto-generating components based on I/O field quantities for this Assembly. These rules are specific to this Assembly's fields.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ruleId": { 
+                  "type": "string",
+                  "description": "Unique identifier for this rule"
+                },
+                "sourceField": {
+                  "type": "string",
+                  "description": "The I/O field name that triggers component generation (e.g., 'Motor (VFD)')"
+                },
+                "quantityField": {
+                  "type": "string",
+                  "description": "Optional: If sourceField is a count field, this specifies which field provides the quantity"
+                },
+                "components": {
+                  "type": "array",
+                  "description": "Components to generate when this rule is triggered",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sku": { 
+                        "type": "string",
+                        "description": "Component SKU from the catalog"
+                      },
+                      "quantityPerUnit": { 
+                        "type": "number", 
+                        "minimum": 1,
+                        "description": "Quantity of this component per unit of the source field"
+                      },
+                      "displayName": { 
+                        "type": "string",
+                        "description": "Optional display name for this component in the BOM"
+                      },
+                      "sectionGroup": { 
+                        "type": "string",
+                        "description": "Optional section group for BOM organization (e.g., 'Hardware', 'Components', 'Labor')"
+                      }
+                    },
+                    "required": ["sku", "quantityPerUnit"]
+                  }
+                },
+                "condition": {
+                  "type": "object",
+                  "description": "Optional conditions for this rule (e.g., panelConfig.voltage must be '480V'). If conditions are not met, the rule is skipped.",
+                  "properties": {
+                    "panelConfig": {
+                      "type": "object",
+                      "description": "Panel configuration conditions (e.g., {voltage: '480V', phase: '3'})",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "required": ["ruleId", "sourceField", "components"]
+            },
+            "default": []
+          }
+        },
+        "required": ["assemblyId", "displayName", "fields"]
+      },
+      "default": []
+    }
+  },
+  "required": ["productCode", "productName", "assemblies"],
+  "definitions": {
+    "fieldArray": {
+      "type": "array",
+      "description": "Array of I/O field definitions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fieldName": { 
+            "type": "string",
+            "description": "The name of the field (e.g., 'Level Switch (High)', 'Motor (VFD)')"
+          },
+          "fieldType": { 
+            "type": "string", 
+            "enum": ["Text", "Number", "Boolean", "List"],
+            "description": "The type of input field"
+          },
           "defaultValue": { 
             "description": "Default value for the field",
             "oneOf": [
@@ -80,18 +194,23 @@
           },
           "listOptions": {
             "type": "array",
+            "description": "Options for List type fields",
             "items": {
               "type": "object",
               "properties": {
-                "name": { "type": "string" },
+                "name": { 
+                  "type": "string",
+                  "description": "Display name for the option"
+                },
                 "bomLogic": {
                   "type": "object",
-                  "description": "The search query to find a matching assembly.",
+                  "description": "The search query to find a matching sub-assembly when this option is selected.",
                   "properties": {
                     "category": { "type": "string" },
                     "description": { "type": "string" },
                     "amps": { "type": "number" }
-                  }
+                  },
+                  "additionalProperties": true
                 }
               },
               "required": ["name"]

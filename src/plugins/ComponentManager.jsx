@@ -94,6 +94,75 @@ export default function ComponentManager({ context, onNavigate }) {
     // TODO: Generate a CSV template with the expected column headers
   };
 
+  // Export components to CSV with optional filtering
+  const handleExportComponents = async (filterOptions = {}) => {
+    if (!components || components.length === 0) {
+      alert('No components to export.');
+      return;
+    }
+
+    try {
+      // Apply filters if provided
+      let filteredComponents = [...components];
+
+      if (filterOptions.category) {
+        filteredComponents = filteredComponents.filter(c => c.category === filterOptions.category);
+      }
+      if (filterOptions.vendor) {
+        filteredComponents = filteredComponents.filter(c => c.vendor === filterOptions.vendor);
+      }
+      if (filterOptions.hasPrice !== undefined) {
+        filteredComponents = filteredComponents.filter(c => 
+          filterOptions.hasPrice ? (c.price > 0) : (c.price === 0 || !c.price)
+        );
+      }
+      if (filterOptions.hasEngineering !== undefined) {
+        filteredComponents = filteredComponents.filter(c => {
+          const hasEngineering = c.volt || c.phase || c.amps || (c.tags && c.tags.length > 0);
+          return filterOptions.hasEngineering ? hasEngineering : !hasEngineering;
+        });
+      }
+
+      // Create CSV
+      const csvRows = [];
+      csvRows.push('SKU,Description,Category,Vendor,VN#,Price,UOM,Notes,PartAbbrev,LastPriceUpdate,EngineeringData');
+
+      filteredComponents.forEach(component => {
+        const hasEngineering = component.volt || component.phase || component.amps || (component.tags && component.tags.length > 0);
+        const engineeringData = hasEngineering ? 'Yes' : 'No';
+
+        const row = [
+          component.sku || '',
+          component.description || '',
+          component.category || '',
+          component.vendor || '',
+          component.vndrnum || '',
+          component.price || '',
+          component.uom || '',
+          component.notes || '',
+          component.partAbbrev || '',
+          component.lastPriceUpdate || '',
+          engineeringData
+        ].map(field => `"${field}"`).join(',');
+
+        csvRows.push(row);
+      });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+      const filterDesc = Object.keys(filterOptions).length > 0 ? '_filtered' : '';
+      const filename = `ComponentCatalog${filterDesc}_${timestamp}.csv`;
+
+      await window.app.writeFile(`OUTPUT/Catalog/${filename}`, csvRows.join('\n'));
+
+      addLog(`Exported ${filteredComponents.length} components to OUTPUT/Catalog/${filename}`, 'success');
+      alert(`Exported ${filteredComponents.length} components to OUTPUT/Catalog/${filename}`);
+    } catch (error) {
+      console.error('Failed to export components:', error);
+      addLog(`Export failed: ${error.message}`, 'error');
+      alert(`Failed to export components: ${error.message}`);
+    }
+  };
+
   const getLogIcon = (type) => {
     switch (type) {
       case 'error': return <AlertCircle size={16} className="text-red-500" />;
@@ -109,7 +178,7 @@ export default function ComponentManager({ context, onNavigate }) {
         <h1 className="text-3xl font-bold text-white mb-6">Component Manager</h1>
         
         {/* Action Buttons */}
-        <div className="mb-6 flex gap-4">
+        <div className="mb-6 flex gap-4 flex-wrap">
           <button 
             onClick={handleSync}
             disabled={isSyncing}
@@ -126,6 +195,27 @@ export default function ComponentManager({ context, onNavigate }) {
                 Sync from CSV
               </>
             )}
+          </button>
+          <button 
+            onClick={() => handleExportComponents()}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <Download size={18} />
+            Export All
+          </button>
+          <button 
+            onClick={() => handleExportComponents({ hasPrice: true })}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+          >
+            <Download size={18} />
+            Export Priced
+          </button>
+          <button 
+            onClick={() => handleExportComponents({ hasEngineering: true })}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+          >
+            <Download size={18} />
+            Export Engineering
           </button>
           <button 
             onClick={handleDownloadTemplate}

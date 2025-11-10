@@ -1,14 +1,143 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron'
 import path from 'path'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import Ajv from 'ajv'
 import Papa from 'papaparse'
-import crypto from 'crypto'
+
+// Note: Services are imported dynamically in IPC handlers to handle ES module resolution
+// This avoids import errors in development mode when Electron may not resolve paths correctly
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+const ENV_RUNTIME_ROOT = [
+  process.env.CTH_RUNTIME_ROOT,
+  process.env.CRAFT_TOOLS_RUNTIME_ROOT,
+  process.env.CRAFT_TOOLS_NAS_ROOT
+].find(value => typeof value === 'string' && value.trim().length > 0)
+
+const resolvedRuntimeRoot = ENV_RUNTIME_ROOT
+  ? path.resolve(ENV_RUNTIME_ROOT.trim())
+  : null
+
+const defaultRuntimeRoot = path.resolve(app.getPath('userData'), 'data')
+
+function resolveRuntimePath(targetPath = '') {
+  if (!targetPath) {
+    // For root path, try network first, then fallback to local
+    if (resolvedRuntimeRoot) {
+      try {
+        // Quick sync check - if we can access the directory, use it
+        fssync.accessSync(resolvedRuntimeRoot);
+        return resolvedRuntimeRoot;
+      } catch (err) {
+        console.log('Network runtime root not accessible, falling back to local:', err.message);
+        return defaultRuntimeRoot;
+      }
+    }
+    return defaultRuntimeRoot;
+  }
+
+  if (path.isAbsolute(targetPath)) {
+    return targetPath;
+  }
+
+  // For relative paths, try network first, then fallback to local
+  let base = defaultRuntimeRoot; // Default to local
+
+  if (resolvedRuntimeRoot) {
+    try {
+      // Quick sync check - if we can access the network directory, use it
+      fssync.accessSync(resolvedRuntimeRoot);
+      base = resolvedRuntimeRoot;
+    } catch (err) {
+      console.log('Network runtime root not accessible for path resolution, falling back to local:', err.message);
+      base = defaultRuntimeRoot;
+    }
+  }
+
+  return path.resolve(base, targetPath);
+}
+
+async function ensureDirectoryForFile(targetPath) {
+  const directory = path.dirname(targetPath)
+  await fs.mkdir(directory, { recursive: true })
+}
+
+async function getRuntimeStatus() {
+  const runtimeRoot = resolveRuntimePath()
+  const usingOverride = Boolean(resolvedRuntimeRoot)
+  const status = {
+    runtimeRoot,
+    usingOverride,
+    ok: true,
+    message: usingOverride ? 'Runtime override active.' : 'Using local runtime.',
+    buildInfo: null,
+    buildInfoFileModified: null,
+    buildInfoAgeMinutes: null
+  }
+
+  try {
+    await fs.access(runtimeRoot)
+  } catch (err) {
+    status.ok = !usingOverride
+    status.message = usingOverride
+      ? `Runtime override unavailable: ${err.message}`
+      : `Local runtime unavailable: ${err.message}`
+    status.error = err.message
+    return status
+  }
+
+  const buildInfoPath = path.join(runtimeRoot, 'build-info.json')
+
+  try {
+    const content = await fs.readFile(buildInfoPath, 'utf-8')
+    const info = JSON.parse(content)
+    status.buildInfo = info
+
+    const stats = await fs.stat(buildInfoPath)
+    status.buildInfoFileModified = stats.mtime.toISOString()
+
+    if (info?.timestampUtc) {
+      const parsed = Date.parse(info.timestampUtc)
+      if (!Number.isNaN(parsed)) {
+        status.buildInfoAgeMinutes = Math.round((Date.now() - parsed) / 60000)
+      }
+    }
+
+    if (usingOverride) {
+      const version = info?.version || 'unknown version'
+      const timestamp = info?.timestampUtc || status.buildInfoFileModified
+      status.message = `NAS build ${version} @ ${timestamp}`
+    } else {
+      status.message = 'Using local runtime'
+    }
+  } catch (err) {
+    if (usingOverride) {
+      status.ok = false
+      status.message = err.code === 'ENOENT'
+        ? 'NAS build-info.json not found'
+        : `NAS runtime error: ${err.message}`
+      status.error = err.message
+    } else {
+      status.message = 'Using local runtime'
+    }
+  }
+
+  return status
+}
+
+if (resolvedRuntimeRoot) {
+  fs.mkdir(resolvedRuntimeRoot, { recursive: true })
+    .then(() => {
+      console.log('Craft Tools Hub runtime root override active:', resolvedRuntimeRoot)
+    })
+    .catch(err => {
+      console.error('Failed to prepare runtime root override:', err)
+    })
+}
 
 // Determine if running in development mode
 const isDev = !app.isPackaged
@@ -19,8 +148,8 @@ let dataPath
 let pluginsPath
 let loadedPlugins = []
 let loadedComponents = []
-let loadedAssemblies = []
-let cachedAllAssemblies = [] // New: Cache for all assemblies
+let loadedSubAssemblies = []
+let cachedSubAssemblies = [] // Cache for all sub-assemblies
 let quoteSchema
 let quoteValidate
 
@@ -214,7 +343,7 @@ const DEFAULT_CUSTOMER_DATA = {
 
 // Initialize data storage
 async function initDataStorage() {
-  dataPath = path.join(app.getPath('userData'), 'data')
+  dataPath = path.join(defaultRuntimeRoot)
   try {
     await fs.mkdir(dataPath, { recursive: true })
     console.log('Data directory created:', dataPath)
@@ -251,6 +380,14 @@ async function loadPlugins() {
     for (const dir of pluginDirs) {
       try {
         const manifestPath = path.join(pluginsPath, dir.name, 'manifest.json')
+        // Skip directories that don't contain a manifest.json to avoid noisy ENOENT warnings
+        try {
+          await fs.access(manifestPath)
+        } catch {
+          console.log(`No manifest found for plugin directory: ${dir.name}, skipping.`)
+          continue
+        }
+
         const manifestData = await fs.readFile(manifestPath, 'utf-8')
         const manifest = JSON.parse(manifestData)
         
@@ -278,6 +415,40 @@ async function loadPlugins() {
   }
 }
 
+function sanitizeComponentCatalog(list = []) {
+  if (!Array.isArray(list)) {
+    return []
+  }
+
+  let filteredOut = 0
+
+  const sanitized = list.reduce((acc, component) => {
+    if (!component || typeof component !== 'object') {
+      filteredOut += 1
+      return acc
+    }
+
+    const rawPrice = component.price
+    const numericPrice = typeof rawPrice === 'string'
+      ? Number(rawPrice.replace(/[$,]/g, ''))
+      : Number(rawPrice)
+
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      filteredOut += 1
+      return acc
+    }
+
+    acc.push({ ...component, price: numericPrice })
+    return acc
+  }, [])
+
+  if (filteredOut > 0) {
+    console.log(`Filtered ${filteredOut} components with no valid price`)
+  }
+
+  return sanitized
+}
+
 // Load component catalog from bundled data
 async function loadComponents() {
   try {
@@ -286,7 +457,8 @@ async function loadComponents() {
     
     try {
       const syncedData = await fs.readFile(syncedPath, 'utf-8');
-      loadedComponents = JSON.parse(syncedData);
+      const parsed = JSON.parse(syncedData);
+      loadedComponents = sanitizeComponentCatalog(parsed);
       console.log(`Loaded ${loadedComponents.length} components from synced catalog`);
       return loadedComponents;
     } catch (syncErr) {
@@ -302,7 +474,8 @@ async function loadComponents() {
     }
     
     const data = await fs.readFile(componentsPath, 'utf-8');
-    loadedComponents = JSON.parse(data);
+    const parsed = JSON.parse(data);
+    loadedComponents = sanitizeComponentCatalog(parsed);
     console.log(`Loaded ${loadedComponents.length} components from bundled catalog`);
     return loadedComponents;
   } catch (err) {
@@ -311,22 +484,32 @@ async function loadComponents() {
   }
 }
 
-// Load assemblies from bundled data
-async function loadAssemblies() {
+// Load sub-assemblies from bundled data
+async function loadSubAssemblies() {
   try {
-    let assembliesPath
-    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-      assembliesPath = path.join(__dirname, '..', 'src', 'data', 'assemblies', 'assemblies.json')
-    } else {
-      assembliesPath = path.join(process.resourcesPath, 'data', 'assemblies', 'assemblies.json')
+    // Check if bundled sub-assemblies should be disabled for production
+    const disableBundledSubAssemblies = process.env.DISABLE_BUNDLED_SUBASSEMBLIES === 'true' ||
+                                       process.env.NODE_ENV === 'production' && !process.env.FORCE_LOAD_BUNDLED_SUBASSEMBLIES;
+
+    if (disableBundledSubAssemblies) {
+      console.log('Bundled sub-assemblies disabled for production environment');
+      loadedSubAssemblies = [];
+      return loadedSubAssemblies;
     }
-    
-    const data = await fs.readFile(assembliesPath, 'utf-8')
-    loadedAssemblies = JSON.parse(data)
-    console.log(`Loaded ${loadedAssemblies.length} assemblies from library`)
-    return loadedAssemblies
+
+    let subAssembliesPath
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      subAssembliesPath = path.join(__dirname, '..', 'src', 'data', 'sub-assemblies', 'sub_assemblies.json')
+    } else {
+      subAssembliesPath = path.join(process.resourcesPath, 'data', 'sub-assemblies', 'sub_assemblies.json')
+    }
+
+    const data = await fs.readFile(subAssembliesPath, 'utf-8')
+    loadedSubAssemblies = JSON.parse(data)
+    console.log(`Loaded ${loadedSubAssemblies.length} sub-assemblies from library`)
+    return loadedSubAssemblies
   } catch (err) {
-    console.error('Error loading assemblies:', err)
+    console.error('Error loading sub-assemblies:', err)
     return []
   }
 }
@@ -350,12 +533,26 @@ async function writeJSONFile(filename, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
 }
 
+function csvEscape(value) {
+  if (value === undefined || value === null) {
+    return ''
+  }
+
+  const stringValue = typeof value === 'string' ? value : String(value)
+  if (stringValue.includes('"') || stringValue.includes(',') || /[\r\n]/.test(stringValue)) {
+    return `"${stringValue.replace(/"/g, '""')}"`
+  }
+
+  return stringValue
+}
+
 // CSV export helper
 async function appendProjectToCSV(project) {
-  const csvPath = path.join(dataPath, 'projects_log.csv')
-  const headers = 'ID,Project Number,Quote Number,PO Number,Customer,Industry,Product,Control,Scope,Created At\n'
-  
-  // Check if file exists
+  const csvPath = resolveRuntimePath(path.join('OUTPUT', 'quote_project_log.csv'))
+  const headers = 'ID,Project Number,Quote Number,Project Name,Customer,Industry,Product,Control,Scope,PO Number,Created At\n'
+
+  await ensureDirectoryForFile(csvPath)
+
   let fileExists = false
   try {
     await fs.access(csvPath)
@@ -363,15 +560,121 @@ async function appendProjectToCSV(project) {
   } catch {
     // File doesn't exist
   }
-  
-  // Write headers if file doesn't exist
+
   if (!fileExists) {
     await fs.writeFile(csvPath, headers, 'utf-8')
   }
-  
-  // Append project row
-  const row = `${project.id},${project.projectNumber},${project.quoteNumber},${project.poNumber || ''},${project.customer},${project.industry},${project.product},${project.control},${project.scope},${project.createdAt}\n`
+
+  const rowValues = [
+    project.id || '',
+    project.projectNumber || '',
+    project.quoteNumber || '',
+    project.projectName || '',
+    project.customer || '',
+    project.industry || '',
+    project.product || '',
+    project.control || '',
+    project.scope || '',
+    project.poNumber || '',
+    project.createdAt || new Date().toISOString()
+  ]
+
+  const row = `${rowValues.map(csvEscape).join(',')}\n`
   await fs.appendFile(csvPath, row, 'utf-8')
+}
+
+async function writeQuoteSnapshotCSV(quoteObject) {
+  if (!quoteObject) {
+    return
+  }
+
+  const rawIdentifier = (quoteObject.quoteId || quoteObject.id || 'quote').toString()
+  const safeIdentifier = rawIdentifier.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'quote'
+  const timestamp = new Date().toISOString()
+  const safeTimestamp = timestamp.replace(/[:.]/g, '-').replace(/\s+/g, '_')
+
+  const quotesDir = resolveRuntimePath(path.join('OUTPUT', 'quotes'))
+  const historyDir = resolveRuntimePath(path.join('OUTPUT', 'quotes', 'history'))
+  const currentPath = path.join(quotesDir, `${safeIdentifier}.csv`)
+  const historicalPath = path.join(historyDir, `${safeIdentifier}_${safeTimestamp}.csv`)
+
+  const summaryPairs = [
+    ['Quote ID', quoteObject.quoteId || ''],
+    ['Project Name', quoteObject.projectName || ''],
+    ['Customer', quoteObject.customer || ''],
+    ['Sales Rep', quoteObject.salesRep || ''],
+    ['Status', quoteObject.status || ''],
+    ['Industry Code', quoteObject.projectCodes?.industry || ''],
+    ['Product Code', quoteObject.projectCodes?.product || ''],
+    ['Control Code', quoteObject.projectCodes?.control || ''],
+    ['Scope Code', quoteObject.projectCodes?.scope || ''],
+    ['Material Cost', Number(quoteObject.pricing?.materialCost || 0).toFixed(2)],
+    ['Labor Cost', Number(quoteObject.pricing?.laborCost || 0).toFixed(2)],
+    ['Total COGS', Number(quoteObject.pricing?.totalCOGS || 0).toFixed(2)],
+    ['Margin Percent', Number(quoteObject.pricing?.marginPercent || 0).toFixed(2)],
+    ['Sell Price', Number(quoteObject.pricing?.finalPrice || 0).toFixed(2)],
+    ['Operational Item Count', Array.isArray(quoteObject.operationalItems) ? quoteObject.operationalItems.length : 0],
+    ['Last Updated', timestamp]
+  ]
+
+  const lines = ['Field,Value']
+  summaryPairs.forEach(([key, value]) => {
+    lines.push(`${csvEscape(key)},${csvEscape(value)}`)
+  })
+
+  const operationalItems = Array.isArray(quoteObject.operationalItems) ? quoteObject.operationalItems : []
+
+  lines.push('')
+
+  if (operationalItems.length > 0) {
+    const itemHeader = [
+      'SKU',
+      'Description',
+      'Display Name',
+      'Quantity',
+      'Unit Price',
+      'Total Price',
+      'Vendor',
+      'VN#',
+      'Category',
+      'Section Group',
+      'Source Assembly',
+      'Source Rule',
+      'Notes'
+    ]
+
+    lines.push(itemHeader.map(csvEscape).join(','))
+
+    operationalItems.forEach(item => {
+      const row = [
+        item?.sku || '',
+        item?.description || '',
+        item?.displayName || '',
+        item?.quantity ?? 0,
+        typeof item?.unitPrice === 'number' ? item.unitPrice.toFixed(2) : item?.unitPrice || '',
+        typeof item?.totalPrice === 'number' ? item.totalPrice.toFixed(2) : item?.totalPrice || '',
+        item?.vendor || '',
+        item?.vndrnum || '',
+        item?.category || '',
+        item?.sectionGroup || '',
+        item?.sourceAssembly || '',
+        item?.sourceRule || '',
+        item?.notes || ''
+      ]
+
+      lines.push(row.map(csvEscape).join(','))
+    })
+  } else {
+    lines.push(csvEscape('No operational items generated'))
+  }
+
+  const csvContent = lines.join('\n')
+
+  await ensureDirectoryForFile(currentPath)
+  await fs.writeFile(currentPath, csvContent, 'utf-8')
+
+  await ensureDirectoryForFile(historicalPath)
+  await fs.writeFile(historicalPath, csvContent, 'utf-8')
 }
 
 function createSplashWindow() {
@@ -462,13 +765,35 @@ function createSplashWindow() {
 }
 
 function createWindow() {
+  // Determine preload script path
+  // In production, use built preload.cjs
+  // In development, prefer built preload.cjs if it exists, otherwise use source preload.js
+  let preloadPath
+  if (app.isPackaged) {
+    preloadPath = path.join(__dirname, 'preload.cjs')
+  } else {
+    // Check if built version exists (from dist-electron), otherwise use source
+    const builtPreload = path.join(__dirname, '..', 'dist-electron', 'preload.cjs')
+    const sourcePreload = path.join(__dirname, 'preload.js')
+    
+    try {
+      // Try to use built version if it exists
+      if (fssync.existsSync(builtPreload)) {
+        preloadPath = builtPreload
+      } else {
+        preloadPath = sourcePreload
+      }
+    } catch {
+      preloadPath = sourcePreload
+    }
+  }
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false, // Don't show until ready
     webPreferences: {
-      // Use CommonJS preload bundle
-      preload: path.join(__dirname, 'preload.cjs'),
+      preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
@@ -478,7 +803,7 @@ function createWindow() {
 
   // In development, load from Vite dev server; in production, load from dist folder
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.loadURL('http://localhost:5174')
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -564,7 +889,7 @@ app.whenReady().then(async () => {
   await initPluginsDirectory()
   await loadPlugins()
   await loadComponents()
-  await loadAssemblies()
+  await loadSubAssemblies()
   
   // Load quote schema
   let quoteSchemaPath
@@ -578,9 +903,9 @@ app.whenReady().then(async () => {
   const ajv = new Ajv()
   quoteValidate = ajv.compile(quoteSchema)
   
-  // Populate cachedAllAssemblies after initial loads
-  cachedAllAssemblies = await getAllAssemblies();
-  console.log(`Cached ${cachedAllAssemblies.length} assemblies.`);
+  // Populate cached sub-assemblies after initial loads
+  cachedSubAssemblies = await getAllSubAssemblies();
+  console.log(`Cached ${cachedSubAssemblies.length} sub-assemblies.`);
   
   createMenu();
   createWindow()
@@ -872,11 +1197,18 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
       }
     }
 
+    const sanitizedCatalog = sanitizeComponentCatalog(masterCatalog)
+    const removedCount = masterCatalog.length - sanitizedCatalog.length
+
     // 4. Write the updated catalog back to disk
-    await fs.writeFile(catalogPath, JSON.stringify(masterCatalog, null, 2));
+    await fs.writeFile(catalogPath, JSON.stringify(sanitizedCatalog, null, 2));
     
     // 5. Reload components into memory
-    loadedComponents = masterCatalog;
+    loadedComponents = sanitizedCatalog;
+
+    if (removedCount > 0) {
+      console.log(`Excluded ${removedCount} catalog entries with missing pricing during sync`)
+    }
 
     return { success: true, updated: updatedCount, added: newCount };
   } catch (error) {
@@ -885,122 +1217,203 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
   }
 });
 
-// Assembly IPC handlers
+// Sub-Assembly IPC handlers
 
-// Get all assemblies (user data + bundled)
-// Helper to get all assemblies (bundled + user)
-async function getAllAssemblies() {
+// Get all sub-assemblies (user data + bundled)
+// Helper to get all sub-assemblies (bundled + user)
+async function getAllSubAssemblies() {
   try {
-    // Load from root assemblies.json (where save writes to)
-    let userAssemblies = await readJSONFile('assemblies.json') || [];
-    const assembliesPath = path.join(dataPath, 'assemblies.json');
-    console.log(`Loaded ${userAssemblies.length} user assemblies from: ${assembliesPath}`);
+    // Load from root sub_assemblies.json (where save writes to)
+    let userSubAssemblies = await readJSONFile('sub_assemblies.json') || [];
+    const subAssembliesPath = path.join(dataPath, 'sub_assemblies.json');
+    console.log(`Loaded ${userSubAssemblies.length} user sub-assemblies from: ${subAssembliesPath}`);
     
-    // Merge with bundled assemblies (user assemblies take precedence)
-    const allAssemblies = [...loadedAssemblies];
+    // Start with bundled sub-assemblies and mark them as bundled
+    const allSubAssemblies = loadedSubAssemblies.map(assembly => ({
+      ...assembly,
+      isBundled: true,
+      isUserCreated: false
+    }));
     
-    // Add or update with user assemblies
-    for (const userAssembly of userAssemblies) {
-      const existingIndex = allAssemblies.findIndex(a => a.assemblyId === userAssembly.assemblyId);
+    // Add or update with user sub-assemblies (mark them as user-created)
+    // Support both assemblyId (legacy) and subAssemblyId (new) for matching
+    for (const userSubAssembly of userSubAssemblies) {
+      const userAssemblyId = userSubAssembly.subAssemblyId || userSubAssembly.assemblyId;
+      const existingIndex = allSubAssemblies.findIndex(a => {
+        const existingId = a.subAssemblyId || a.assemblyId;
+        return existingId === userAssemblyId;
+      });
       if (existingIndex >= 0) {
-        allAssemblies[existingIndex] = userAssembly;
+        // User sub-assembly overrides bundled one
+        allSubAssemblies[existingIndex] = {
+          ...userSubAssembly,
+          isBundled: false,
+          isUserCreated: true
+        };
       } else {
-        allAssemblies.push(userAssembly);
+        // New user sub-assembly
+        allSubAssemblies.push({
+          ...userSubAssembly,
+          isBundled: false,
+          isUserCreated: true
+        });
       }
     }
     
-    console.log(`Total assemblies after merge: ${allAssemblies.length} (${loadedAssemblies.length} bundled + ${userAssemblies.length} user)`);
-    return allAssemblies;
+    console.log(`Total sub-assemblies after merge: ${allSubAssemblies.length} (${loadedSubAssemblies.length} bundled + ${userSubAssemblies.length} user)`);
+    return allSubAssemblies;
   } catch (err) {
-    console.error('Error loading assemblies:', err);
-    return loadedAssemblies;
+    console.error('Error loading sub-assemblies:', err);
+    return loadedSubAssemblies.map(assembly => ({
+      ...assembly,
+      isBundled: true,
+      isUserCreated: false
+    }));
   }
 }
 
-ipcMain.handle('assemblies:getAll', async () => {
-  // Return cached assemblies for performance, or rebuild if cache is empty
-  if (cachedAllAssemblies.length === 0) {
-    cachedAllAssemblies = await getAllAssemblies();
+async function expandSubAssemblyById(subAssemblyId) {
+  if (!subAssemblyId) {
+    return null;
   }
-  console.log(`Returning ${cachedAllAssemblies.length} cached assemblies`);
-  return cachedAllAssemblies;
+
+  const allAssemblies = await getAllSubAssemblies();
+  const subAssembly = allAssemblies.find(a => (a.subAssemblyId || a.assemblyId) === subAssemblyId);
+  if (!subAssembly) {
+    return null;
+  }
+
+  const expandedComponents = Array.isArray(subAssembly.components)
+    ? subAssembly.components.map(componentEntry => {
+        const quantity = Number(componentEntry.quantity) || 0;
+        const trimmedSku = componentEntry.sku?.trim();
+        const component = trimmedSku ? loadedComponents.find(c => c.sku === trimmedSku) : null;
+
+        return {
+          ...componentEntry,
+          sku: trimmedSku,
+          quantity,
+          component: component || null,
+          subtotal: component ? (component.price || 0) * quantity : 0,
+        };
+      })
+    : [];
+
+  const totalCost = expandedComponents.reduce((sum, entry) => sum + (Number(entry.subtotal) || 0), 0);
+
+  return {
+    ...subAssembly,
+    components: expandedComponents,
+    totalCost,
+    totalLaborCost: subAssembly.estimatedLaborHours || 0,
+  };
+}
+
+ipcMain.handle('sub-assemblies:getAll', async () => {
+  // Return cached assemblies for performance, or rebuild if cache is empty
+  if (cachedSubAssemblies.length === 0) {
+    cachedSubAssemblies = await getAllSubAssemblies();
+  }
+  console.log(`Returning ${cachedSubAssemblies.length} cached sub-assemblies`);
+  return cachedSubAssemblies;
 })
 
-// Save an assembly (validate against schema first)
-ipcMain.handle('assemblies:save', async (event, assemblyToSave) => {
+// Save a sub-assembly (validate against schema first)
+ipcMain.handle('sub-assemblies:save', async (event, subAssemblyToSave) => {
   try {
-    // Load assembly schema
-    let assemblySchemaPath
+    // Load sub-assembly schema
+    let subAssemblySchemaPath
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-      assemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'assembly_schema.json')
+      subAssemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'sub_assembly_schema.json')
     } else {
-      assemblySchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'assembly_schema.json')
+      subAssemblySchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'sub_assembly_schema.json')
     }
     
-    const schemaData = await fs.readFile(assemblySchemaPath, 'utf-8')
-    const assemblySchema = JSON.parse(schemaData)
+    const schemaData = await fs.readFile(subAssemblySchemaPath, 'utf-8')
+    const subAssemblySchema = JSON.parse(schemaData)
     const ajv = new Ajv()
-    const validate = ajv.compile(assemblySchema)
+    const validate = ajv.compile(subAssemblySchema)
     
-    // Validate the assembly
-    const valid = validate(assemblyToSave)
+    // Validate the sub-assembly
+    // Support both assemblyId (legacy) and subAssemblyId (new) for backward compatibility
+    const subAssemblyData = {
+      ...subAssemblyToSave,
+      subAssemblyId: subAssemblyToSave.subAssemblyId || subAssemblyToSave.assemblyId
+    }
+    const valid = validate(subAssemblyData)
     if (!valid) {
       return { success: false, errors: validate.errors }
     }
     
-    // Load existing user assemblies
-    let userAssemblies = await readJSONFile('assemblies.json') || []
+    // Load existing user sub-assemblies
+    let userSubAssemblies = await readJSONFile('sub_assemblies.json') || []
     
     // Find and replace or add new
-    const existingIndex = userAssemblies.findIndex(a => a.assemblyId === assemblyToSave.assemblyId)
+    // Support both assemblyId and subAssemblyId for lookup
+    const targetId = subAssemblyData.subAssemblyId || subAssemblyData.assemblyId
+    const existingIndex = userSubAssemblies.findIndex(a => 
+      (a.subAssemblyId || a.assemblyId) === targetId
+    )
     if (existingIndex >= 0) {
-      userAssemblies[existingIndex] = assemblyToSave
+      userSubAssemblies[existingIndex] = subAssemblyData
     } else {
-      userAssemblies.push(assemblyToSave)
+      userSubAssemblies.push(subAssemblyData)
     }
     
     // Save back to file
-    const savePath = path.join(dataPath, 'assemblies.json')
-    await writeJSONFile('assemblies.json', userAssemblies)
-    console.log(`✓ Assembly saved to: ${savePath}`)
-    console.log(`  - Assembly ID: ${assemblyToSave.assemblyId}`)
-    console.log(`  - Description: ${assemblyToSave.description}`)
-    console.log(`  - Category: ${assemblyToSave.category}`)
-    console.log(`  - Total assemblies in file: ${userAssemblies.length}`)
+    const savePath = path.join(dataPath, 'sub_assemblies.json')
+    await writeJSONFile('sub_assemblies.json', userSubAssemblies)
+    console.log(`✓ Sub-Assembly saved to: ${savePath}`)
+    console.log(`  - Sub-Assembly ID: ${targetId}`)
+    console.log(`  - Description: ${subAssemblyData.description}`)
+    console.log(`  - Category: ${subAssemblyData.category}`)
+    console.log(`  - Total sub-assemblies in file: ${userSubAssemblies.length}`)
     
     // Refresh the cache
-    cachedAllAssemblies = await getAllAssemblies()
-    console.log(`✓ Cache refreshed with ${cachedAllAssemblies.length} assemblies`)
+    cachedSubAssemblies = await getAllSubAssemblies()
+    console.log(`✓ Cache refreshed with ${cachedSubAssemblies.length} sub-assemblies`)
     
-    return { success: true, data: assemblyToSave }
+    return { success: true, data: subAssemblyData }
   } catch (err) {
-    console.error('Error saving assembly:', err)
+    console.error('Error saving sub-assembly:', err)
     throw err
   }
 })
 
-// Delete an assembly
-ipcMain.handle('assemblies:delete', async (event, assemblyId) => {
+// Delete a sub-assembly
+ipcMain.handle('sub-assemblies:delete', async (event, subAssemblyId) => {
   try {
-    let userAssemblies = await readJSONFile('assemblies.json') || []
-    const initialLength = userAssemblies.length
-    userAssemblies = userAssemblies.filter(a => a.assemblyId !== assemblyId)
-    await writeJSONFile('assemblies.json', userAssemblies)
-    
-    // Refresh the cache
-    cachedAllAssemblies = await getAllAssemblies()
-    console.log(`Assembly deleted and cache refreshed: ${assemblyId}`)
-    
-    return { success: true, changes: initialLength - userAssemblies.length }
+    let userSubAssemblies = await readJSONFile('sub_assemblies.json') || []
+    const initialLength = userSubAssemblies.length
+
+    // Check if this sub-assembly exists in user data (only user-created sub-assemblies can be deleted)
+    const userSubAssembly = userSubAssemblies.find(a =>
+      (a.subAssemblyId || a.assemblyId) === subAssemblyId
+    )
+
+    if (!userSubAssembly) {
+      // This is a bundled sub-assembly that cannot be deleted
+      return { success: false, error: 'Cannot delete bundled sub-assembly. Only user-created sub-assemblies can be deleted.' }
+    }
+
+    // Support both assemblyId and subAssemblyId for deletion
+    userSubAssemblies = userSubAssemblies.filter(a =>
+      (a.subAssemblyId || a.assemblyId) !== subAssemblyId
+    )
+    await writeJSONFile('sub_assemblies.json', userSubAssemblies)
+
+    // Clear the cache to force a fresh load
+    cachedSubAssemblies = []
+    console.log(`Sub-Assembly deleted and cache cleared: ${subAssemblyId}`)
+
+    return { success: true, changes: initialLength - userSubAssemblies.length }
   } catch (err) {
-    console.error('Error deleting assembly:', err)
+    console.error('Error deleting sub-assembly:', err)
     throw err
   }
-})
-
-// Search assemblies by filters
-ipcMain.handle('assemblies:search', async (event, filters) => {
-  let results = cachedAllAssemblies;
+})// Search sub-assemblies by filters
+ipcMain.handle('sub-assemblies:search', async (event, filters) => {
+  let results = cachedSubAssemblies;
 
   if (filters.category) {
     results = results.filter(a => a.category?.toLowerCase().includes(filters.category.toLowerCase()))
@@ -1008,8 +1421,13 @@ ipcMain.handle('assemblies:search', async (event, filters) => {
   if (filters.type) {
     results = results.filter(a => a.attributes?.type?.toLowerCase().includes(filters.type.toLowerCase()))
   }
-  if (filters.assemblyId) {
-    results = results.filter(a => a.assemblyId?.toLowerCase().includes(filters.assemblyId.toLowerCase()))
+  // Support both assemblyId and subAssemblyId for search
+  if (filters.assemblyId || filters.subAssemblyId) {
+    const searchId = (filters.subAssemblyId || filters.assemblyId).toLowerCase()
+    results = results.filter(a => {
+      const id = (a.subAssemblyId || a.assemblyId)?.toLowerCase()
+      return id?.includes(searchId)
+    })
   }
   if (filters.description) {
     results = results.filter(a => a.description?.toLowerCase().includes(filters.description.toLowerCase()))
@@ -1017,11 +1435,11 @@ ipcMain.handle('assemblies:search', async (event, filters) => {
 
   return results
 })
-ipcMain.handle('assemblies:searchMany', async (event, filtersArray) => {
-  const matchingAssemblyIds = new Set();
+ipcMain.handle('sub-assemblies:searchMany', async (event, filtersArray) => {
+  const matchingSubAssemblyIds = new Set();
 
   for (const filters of filtersArray) {
-    let results = cachedAllAssemblies;
+    let results = cachedSubAssemblies;
 
     if (filters.category) {
       results = results.filter(a => a.category?.toLowerCase().includes(filters.category.toLowerCase()))
@@ -1029,56 +1447,42 @@ ipcMain.handle('assemblies:searchMany', async (event, filtersArray) => {
     if (filters.type) {
       results = results.filter(a => a.attributes?.type?.toLowerCase().includes(filters.type.toLowerCase()))
     }
-    if (filters.assemblyId) {
-      results = results.filter(a => a.assemblyId?.toLowerCase().includes(filters.assemblyId.toLowerCase()))
+    // Support both assemblyId and subAssemblyId for search
+    if (filters.assemblyId || filters.subAssemblyId) {
+      const searchId = (filters.subAssemblyId || filters.assemblyId).toLowerCase()
+      results = results.filter(a => {
+        const id = (a.subAssemblyId || a.assemblyId)?.toLowerCase()
+        return id?.includes(searchId)
+      })
     }
     if (filters.description) {
       results = results.filter(a => a.description?.toLowerCase().includes(filters.description.toLowerCase()))
     }
 
-    results.forEach(asm => matchingAssemblyIds.add(asm.assemblyId));
+    results.forEach(asm => {
+      const id = asm.subAssemblyId || asm.assemblyId
+      if (id) matchingSubAssemblyIds.add(id)
+    })
   }
 
-  return Array.from(matchingAssemblyIds);
+  return Array.from(matchingSubAssemblyIds);
 });
 
-// Get assembly by ID
-ipcMain.handle('assemblies:getById', async (event, assemblyId) => {
-  const allAssemblies = await getAllAssemblies();
-  return allAssemblies.find(a => a.assemblyId === assemblyId) || null
+// Get sub-assembly by ID
+ipcMain.handle('sub-assemblies:getById', async (event, subAssemblyId) => {
+  const allAssemblies = await getAllSubAssemblies();
+  // Support both assemblyId and subAssemblyId for lookup
+  return allAssemblies.find(a => (a.subAssemblyId || a.assemblyId) === subAssemblyId) || null
 })
 
-// Expand assembly with full component details and calculate total cost
-ipcMain.handle('assemblies:expand', async (event, assemblyId) => {
-  const allAssemblies = await getAllAssemblies();
-  const assembly = allAssemblies.find(a => a.assemblyId === assemblyId)
-  if (!assembly) return null
-  
-  const expandedComponents = assembly.components.map(ac => {
-    // Trim SKU to handle whitespace issues
-    const trimmedSku = ac.sku?.trim();
-    const component = loadedComponents.find(c => c.sku === trimmedSku);
-    return {
-      ...ac,
-      sku: trimmedSku, // Use trimmed SKU
-      component: component || null,
-      subtotal: component ? (component.price || 0) * ac.quantity : 0
-    }
-  })
-  
-  const totalCost = expandedComponents.reduce((sum, ec) => sum + ec.subtotal, 0)
-  
-  return {
-    ...assembly,
-    components: expandedComponents,
-    totalCost,
-    totalLaborCost: assembly.estimatedLaborHours || 0
-  }
+// Expand sub-assembly with full component details and calculate total cost
+ipcMain.handle('sub-assemblies:expand', async (event, subAssemblyId) => {
+  return await expandSubAssemblyById(subAssemblyId);
 })
 
-// Get unique assembly categories
-ipcMain.handle('assemblies:getCategories', async () => {
-  const allAssemblies = await getAllAssemblies();
+// Get unique sub-assembly categories
+ipcMain.handle('sub-assemblies:getCategories', async () => {
+  const allAssemblies = await getAllSubAssemblies();
   const categories = [...new Set(allAssemblies.map(a => a.category).filter(Boolean))]
   return categories.sort()
 })
@@ -1093,8 +1497,17 @@ ipcMain.handle('quote:save', async (event, quoteObject) => {
   }
   const quotesDir = path.join(dataPath, 'quotes')
   await fs.mkdir(quotesDir, { recursive: true })
-  const filePath = path.join(quotesDir, `${quoteObject.quoteId}.json`)
+  const quoteIdentifier = (quoteObject.quoteId || quoteObject.id || `quote-${Date.now()}`).toString().trim() || `quote-${Date.now()}`
+  const safeQuoteIdentifier = quoteIdentifier.replace(/[\\/:*?"<>|]/g, '_')
+  const filePath = path.join(quotesDir, `${safeQuoteIdentifier}.json`)
   await fs.writeFile(filePath, JSON.stringify(quoteObject, null, 2), 'utf-8')
+
+  try {
+    await writeQuoteSnapshotCSV(quoteObject)
+  } catch (err) {
+    console.error('Failed to write quote snapshot CSV:', err)
+  }
+
   return { success: true, path: filePath }
 })
 
@@ -1142,6 +1555,275 @@ ipcMain.handle('quote:delete', async (event, quoteId) => {
     throw err
   }
 })
+
+// Evaluate sub-assembly rules from template and quote configuration
+ipcMain.handle('quotes:evaluate-subassembly-rules', async (event, quoteObject) => {
+  try {
+    // Dynamically import service to handle ES module resolution
+    let servicePath
+    if (app.isPackaged) {
+      servicePath = path.join(process.resourcesPath, 'src', 'services', 'SubAssemblyRuleEngine.js')
+    } else {
+      servicePath = path.join(__dirname, '..', 'src', 'services', 'SubAssemblyRuleEngine.js')
+    }
+    
+    // Verify file exists
+    try {
+      await fs.access(servicePath)
+    } catch {
+      throw new Error(`Service file not found: ${servicePath}`)
+    }
+    
+    const serviceURL = pathToFileURL(servicePath).href
+    const { default: SubAssemblyRuleEngine } = await import(serviceURL)
+    
+    // Load template if product code is available
+    let template = null
+    if (quoteObject?.projectCodes?.product) {
+      try {
+        const userTemplatePath = path.join(dataPath, 'product-templates', `${quoteObject.projectCodes.product}.json`)
+        let templatePath = ''
+        
+        try {
+          await fs.access(userTemplatePath)
+          templatePath = userTemplatePath
+        } catch {
+          const srcDir = app.isPackaged
+            ? path.join(process.resourcesPath, 'src')
+            : path.join(__dirname, '..', 'src')
+          const bundledTemplatePath = path.join(srcDir, 'data', 'product-templates', `${quoteObject.projectCodes.product}.json`)
+          
+          try {
+            await fs.access(bundledTemplatePath)
+            templatePath = bundledTemplatePath
+          } catch {
+            // Template not found, continue without it
+          }
+        }
+        
+        if (templatePath) {
+          const data = await fs.readFile(templatePath, 'utf-8')
+          template = JSON.parse(data)
+          
+          // Apply template migration to ensure v2.0 structure
+          let migrationServicePath
+          if (app.isPackaged) {
+            migrationServicePath = path.join(process.resourcesPath, 'src', 'services', 'TemplateMigrationService.js')
+          } else {
+            migrationServicePath = path.join(__dirname, '..', 'src', 'services', 'TemplateMigrationService.js')
+          }
+          
+          try {
+            const migrationURL = pathToFileURL(migrationServicePath).href
+            const { migrateTemplate } = await import(migrationURL)
+            template = migrateTemplate(template)
+          } catch (migrationError) {
+            console.warn('Error migrating template for rule evaluation:', migrationError)
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading template for rule evaluation:', err)
+      }
+    }
+
+    // Evaluate sub-assembly rules
+    const result = SubAssemblyRuleEngine.evaluateSubAssemblyRules(template, quoteObject)
+
+    return {
+      success: true,
+      requiredSubAssemblies: result.requiredSubAssemblies || [],
+      recommendedSubAssemblies: result.recommendedSubAssemblies || []
+    }
+  } catch (error) {
+    console.error('Error evaluating sub-assembly rules:', error)
+    return {
+      success: false,
+      error: error.message,
+      requiredSubAssemblies: [],
+      recommendedSubAssemblies: []
+    }
+  }
+})
+
+// Generate operational items from quote configuration
+ipcMain.handle('quotes:generate-oi', async (event, quoteObject) => {
+  try {
+    // Dynamically import service to handle ES module resolution
+    // Use pathToFileURL for proper file:// URL conversion
+    let servicePath
+    if (app.isPackaged) {
+      // In production, use resources path
+      servicePath = path.join(process.resourcesPath, 'src', 'services', 'BOMGenerationService.js')
+    } else {
+      // In development, use relative path from electron/ directory
+      servicePath = path.join(__dirname, '..', 'src', 'services', 'BOMGenerationService.js')
+    }
+    
+    // Verify file exists
+    try {
+      await fs.access(servicePath)
+    } catch {
+      throw new Error(`Service file not found: ${servicePath}`)
+    }
+    
+    const serviceURL = pathToFileURL(servicePath).href
+    const { default: BOMGenerationService } = await import(serviceURL)
+    
+    // Load all necessary data
+    const allAssemblies = await getAllSubAssemblies()
+    const allComponents = loadedComponents
+    
+    // Load template if product code is available
+    let template = null
+    if (quoteObject?.projectCodes?.product) {
+      try {
+        // Use the same template loading logic as product-templates:get handler
+        // This ensures template migration is applied
+        const userTemplatePath = path.join(dataPath, 'product-templates', `${quoteObject.projectCodes.product}.json`)
+        let templatePath = ''
+        
+        try {
+          await fs.access(userTemplatePath)
+          templatePath = userTemplatePath
+        } catch {
+          // Fall back to bundled templates
+          const srcDir = app.isPackaged
+            ? path.join(process.resourcesPath, 'src')
+            : path.join(__dirname, '..', 'src')
+          const bundledTemplatePath = path.join(srcDir, 'data', 'product-templates', `${quoteObject.projectCodes.product}.json`)
+          
+          try {
+            await fs.access(bundledTemplatePath)
+            templatePath = bundledTemplatePath
+          } catch {
+            // Template not found, continue without it
+          }
+        }
+        
+        if (templatePath) {
+          const data = await fs.readFile(templatePath, 'utf-8')
+          template = JSON.parse(data)
+          
+          // Apply template migration to ensure v2.0 structure
+          let migrationServicePath
+          if (app.isPackaged) {
+            migrationServicePath = path.join(process.resourcesPath, 'src', 'services', 'TemplateMigrationService.js')
+          } else {
+            migrationServicePath = path.join(__dirname, '..', 'src', 'services', 'TemplateMigrationService.js')
+          }
+          
+          try {
+            const migrationURL = pathToFileURL(migrationServicePath).href
+            const { migrateTemplate } = await import(migrationURL)
+            template = migrateTemplate(template)
+          } catch (migrationError) {
+            console.warn('Error migrating template for OI generation:', migrationError)
+            // Continue with unmigrated template (may cause issues, but better than crashing)
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading template for OI generation:', err)
+      }
+    }
+
+    // Generate operational items
+    const operationalItems = BOMGenerationService.generateOperationalItems(
+      quoteObject,
+      allAssemblies,
+      allComponents,
+      template
+    )
+
+    return {
+      success: true,
+      operationalItems
+    }
+  } catch (error) {
+    console.error('Error generating operational items:', error)
+    return {
+      success: false,
+      error: error.message,
+      operationalItems: []
+    }
+  }
+})
+
+// Validate quote configuration
+ipcMain.handle('quotes:validate', async (event, quoteObject) => {
+  try {
+    // Dynamically import service to handle ES module resolution
+    // Use pathToFileURL for proper file:// URL conversion
+    let servicePath
+    if (app.isPackaged) {
+      servicePath = path.join(process.resourcesPath, 'src', 'services', 'ValidationService.js')
+    } else {
+      servicePath = path.join(__dirname, '..', 'src', 'services', 'ValidationService.js')
+    }
+    
+    // Verify file exists
+    try {
+      await fs.access(servicePath)
+    } catch {
+      throw new Error(`Service file not found: ${servicePath}`)
+    }
+    
+    const serviceURL = pathToFileURL(servicePath).href
+    const { default: ValidationService } = await import(serviceURL)
+    
+    // Load all necessary data
+    const allAssemblies = await getAllSubAssemblies()
+    const allComponents = loadedComponents
+    
+    // Load template if product code is available
+    let template = null
+    if (quoteObject?.projectCodes?.product) {
+      try {
+        const userFilePath = path.join(dataPath, 'product-templates', `${quoteObject.projectCodes.product}.json`)
+        try {
+          const data = await fs.readFile(userFilePath, 'utf-8')
+          template = JSON.parse(data)
+        } catch {
+          // Try source directory
+          let filePath
+          if (app.isPackaged) {
+            filePath = path.join(process.resourcesPath, 'data', 'product-templates', `${quoteObject.projectCodes.product}.json`)
+          } else {
+            filePath = path.join(__dirname, '..', 'src', 'data', 'product-templates', `${quoteObject.projectCodes.product}.json`)
+          }
+          try {
+            const data = await fs.readFile(filePath, 'utf-8')
+            template = JSON.parse(data)
+          } catch {
+            // Template not found
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading template for validation:', err)
+      }
+    }
+
+    // Validate quote configuration
+    const validationErrors = ValidationService.validateQuoteConfiguration(
+      quoteObject,
+      template,
+      allAssemblies,
+      allComponents
+    )
+
+    return {
+      success: true,
+      validationErrors
+    }
+  } catch (error) {
+    console.error('Error validating quote:', error)
+    return {
+      success: false,
+      error: error.message,
+      validationErrors: []
+    }
+  }
+})
+
 
 // Schemas IPC handlers
 
@@ -1425,38 +2107,187 @@ const MOCK_CUSTOMERS = Object.entries(DEFAULT_CUSTOMER_DATA).map(([id, name]) =>
 
 ipcMain.handle('customers:get-all', () => { return MOCK_CUSTOMERS; });
 
+// Add customer
+ipcMain.handle('customers:add', async (event, { name, isOEM }) => {
+  try {
+    // Load existing custom customers
+    const settings = await readJSONFile('settings.json') || {}
+    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {}
+    const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+    
+    // Determine the next available number
+    const existingIds = Object.keys(allCustomers).map(id => parseInt(id))
+    const rangeStart = isOEM ? 0 : 100
+    const rangeEnd = isOEM ? 99 : 999
+    
+    let nextId = rangeStart
+    for (let i = rangeStart; i <= rangeEnd; i++) {
+      if (!existingIds.includes(i)) {
+        nextId = i
+        break
+      }
+    }
+    
+    // Validate we found an available ID
+    if (nextId > rangeEnd) {
+      throw new Error(`No available ${isOEM ? 'OEM' : 'End User'} customer numbers`)
+    }
+    
+    const customerId = String(nextId).padStart(3, '0')
+    
+    // Add to custom customers
+    customCustomerData[customerId] = name
+    settings.customCustomers = JSON.stringify(customCustomerData)
+    
+    // Save to settings.json
+    await writeJSONFile('settings.json', settings)
+    
+    // Log customer creation using LoggingService
+    // Import LoggingService dynamically to avoid circular dependencies
+    let loggingService;
+    try {
+      const loggingServicePath = path.join(__dirname, '..', 'src', 'services', 'LoggingService.js');
+      const loggingServiceURL = pathToFileURL(loggingServicePath).href;
+      const { default: LoggingService } = await import(loggingServiceURL);
+      loggingService = LoggingService;
+      loggingService.logCustomerActivity('create', customerId, name, {
+        type: isOEM ? 'OEM' : 'End User',
+        source: 'settings_ui'
+      });
+    } catch (logError) {
+      console.error('Error logging customer creation:', logError);
+    }
+    
+    return { id: customerId, name, isOEM }
+  } catch (err) {
+    console.error('Error adding customer:', err)
+    throw err
+  }
+});
+
+// Delete customer
+ipcMain.handle('customers:delete', async (event, customerId) => {
+  try {
+    const settings = await readJSONFile('settings.json') || {}
+    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {}
+    
+    // Only allow deletion of custom customers (not defaults)
+    if (!customCustomerData[customerId]) {
+      throw new Error('Cannot delete default customer')
+    }
+    
+    delete customCustomerData[customerId]
+    settings.customCustomers = JSON.stringify(customCustomerData)
+    
+    await writeJSONFile('settings.json', settings)
+    return { success: true }
+  } catch (err) {
+    console.error('Error deleting customer:', err)
+    throw err
+  }
+});
+
+// Update customer
+ipcMain.handle('customers:update', async (event, { id, name }) => {
+  try {
+    const settings = await readJSONFile('settings.json') || {}
+    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {}
+    
+    // Only allow updating custom customers
+    if (!customCustomerData[id]) {
+      throw new Error('Cannot update default customer')
+    }
+    
+    customCustomerData[id] = name
+    settings.customCustomers = JSON.stringify(customCustomerData)
+    
+    await writeJSONFile('settings.json', settings)
+    return { id, name }
+  } catch (err) {
+    console.error('Error updating customer:', err)
+    throw err
+  }
+});
+
 // Product Templates IPC handlers
 
 // Get product template by product code
 ipcMain.handle('product-templates:get', async (event, productCode) => {
+  if (!productCode) {
+    return null;
+  }
+
+  let templatePath = '';
+  let template = null;
+
   try {
-    // Try user data directory FIRST (for custom/modified templates)
-    const userFilePath = path.join(dataPath, 'product-templates', `${productCode}.json`);
-    
+    // 1. Check user's custom templates directory first
+    const userTemplatePath = path.join(dataPath, 'product-templates', `${productCode}.json`);
     try {
-      const data = await fs.readFile(userFilePath, 'utf-8');
-      return JSON.parse(data);
-    } catch (userErr) {
-      // If not in user data, try source directory (for built-in templates)
-      if (userErr.code === 'ENOENT') {
-        let filePath;
-        if (app.isPackaged) {
-          filePath = path.join(process.resourcesPath, 'data', 'product-templates', `${productCode}.json`);
-        } else {
-          filePath = path.join(__dirname, '..', 'src', 'data', 'product-templates', `${productCode}.json`);
-        }
+      await fs.access(userTemplatePath);
+      templatePath = userTemplatePath;
+    } catch (err) {
+      // 2. If not found, fall back to bundled templates
+      const srcDir = app.isPackaged
+        ? path.join(process.resourcesPath, 'src') // Packaged
+        : path.join(__dirname, '..', 'src');     // Development
         
-        const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data);
+      const bundledTemplatePath = path.join(srcDir, 'data', 'product-templates', `${productCode}.json`);
+      
+      try {
+        await fs.access(bundledTemplatePath);
+        templatePath = bundledTemplatePath;
+      } catch (err2) {
+        console.warn(`No template file found for product code: ${productCode}`);
+        return null;
       }
-      throw userErr;
     }
-  } catch (err) {
-    if (err.code === 'ENOENT') {
+
+    // Read the template file
+    const data = await fs.readFile(templatePath, 'utf8');
+    if (data) {
+      template = JSON.parse(data);
+
+      // --- [NEW] V2.0 MIGRATION LOGIC ---
+      if (template) {
+        // Define path to the migration service
+        let migrationServicePath;
+        if (app.isPackaged) {
+          migrationServicePath = path.join(process.resourcesPath, 'src', 'services', 'TemplateMigrationService.js');
+        } else {
+          migrationServicePath = path.join(__dirname, '..', 'src', 'services', 'TemplateMigrationService.js');
+        }
+
+        // Convert path to file URL for ES module import
+        const serviceURL = pathToFileURL(migrationServicePath).href;
+        
+        try {
+          // Import
+          const { migrateTemplate } = await import(serviceURL);
+          
+          // Auto-migrate the template to the v2.0 structure in memory
+          const migratedTemplate = migrateTemplate(template);
+          
+          // Return the migrated, v2.0 compatible template to the UI
+          return migratedTemplate;
+        } catch (importError) {
+          console.error('Error importing TemplateMigrationService:', importError);
+          // If migration fails, return original template (better than crashing)
+          return template;
+        }
+      }
+      // --- END OF MIGRATION LOGIC ---
+    }
+    
+    // Fallback (should not be reached if migration is successful)
+    return template;
+    
+  } catch (error) {
+    if (error.code === 'ENOENT') {
       return null; // Template doesn't exist
     }
-    console.error('Error loading product template:', err);
-    throw err;
+    console.error(`Error loading product template ${productCode}:`, error);
+    return null;
   }
 })
 
@@ -1585,30 +2416,42 @@ ipcMain.handle('boms:save', async (event, bomToSave) => {
   }
 })
 
-ipcMain.handle('boms:expand-bom', async (event, { assemblies, components }) => {
+ipcMain.handle('boms:expand-bom', async (event, payload = {}) => {
   try {
+    const subAssemblyItems = Array.isArray(payload?.subAssemblies) && payload.subAssemblies.length > 0
+      ? payload.subAssemblies
+      : Array.isArray(payload?.assemblies)
+        ? payload.assemblies
+        : [];
+    const componentItems = Array.isArray(payload?.components) ? payload.components : [];
     let totalCost = 0
     
-    // Expand assemblies
-    for (const item of assemblies) {
-      const assemblyId = item.assemblyId
-      const quantity = item.quantity
-      
-      // Use the existing assemblies:expand logic
-      const expansion = await expandAssembly(assemblyId)
-      if (expansion && expansion.componentCost !== undefined) {
-        totalCost += expansion.componentCost * quantity
+    // Expand sub-assemblies
+    for (const item of subAssemblyItems) {
+      const subAssemblyId = item?.subAssemblyId || item?.assemblyId
+      const quantity = Number(item?.quantity) || 0
+
+      if (!subAssemblyId || quantity <= 0) {
+        continue
+      }
+
+      const expansion = await expandSubAssemblyById(subAssemblyId)
+      if (expansion && typeof expansion.totalCost === 'number') {
+        totalCost += expansion.totalCost * quantity
       }
     }
     
     // Expand components
-    for (const item of components) {
-      const sku = item.sku
-      const quantity = item.quantity
-      
-      // Get component price
-      const component = await getComponentBySku(sku)
-      if (component && component.price !== undefined) {
+    for (const item of componentItems) {
+      const sku = item?.sku?.trim()
+      const quantity = Number(item?.quantity) || 0
+
+      if (!sku || quantity <= 0) {
+        continue
+      }
+
+      const component = loadedComponents.find(c => c.sku === sku)
+      if (component && typeof component.price === 'number') {
         totalCost += component.price * quantity
       }
     }
@@ -1629,13 +2472,44 @@ ipcMain.handle('app:show-open-dialog', async (event, options) => {
 
 // Read file
 ipcMain.handle('app:read-file', async (event, filePath) => {
-  return fs.readFile(filePath, 'utf-8')
+  const fullPath = resolveRuntimePath(filePath)
+
+  if (resolvedRuntimeRoot) {
+    console.log(`[app:read-file] overridden root => ${fullPath}`)
+  }
+
+  return fs.readFile(fullPath, 'utf-8')
 })
 
 // Write file
 ipcMain.handle('app:write-file', async (event, filePath, content) => {
-  const fullPath = path.join(__dirname, '..', filePath)
+  const fullPath = resolveRuntimePath(filePath)
+  await ensureDirectoryForFile(fullPath)
+
+  if (resolvedRuntimeRoot) {
+    console.log(`[app:write-file] overridden root => ${fullPath}`)
+  }
+
   return fs.writeFile(fullPath, content, 'utf-8')
+})
+
+ipcMain.handle('app:log-margin-calculation', async (event, marginData) => {
+  await logMarginCalculation(marginData)
+})
+
+ipcMain.handle('runtime:get-status', async () => {
+  try {
+    return await getRuntimeStatus()
+  } catch (err) {
+    console.error('Failed to resolve runtime status:', err)
+    return {
+      runtimeRoot: resolveRuntimePath(),
+      usingOverride: Boolean(resolvedRuntimeRoot),
+      ok: false,
+      message: `Failed to resolve runtime status: ${err.message}`,
+      error: err.message
+    }
+  }
 })
 
 // Pipedrive IPC handlers
@@ -1841,14 +2715,22 @@ ipcMain.handle('api:load-plugin', async (event, pluginId, context) => {
 // Shell API handlers
 
 ipcMain.handle('shell:open-external', async (event, url) => {
-  const { shell } = require('electron');
-  shell.openExternal(url);
-  return { success: true };
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening external URL:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // Manual Management System
 const MANUALS_DIR = path.join(app.getPath('userData'), 'ComponentManuals');
 const MANUALS_INDEX = path.join(app.getPath('userData'), 'data', 'manual_index.json');
+
+function resolveManualKey(source = {}) {
+  return source.sku || source.vndrnum || source.id || null;
+}
 
 // Ensure manuals directory exists
 async function ensureManualsDir() {
@@ -1878,19 +2760,20 @@ async function saveManualIndex(index) {
 
 // Generate smart search URLs for manufacturers
 function generateSearchUrls(component) {
-  const { sku, manufacturer, vndrnum, description } = component;
+  const { sku, manufacturer, vndrnum } = component;
+  const partNumber = vndrnum || sku || '';
   const man = (manufacturer || '').toLowerCase();
   
   // Manufacturer-specific search URLs
   const manufacturerUrls = {
-    'allen bradley': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${sku || vndrnum}/en-us.pdf`,
-    'rockwell': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${sku || vndrnum}/en-us.pdf`,
-    'siemens': `https://support.industry.siemens.com/cs/ww/en/ps/${sku || vndrnum}/man`,
-    'schneider': `https://www.se.com/ww/en/search.html?q=${sku || vndrnum}+manual`,
-    'abb': `https://search.abb.com/library/Download.aspx?DocumentID=${sku || vndrnum}`,
-    'endress+hauser': `https://portal.endress.com/wa001/dla/5000000/${sku || vndrnum}.pdf`,
-    'endress hauser': `https://portal.endress.com/wa001/dla/5000000/${sku || vndrnum}.pdf`,
-    'festo': `https://www.festo.com/cat/${sku || vndrnum}`,
+    'allen bradley': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${partNumber}/en-us.pdf`,
+    'rockwell': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${partNumber}/en-us.pdf`,
+    'siemens': `https://support.industry.siemens.com/cs/ww/en/ps/${partNumber}/man`,
+    'schneider': `https://www.se.com/ww/en/search.html?q=${encodeURIComponent(partNumber)}+manual`,
+    'abb': `https://search.abb.com/library/Download.aspx?DocumentID=${partNumber}`,
+    'endress+hauser': `https://portal.endress.com/wa001/dla/5000000/${partNumber}.pdf`,
+    'endress hauser': `https://portal.endress.com/wa001/dla/5000000/${partNumber}.pdf`,
+    'festo': `https://www.festo.com/cat/${partNumber}`,
   };
   
   // Check if we have a specific manufacturer URL
@@ -1901,7 +2784,8 @@ function generateSearchUrls(component) {
   }
   
   // Fallback to Google search with specific terms
-  const searchTerm = encodeURIComponent(`${manufacturer} ${sku || vndrnum} manual pdf`);
+  const numberHint = partNumber || sku || '';
+  const searchTerm = encodeURIComponent(`${manufacturer || ''} ${numberHint} manual pdf`.trim());
   return `https://www.google.com/search?q=${searchTerm}`;
 }
 
@@ -1912,16 +2796,26 @@ ipcMain.handle('manuals:check-local', async (event, component) => {
     await ensureManualsDir();
     const index = await loadManualIndex();
     
-    const key = component.sku || component.id;
-    if (index[key] && index[key].localPath) {
-      // Check if file actually exists
-      try {
-        await fs.access(index[key].localPath);
-        return { found: true, path: index[key].localPath };
-      } catch {
-        // File was deleted, remove from index
-        delete index[key];
-        await saveManualIndex(index);
+    const key = resolveManualKey(component);
+    if (!key) {
+      return { found: false };
+    }
+    const entry = index[key];
+    if (entry) {
+      if (entry.localPath) {
+        // Check if file actually exists
+        try {
+          await fs.access(entry.localPath);
+          return { found: true, path: entry.localPath, type: 'local' };
+        } catch {
+          // File was deleted, remove the stale path reference
+          delete entry.localPath;
+          await saveManualIndex(index);
+        }
+      }
+
+      if (entry.manualUrl) {
+        return { found: true, url: entry.manualUrl, type: 'reference' };
       }
     }
     
@@ -1933,7 +2827,6 @@ ipcMain.handle('manuals:check-local', async (event, component) => {
 });
 
 ipcMain.handle('manuals:open-local', async (event, filePath) => {
-  const { shell } = require('electron');
   try {
     await shell.openPath(filePath);
     return { success: true };
@@ -1958,11 +2851,16 @@ ipcMain.handle('manuals:save-reference', async (event, data) => {
     await ensureManualsDir();
     const index = await loadManualIndex();
     
-    const key = data.sku;
+    const key = resolveManualKey(data);
+    if (!key) {
+      throw new Error('Unable to resolve manual key (missing SKU/VNDRNUM/ID)');
+    }
     index[key] = {
       manufacturer: data.manufacturer,
       manualUrl: data.manualUrl,
       savedDate: data.savedDate,
+      sku: data.sku || null,
+      vndrnum: data.vndrnum || null,
       // Future: could store actual PDF path here when we implement download
       localPath: null
     };
@@ -1987,12 +2885,12 @@ ipcMain.handle('manuals:get-index', async () => {
 // Helper function to log number generation to CSV
 async function logNumberGeneration(type, numberData) {
   try {
-    const outputDir = path.join(app.getPath('userData'), 'OUTPUT');
-    const csvPath = path.join(outputDir, 'number_log.csv');
-    
-    // Ensure OUTPUT directory exists
-    await fs.mkdir(outputDir, { recursive: true });
-    
+    const logsDir = resolveRuntimePath('OUTPUT/LOGS');
+    const csvPath = path.join(logsDir, `${type}s.csv`);
+
+    // Ensure LOGS directory exists
+    await ensureDirectoryForFile(csvPath);
+
     // Create CSV header if file doesn't exist
     let fileExists = false;
     try {
@@ -2001,18 +2899,82 @@ async function logNumberGeneration(type, numberData) {
     } catch (error) {
       // File doesn't exist, will create with header
     }
-    
+
     const timestamp = new Date().toISOString();
-    const row = `"${timestamp}","${type}","${numberData.mainId}","${numberData.fullId}","${numberData.customerCode}","${numberData.customerName || ''}"`;
-    
+    const row = `"${timestamp}","${numberData.mainId}","${numberData.fullId}","${numberData.customerCode}","${numberData.customerName || ''}"`;
+
     if (!fileExists) {
-      const header = '"Timestamp","Type","Main ID","Full ID","Customer Code","Customer Name"';
+      const header = '"Timestamp","Main ID","Full ID","Customer Code","Customer Name"';
       await fs.writeFile(csvPath, header + '\n' + row + '\n', 'utf8');
     } else {
       await fs.appendFile(csvPath, row + '\n', 'utf8');
     }
   } catch (error) {
     console.error('Error logging number generation:', error);
+  }
+}
+
+// Helper function to log customer creation
+async function logCustomerCreation(customerData) {
+  try {
+    const logsDir = resolveRuntimePath('OUTPUT/LOGS');
+    const csvPath = path.join(logsDir, 'Customers.csv');
+
+    // Ensure LOGS directory exists
+    await ensureDirectoryForFile(csvPath);
+
+    // Create CSV header if file doesn't exist
+    let fileExists = false;
+    try {
+      await fs.access(csvPath);
+      fileExists = true;
+    } catch (error) {
+      // File doesn't exist, will create with header
+    }
+
+    const timestamp = new Date().toISOString();
+    const row = `"${timestamp}","${customerData.id}","${customerData.name}","${customerData.type}","${customerData.contact || ''}","${customerData.email || ''}","${customerData.phone || ''}"`;
+
+    if (!fileExists) {
+      const header = '"Timestamp","Customer ID","Name","Type","Contact","Email","Phone"';
+      await fs.writeFile(csvPath, header + '\n' + row + '\n', 'utf8');
+    } else {
+      await fs.appendFile(csvPath, row + '\n', 'utf8');
+    }
+  } catch (error) {
+    console.error('Error logging customer creation:', error);
+  }
+}
+
+// Helper function to log margin calculations
+async function logMarginCalculation(marginData) {
+  try {
+    const logsDir = resolveRuntimePath('OUTPUT/LOGS');
+    const csvPath = path.join(logsDir, 'Margin.csv');
+
+    // Ensure LOGS directory exists
+    await ensureDirectoryForFile(csvPath);
+
+    // Create CSV header if file doesn't exist
+    let fileExists = false;
+    try {
+      await fs.access(csvPath);
+      fileExists = true;
+    } catch (error) {
+      // File doesn't exist, will create with header
+    }
+
+    const timestamp = new Date().toISOString();
+    const row = `"${timestamp}","${marginData.quoteId || ''}","${marginData.materialCost || 0}","${marginData.laborCost || 0}","${marginData.totalCOGS || 0}","${marginData.marginPercent || 0}","${marginData.finalPrice || 0}","${marginData.user || ''}"`;
+
+    if (!fileExists) {
+      const header = '"Timestamp","Quote ID","Material Cost","Labor Cost","Total COGS","Margin %","Final Price","User"';
+      await fs.writeFile(csvPath, header + '\n' + row + '\n', 'utf8');
+    } else {
+      await fs.appendFile(csvPath, row + '\n', 'utf8');
+    }
+  } catch (error) {
+    console.error('Error logging margin calculation:', error);
   }
 }
 
@@ -2051,7 +3013,182 @@ ipcMain.handle('calc:get-project-number', async (event, data) => {
   return { mainId, fullId };
 });
 
-// BOM Importer IPC handlers
+// Logical Assemblies IPC handlers
+
+// Get all logical assemblies
+ipcMain.handle('assemblies:getAll', async () => {
+  try {
+    const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
+    
+    // Check if file exists
+    try {
+      await fs.access(assembliesPath);
+    } catch {
+      // File doesn't exist, return empty array
+      return [];
+    }
+    
+    const data = await fs.readFile(assembliesPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error loading logical assemblies:', err);
+    return [];
+  }
+});
+
+// Save a logical assembly
+ipcMain.handle('assemblies:save', async (event, assemblyToSave) => {
+  try {
+    // Load assembly schema for validation
+    let assemblySchemaPath;
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      assemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'assembly_schema.json');
+    } else {
+      assemblySchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'assembly_schema.json');
+    }
+    
+    const schemaData = await fs.readFile(assemblySchemaPath, 'utf-8');
+    const assemblySchema = JSON.parse(schemaData);
+    const ajv = new Ajv();
+    const validate = ajv.compile(assemblySchema);
+    
+    // Validate the assembly
+    const valid = validate(assemblyToSave);
+    if (!valid) {
+      return { success: false, errors: validate.errors };
+    }
+    
+    // Ensure assemblies directory exists
+    const assembliesDir = path.join(dataPath, 'assemblies');
+    await fs.mkdir(assembliesDir, { recursive: true });
+    
+    const assembliesPath = path.join(assembliesDir, 'assemblies.json');
+    
+    // Read existing assemblies
+    let assemblies = [];
+    try {
+      await fs.access(assembliesPath);
+      const data = await fs.readFile(assembliesPath, 'utf-8');
+      assemblies = JSON.parse(data);
+    } catch {
+      // File doesn't exist, start with empty array
+      assemblies = [];
+    }
+    
+    // Find and replace or add new
+    const existingIndex = assemblies.findIndex(a => a.assemblyId === assemblyToSave.assemblyId);
+    if (existingIndex >= 0) {
+      assemblies[existingIndex] = assemblyToSave;
+    } else {
+      assemblies.push(assemblyToSave);
+    }
+    
+    // Save back to file
+    await fs.writeFile(assembliesPath, JSON.stringify(assemblies, null, 2), 'utf-8');
+    console.log(`✓ Logical assembly saved to: ${assembliesPath}`);
+    console.log(`  - Assembly ID: ${assemblyToSave.assemblyId}`);
+    console.log(`  - Display Name: ${assemblyToSave.displayName}`);
+    console.log(`  - Total assemblies in file: ${assemblies.length}`);
+    
+    return { success: true, data: assemblyToSave };
+  } catch (err) {
+    console.error('Error saving logical assembly:', err);
+    throw err;
+  }
+});
+
+// Get logical assembly by ID
+ipcMain.handle('assemblies:getById', async (event, assemblyId) => {
+  try {
+    const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
+    
+    try {
+      await fs.access(assembliesPath);
+    } catch {
+      return null;
+    }
+    
+    const data = await fs.readFile(assembliesPath, 'utf-8');
+    const assemblies = JSON.parse(data);
+    return assemblies.find(a => a.assemblyId === assemblyId) || null;
+  } catch (err) {
+    console.error('Error getting logical assembly by ID:', err);
+    throw err;
+  }
+});
+
+// Delete a logical assembly
+ipcMain.handle('assemblies:delete', async (event, assemblyId) => {
+  try {
+    const assembliesPath = path.join(dataPath, 'assemblies', 'assemblies.json');
+    
+    let assemblies = [];
+    try {
+      await fs.access(assembliesPath);
+      const data = await fs.readFile(assembliesPath, 'utf-8');
+      assemblies = JSON.parse(data);
+    } catch {
+      return { success: false, error: 'Assemblies file not found' };
+    }
+    
+    const initialLength = assemblies.length;
+    assemblies = assemblies.filter(a => a.assemblyId !== assemblyId);
+    
+    await fs.writeFile(assembliesPath, JSON.stringify(assemblies, null, 2), 'utf-8');
+    
+    return { success: true, changes: initialLength - assemblies.length };
+  } catch (err) {
+    console.error('Error deleting logical assembly:', err);
+    throw err;
+  }
+});
+
+// Search logical assemblies by filters
+ipcMain.handle('assemblies:search', async (event, filters) => {
+  try {
+    const assemblies = await ipcMain.handle('assemblies:getAll');
+    
+    let results = assemblies;
+    
+    if (filters.category) {
+      results = results.filter(a => a.category?.toLowerCase().includes(filters.category.toLowerCase()));
+    }
+    if (filters.assemblyId) {
+      results = results.filter(a => a.assemblyId?.toLowerCase().includes(filters.assemblyId.toLowerCase()));
+    }
+    if (filters.displayName) {
+      results = results.filter(a => a.displayName?.toLowerCase().includes(filters.displayName.toLowerCase()));
+    }
+    if (filters.description) {
+      results = results.filter(a => a.description?.toLowerCase().includes(filters.description.toLowerCase()));
+    }
+    if (filters.tags && Array.isArray(filters.tags)) {
+      results = results.filter(a => {
+        if (!a.tags || !Array.isArray(a.tags)) return false;
+        return filters.tags.some(tag => a.tags.some(assemblyTag => 
+          assemblyTag.toLowerCase().includes(tag.toLowerCase())
+        ));
+      });
+    }
+    
+    return results;
+  } catch (err) {
+    console.error('Error searching logical assemblies:', err);
+    return [];
+  }
+});
+
+// Get unique categories from logical assemblies
+ipcMain.handle('assemblies:getCategories', async () => {
+  try {
+    const assemblies = await ipcMain.handle('assemblies:getAll');
+    const categories = [...new Set(assemblies.map(a => a.category).filter(Boolean))];
+    return categories.sort();
+  } catch (err) {
+    console.error('Error getting assembly categories:', err);
+    return [];
+  }
+});
 
 // Smart CSV header detection - finds the header row automatically
 ipcMain.handle('bom-importer:get-csv-headers', async (event, csvContent) => {
@@ -2103,8 +3240,8 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     const parsed = Papa.parse(csvFromHeader, { header: true, skipEmptyLines: true });
     console.log(`Parsed ${parsed.data.length} rows from CSV`);
     
-    // 2. Determine paths - assemblies.json is in root dataPath, not assemblies subfolder
-    const assembliesPath = path.join(dataPath, 'assemblies.json');
+    // 2. Determine paths - sub_assemblies.json is in root dataPath
+    const subAssembliesPath = path.join(dataPath, 'sub_assemblies.json');
     const masterListPath = path.join(dataPath, 'schemas', 'product_master_list.json');
     const templatesPath = path.join(dataPath, 'product-templates');
     
@@ -2113,13 +3250,13 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     await fs.mkdir(templatesPath, { recursive: true });
     
     // 3. Load data files
-    let assemblies = [];
+    let subAssemblies = [];
     try {
-      const assembliesData = fssync.readFileSync(assembliesPath, 'utf-8');
-      assemblies = JSON.parse(assembliesData);
+      const assembliesData = fssync.readFileSync(subAssembliesPath, 'utf-8');
+      subAssemblies = JSON.parse(assembliesData);
     } catch (err) {
-      console.log('Creating new assemblies.json');
-      assemblies = [];
+      console.log('Creating new sub_assemblies.json');
+      subAssemblies = [];
     }
     
     let masterList = [];
@@ -2147,10 +3284,10 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     }
     
     // 4. Create lookup maps - track assemblies by a unique key combining product and assembly name
-    const assemblyLookup = new Map();
+    const subAssemblyLookup = new Map();
     
     // Track stats
-    const initialAssemblyCount = assemblies.length;
+    const initialSubAssemblyCount = subAssemblies.length;
     const updatedProducts = new Set();
     
     // 5. Process each row
@@ -2166,7 +3303,7 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
         continue;
       }
       
-      console.log(`Processing: Product="${productName}", Assembly="${assemblyName}", SKU="${sku}"`);
+      console.log(`Processing: Product="${productName}", Sub-Assembly="${assemblyName}", SKU="${sku}"`);
       
       // Build attributes object from optional columns
       const attributes = {};
@@ -2194,10 +3331,10 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
       }
       
       // 7. Find or create assembly - use product+assembly name as unique key
-      const assemblyKey = `${productName}::${assemblyName}`;
-      let assembly = assemblyLookup.get(assemblyKey);
+      const subAssemblyKey = `${productName}::${assemblyName}`;
+      let subAssembly = subAssemblyLookup.get(subAssemblyKey);
       
-      if (!assembly) {
+      if (!subAssembly) {
         // Create new assembly with random ID
         const randomId = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
         
@@ -2206,24 +3343,25 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
           ? row[columnMap.assemblyDescription] 
           : assemblyName;
         
-        assembly = {
-          assemblyId: `ASM-${randomId}`,
+        subAssembly = {
+          subAssemblyId: `SA-${randomId}`,
+          assemblyId: `SA-${randomId}`,
           description: assemblyDesc,
           category: row[columnMap.category] || 'Uncategorized',
           attributes: {},
           components: []
         };
-        assemblies.push(assembly);
-        assemblyLookup.set(assemblyKey, assembly);
+        subAssemblies.push(subAssembly);
+        subAssemblyLookup.set(subAssemblyKey, subAssembly);
       }
       
       // 8. Update assembly attributes (merge with existing)
-      Object.assign(assembly.attributes, attributes);
+      Object.assign(subAssembly.attributes, attributes);
       
       // 9. Add component to assembly (check for duplicates)
-      const existingComponent = assembly.components.find(c => c.sku === sku);
+      const existingComponent = subAssembly.components.find(c => c.sku === sku);
       if (!existingComponent) {
-        assembly.components.push({
+        subAssembly.components.push({
           sku,
           quantity,
           notes: row[columnMap.notes] || ''
@@ -2232,7 +3370,7 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
       
       // 10. Update product template
       if (!templates[productCode]) {
-        // Create new product template
+        // Create new product template placeholder (legacy structure - will be migrated)
         templates[productCode] = {
           productCode,
           productName: masterList.find(p => p.code === productCode)?.name || productName,
@@ -2243,18 +3381,18 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
         };
       }
       
-      // Add assembly to product template's optional list
-      if (!templates[productCode].assemblies.optional.includes(assembly.assemblyId)) {
-        templates[productCode].assemblies.optional.push(assembly.assemblyId);
+      // Add sub-assembly to product template's optional list (legacy structure)
+      if (!templates[productCode].assemblies.optional.includes(subAssembly.subAssemblyId)) {
+        templates[productCode].assemblies.optional.push(subAssembly.subAssemblyId);
       }
       
       updatedProducts.add(productCode);
     }
     
     // 11. Write all updated data back to files
-    console.log(`Writing ${assemblies.length} assemblies to file: ${assembliesPath}`);
-    await fs.writeFile(assembliesPath, JSON.stringify(assemblies, null, 2));
-    console.log(`Successfully wrote assemblies to: ${assembliesPath}`);
+    console.log(`Writing ${subAssemblies.length} sub-assemblies to file: ${subAssembliesPath}`);
+    await fs.writeFile(subAssembliesPath, JSON.stringify(subAssemblies, null, 2));
+    console.log(`Successfully wrote sub-assemblies to: ${subAssembliesPath}`);
     console.log(`Writing ${masterList.length} products to master list...`);
     await fs.writeFile(masterListPath, JSON.stringify(masterList, null, 2));
     
@@ -2267,14 +3405,14 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     
     const result = {
       success: true,
-      assembliesCreated: assemblies.length - initialAssemblyCount,
+      subAssembliesCreated: subAssemblies.length - initialSubAssemblyCount,
       productsUpdated: updatedProducts.size
     };
     console.log('=== BOM Import Complete ===', result);
     
-    // Invalidate the assembly cache so Assembly Manager sees the new assemblies
-    cachedAllAssemblies = await getAllAssemblies();
-    console.log(`Cache refreshed with ${cachedAllAssemblies.length} assemblies`);
+    // Invalidate the sub-assembly cache so Sub-Assembly Manager sees the new data
+    cachedSubAssemblies = await getAllSubAssemblies();
+    console.log(`Cache refreshed with ${cachedSubAssemblies.length} sub-assemblies`);
     
     return result;
     

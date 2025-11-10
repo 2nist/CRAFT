@@ -1,0 +1,136 @@
+[
+  {
+    "subAssemblyId": "ASM-ENCLOSURE-24x36",
+    "description": "24x36 NEMA 4X Enclosure Kit",
+    "category": "ENCLOSURE",
+    "components": [
+      {
+        "sku": "ENC-2436-4X",
+        "quantity": 1,
+        "notes": "Main control enclosure"
+      }
+    ],
+    "estimatedLaborHours": 2
+  },
+  {
+    "subAssemblyId": "ASM-DISCONNECT-100A",
+    "description": "100A Disconnect Switch Assembly",
+    "category": "DISCONNECT",
+    "components": [
+      {
+        "sku": "DIS-100A-3P",
+        "quantity": 1,
+        "notes": "Main disconnect"
+      }
+    ],
+    "estimatedLaborHours": 1.5
+  },
+  {
+    "subAssemblyId": "ASM-PLC-BASIC",
+    "description": "Basic PLC Starter Kit",
+    "category": "PLC/COM",
+    "components": [
+      {
+        "sku": "PLC-CPU-1500",
+        "quantity": 1,
+        "notes": "CPU module"
+      },
+      {
+        "sku": "PLC-PWR-24V",
+        "quantity": 1,
+        "notes": "Power supply"
+      }
+    ],
+    "attributes": {
+      "type": "PLC"
+    },
+    "estimatedLaborHours": 4
+  },
+  {
+    "subAssemblyId": "ASM-HMI-10INCH",
+    "description": "10-inch HMI Touchscreen",
+    "category": "PLC/COM",
+    "components": [
+      {
+        "sku": "HMI-10-COLOR",
+        "quantity": 1,
+        "notes": "Touchscreen panel"
+      }
+    ],
+    "attributes": {
+      "type": "HMI"
+    },
+    "estimatedLaborHours": 2
+  },
+  {
+    "subAssemblyId": "ASM-VFD-3HP",
+    "description": "3HP VFD Motor Starter",
+    "category": "MOTOR CONTROL/HEATER CONTROL",
+    "components": [
+      {
+        "sku": "VFD-3HP",
+        "quantity": 1,
+        "notes": "Variable frequency drive"
+      }
+    ],
+    "attributes": {
+      "type": "VFD",
+      "voltage": "480V"
+    },
+    "estimatedLaborHours": 2.5
+  },
+  {
+    "subAssemblyId": "ASM-VFD-5HP",
+    "description": "5HP VFD Motor Starter",
+    "category": "MOTOR CONTROL/HEATER CONTROL",
+    "components": [
+      {
+        "sku": "VFD-5HP-480V",
+        "quantity": 1,
+        "notes": "Variable frequency drive"
+      }
+    ],
+    "attributes": {
+      "type": "VFD",
+      "voltage": "480V"
+    },
+    "estimatedLaborHours": 3
+  },
+  {
+    "subAssemblyId": "ASM-SAFETY-ESTOP",
+    "description": "Emergency Stop Safety Circuit",
+    "category": "SAFETY",
+    "components": [
+      {
+        "sku": "ESTOP-BUTTON-RED",
+        "quantity": 2,
+        "notes": "Emergency stop buttons"
+      },
+      {
+        "sku": "SAFETY-RELAY-DUAL",
+        "quantity": 1,
+        "notes": "Safety relay module"
+      }
+    ],
+    "attributes": {
+      "type": "SAFETY"
+    },
+    "estimatedLaborHours": 2.5
+  },
+  {
+    "subAssemblyId": "ASM-VALVE-GLYCOL",
+    "description": "Glycol Valve Assembly",
+    "category": "CONTROL",
+    "components": [
+      {
+        "sku": "COMP-VALVE-GLYCOL-2INCH",
+        "quantity": 1,
+        "notes": "2-inch glycol valve"
+      }
+    ],
+    "attributes": {
+      "type": "VALVE"
+    },
+    "estimatedLaborHours": 1.5
+  }
+]

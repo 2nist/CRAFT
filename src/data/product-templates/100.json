@@ -1,49 +1,217 @@
 {
   "productCode": 100,
   "productName": "Brewhouse Control Panel",
-  "fields": {
-    "digitalIn": [
-      {
-        "fieldName": "Digital Inputs (DI)",
-        "fieldType": "Number",
-        "defaultValue": 16,
-        "min": 0,
-        "max": 64
-      }
-    ],
-    "digitalOut": [
-      {
-        "fieldName": "Digital Outputs (DO)",
-        "fieldType": "Number",
-        "defaultValue": 16,
-        "min": 0,
-        "max": 64
-      }
-    ],
-    "analogIn": [
-      {
-        "fieldName": "Analog Inputs (AI)",
-        "fieldType": "Number",
-        "defaultValue": 8,
-        "min": 0,
-        "max": 32
-      }
-    ],
-    "analogOut": [
-      {
-        "fieldName": "Analog Outputs (AO)",
-        "fieldType": "Number",
-        "defaultValue": 4,
-        "min": 0,
-        "max": 32
-      }
-    ]
-  },
-  "assemblies": {
-    "required": ["ASM-ENCLOSURE-24x36"],
-    "recommended": ["ASM-DISCONNECT-100A", "ASM-PLC-BASIC"],
-    "optional": ["ASM-HMI-10INCH", "ASM-VFD-5HP", "ASM-SAFETY-ESTOP"]
-  },
   "estimatedBaseLaborHours": 40,
-  "notes": "Standard brewhouse configuration with digital and analog I/O for temperature and valve control."
+  "notes": "Standard brewhouse configuration with digital and analog I/O for temperature and valve control. This is a v2.0 template with Assembly Cards.",
+  "assemblies": [
+    {
+      "assemblyId": "hlt",
+      "displayName": "Hot Liquor Tank (HLT)",
+      "description": "Control panel configuration for the Hot Liquor Tank, including temperature control, level monitoring, and heating elements.",
+      "allowMultiple": false,
+      "features": [
+        "Temperature control with PID",
+        "Level monitoring",
+        "Heating element control"
+      ],
+      "fields": {
+        "digitalIn": [
+          {
+            "fieldName": "Level Switch",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          },
+          {
+            "fieldName": "Temperature Alarm",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          }
+        ],
+        "analogIn": [
+          {
+            "fieldName": "Temperature Sensor (RTD)",
+            "fieldType": "Number",
+            "defaultValue": 1,
+            "min": 0,
+            "max": 4
+          },
+          {
+            "fieldName": "Level Transmitter (4-20mA)",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          }
+        ],
+        "digitalOut": [
+          {
+            "fieldName": "Heater Control",
+            "fieldType": "List",
+            "defaultValue": "SSR",
+            "listOptions": [
+              {
+                "name": "SSR",
+                "label": "Solid State Relay (PID)"
+              },
+              {
+                "name": "CONTACTOR",
+                "label": "On/Off Contactor"
+              }
+            ]
+          },
+          {
+            "fieldName": "Pump Control",
+            "fieldType": "List",
+            "defaultValue": "VFD",
+            "listOptions": [
+              {
+                "name": "VFD",
+                "label": "Variable Frequency Drive"
+              },
+              {
+                "name": "CONTACTOR",
+                "label": "On/Off Contactor"
+              }
+            ]
+          }
+        ],
+        "analogOut": [
+          {
+            "fieldName": "Modulating Valve (4-20mA)",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          }
+        ]
+      },
+      "subAssemblies": {
+        "required": ["ASM-ENCLOSURE-24x36", "ASM-DISCONNECT-100A"],
+        "optional": ["ASM-HMI-10INCH", "ASM-VFD-5HP"]
+      },
+      "ioFieldRules": [
+        {
+          "ruleId": "hlt_heater_ssr",
+          "sourceField": "Heater Control",
+          "components": [
+            {
+              "sku": "COMP-SSR-40A",
+              "quantityPerUnit": 1,
+              "displayName": "SSR - HLT Heater",
+              "sectionGroup": "Components"
+            }
+          ],
+          "condition": {
+            "panelConfig": {
+              "voltage": "480V"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "assemblyId": "mash_tun",
+      "displayName": "Mash Tun",
+      "description": "Control configuration for the Mash Tun, including temperature control and agitator motor control.",
+      "allowMultiple": false,
+      "features": [
+        "Temperature control",
+        "Agitator motor control",
+        "Flow control"
+      ],
+      "fields": {
+        "digitalIn": [
+          {
+            "fieldName": "Level Switch",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          }
+        ],
+        "analogIn": [
+          {
+            "fieldName": "Temperature Sensor (RTD)",
+            "fieldType": "Number",
+            "defaultValue": 1,
+            "min": 0,
+            "max": 4
+          }
+        ],
+        "digitalOut": [
+          {
+            "fieldName": "Agitator Motor",
+            "fieldType": "List",
+            "defaultValue": "VFD",
+            "listOptions": [
+              {
+                "name": "VFD",
+                "label": "Variable Frequency Drive"
+              },
+              {
+                "name": "CONTACTOR",
+                "label": "On/Off Contactor"
+              }
+            ]
+          }
+        ],
+        "analogOut": []
+      },
+      "subAssemblies": {
+        "required": ["ASM-VFD-3HP"],
+        "optional": ["ASM-SAFETY-ESTOP"]
+      },
+      "ioFieldRules": []
+    },
+    {
+      "assemblyId": "fermenter",
+      "displayName": "Fermenter",
+      "description": "Control configuration for fermentation vessels, including temperature control and glycol valve control.",
+      "allowMultiple": true,
+      "features": [
+        "Temperature control",
+        "Glycol valve control",
+        "Level monitoring"
+      ],
+      "fields": {
+        "digitalIn": [
+          {
+            "fieldName": "Level Switch",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          }
+        ],
+        "analogIn": [
+          {
+            "fieldName": "Temperature Sensor (RTD)",
+            "fieldType": "Number",
+            "defaultValue": 1,
+            "min": 0,
+            "max": 2
+          }
+        ],
+        "digitalOut": [
+          {
+            "fieldName": "Glycol Valve",
+            "fieldType": "Boolean",
+            "defaultValue": false
+          }
+        ],
+        "analogOut": []
+      },
+      "subAssemblies": {
+        "required": ["ASM-VALVE-GLYCOL"],
+        "optional": []
+      },
+      "ioFieldRules": [
+        {
+          "ruleId": "fermenter_glycol_valve",
+          "sourceField": "Glycol Valve",
+          "components": [
+            {
+              "sku": "COMP-VALVE-GLYCOL-2INCH",
+              "quantityPerUnit": 1,
+              "displayName": "Glycol Valve - Fermenter",
+              "sectionGroup": "Components"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
+
