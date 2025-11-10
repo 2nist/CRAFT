@@ -1,10 +1,10 @@
 {
-  "title": "Craft Tools Hub Manual",
+  "title": "Craft Automation CPQ Manual",
   "author": "Craft Auto Team",
   "versionFromPackage": true,
   "outputHtml": "docs/manual/Manual.html",
   "outputMd": "docs/manual/Manual.md",
-  "outputPdf": "docs/manual/Craft_Tools_Hub_Manual.pdf",
+  "outputPdf": "docs/manual/Craft_Automation_CPQ_Manual.pdf",
   "sourceDir": "docs/user",
   "include": [
     "QUICK_START.md",

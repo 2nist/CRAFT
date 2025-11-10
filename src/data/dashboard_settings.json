@@ -10,8 +10,8 @@
   },
   "welcomeMessage": {
     "enabled": true,
-    "title": "Welcome to Craft Tools Hub",
-    "subtitle": "Your central hub for quotes, projects, and automation tools",
+    "title": "Welcome to Craft Automation CPQ",
+    "subtitle": "Configure, Price, and Quote System for Automation Processes",
     "showLogo": true
   },
   "customization": {

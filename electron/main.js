@@ -753,7 +753,7 @@ function createSplashWindow() {
       <body>
         <div class="splash">
           <div class="logo">⚙️</div>
-          <div class="title">Craft Tools Hub</div>
+          <div class="title">Craft Automation CPQ (Configure, Price Quote)</div>
           <div class="loader"></div>
           <div class="status">Loading workspace...</div>
         </div>
@@ -2961,38 +2961,6 @@ async function logNumberGeneration(type, numberData) {
     console.log(`[${type} Number Log] Generated: ${numberData.fullId} for customer ${numberData.customerName} (${numberData.customerCode})`);
   } catch (error) {
     console.error('Error logging number generation:', error);
-  }
-}
-
-// Helper function to log customer creation
-async function logCustomerCreation(customerData) {
-  try {
-    const logsDir = resolveRuntimePath('OUTPUT/LOGS');
-    const csvPath = path.join(logsDir, 'Customers.csv');
-
-    // Ensure LOGS directory exists
-    await ensureDirectoryForFile(csvPath);
-
-    // Create CSV header if file doesn't exist
-    let fileExists = false;
-    try {
-      await fs.access(csvPath);
-      fileExists = true;
-    } catch (error) {
-      // File doesn't exist, will create with header
-    }
-
-    const timestamp = new Date().toISOString();
-    const row = `"${timestamp}","${customerData.id}","${customerData.name}","${customerData.type}","${customerData.contact || ''}","${customerData.email || ''}","${customerData.phone || ''}"`;
-
-    if (!fileExists) {
-      const header = '"Timestamp","Customer ID","Name","Type","Contact","Email","Phone"';
-      await fs.writeFile(csvPath, header + '\n' + row + '\n', 'utf8');
-    } else {
-      await fs.appendFile(csvPath, row + '\n', 'utf8');
-    }
-  } catch (error) {
-    console.error('Error logging customer creation:', error);
   }
 }
 

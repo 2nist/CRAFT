@@ -89,7 +89,7 @@
   },
   "build": {
     "appId": "com.electron.app",
-    "productName": "Electron Vite React App",
+    "productName": "Craft Automation CPQ",
     "directories": {
       "output": "release"
     },
