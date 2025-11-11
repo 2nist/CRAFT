@@ -22,4 +22,4 @@ exports.default = async function(context) {
   } catch (error) {
     console.error('Failed to create .env file:', error);
   }
-};
+}
