@@ -46,7 +46,7 @@
     "title": "BOM Importer",
     "path": "/bom-importer",
     "description": "Import legacy CSV BOMs to create assemblies and update products",
-    "icon": "Upload"
+    "icon": "History"
   },
   {
     "id": "fla-calc",
@@ -61,6 +61,20 @@
     "path": "/margin-calc",
     "description": "Forward/reverse margin and price calculations",
     "icon": "Calculator"
+  },
+  {
+    "id": "manual-bom-builder",
+    "title": "Manual BOM Builder",
+    "path": "/manual-bom-builder",
+    "description": "Build standalone BOMs for service calls and one-off quotes",
+    "icon": "ClipboardList"
+  },
+  {
+    "id": "settings",
+    "title": "Settings",
+    "path": "/settings",
+    "description": "Customize your workspace, theme, and dashboard preferences",
+    "icon": "Settings"
   }
 ]
 
