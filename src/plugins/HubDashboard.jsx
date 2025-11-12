@@ -10,20 +10,23 @@ export default function HubDashboard({ context }) {
   const [activeTool, setActiveTool] = useState(null);
   const [isEditingToolbox, setIsEditingToolbox] = useState(false);
   const [draftTools, setDraftTools] = useState([]);
+  const [logoUrl, setLogoUrl] = useState('/Craft_Logo.png');
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [quotes, links, docs, dashSettings] = await Promise.all([
+        const [quotes, links, docs, dashSettings, logo] = await Promise.all([
           window.quotes.getAll(),
           window.api.getUsefulLinks(),
           window.api.getDocHubItems(),
-          window.api.getDashboardSettings()
+          window.api.getDashboardSettings(),
+          window.api.getLogoUrl()
         ]);
         setRecentQuotes(quotes.slice(-5).reverse());
         setUsefulLinks(links);
         setDocHubItems(docs);
         setSettings(dashSettings);
+        setLogoUrl(logo);
         // Try to load toolbox items from API if available, otherwise use defaults
         try {
           const apiItems = await (window.api.getToolboxItems?.());
@@ -31,21 +34,12 @@ export default function HubDashboard({ context }) {
             setToolboxItems(apiItems);
             setActiveTool(apiItems[0]);
           } else {
-            // Try reading a public manifest
+            // Try reading toolbox manifest via IPC
             try {
-              const resp = await fetch('/toolbox/manifest.json');
-              if (resp.ok) {
-                const manifest = await resp.json();
-                if (Array.isArray(manifest) && manifest.length > 0) {
-                  setToolboxItems(manifest);
-                  setActiveTool(manifest[0]);
-                } else {
-                  const defaults = [
-                    { title: "Ohm's Law Helper", path: "/toolbox/sample-calculator.html", icon: "Calculator" }
-                  ];
-                  setToolboxItems(defaults);
-                  setActiveTool(defaults[0]);
-                }
+              const manifest = await window.api.getToolboxManifest();
+              if (Array.isArray(manifest) && manifest.length > 0) {
+                setToolboxItems(manifest);
+                setActiveTool(manifest[0]);
               } else {
                 const defaults = [
                   { title: "Ohm's Law Helper", path: "/toolbox/sample-calculator.html", icon: "Calculator" }
@@ -62,21 +56,12 @@ export default function HubDashboard({ context }) {
             }
           }
         } catch {
-          // API not available - try manifest
+          // API not available - try manifest via IPC
           try {
-            const resp = await fetch('/toolbox/manifest.json');
-            if (resp.ok) {
-              const manifest = await resp.json();
-              if (Array.isArray(manifest) && manifest.length > 0) {
-                setToolboxItems(manifest);
-                setActiveTool(manifest[0]);
-              } else {
-                const defaults = [
-                  { title: "Ohm's Law Helper", path: "/toolbox/sample-calculator.html", icon: "Calculator" }
-                ];
-                setToolboxItems(defaults);
-                setActiveTool(defaults[0]);
-              }
+            const manifest = await window.api.getToolboxManifest();
+            if (Array.isArray(manifest) && manifest.length > 0) {
+              setToolboxItems(manifest);
+              setActiveTool(manifest[0]);
             } else {
               const defaults = [
                 { title: "Ohm's Law Helper", path: "/toolbox/sample-calculator.html", icon: "Calculator" }
@@ -119,7 +104,7 @@ export default function HubDashboard({ context }) {
         <div className="mb-8 p-8 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-2xl border border-blue-700/50 backdrop-blur-sm">
           {settings.welcomeMessage.showLogo && (
             <div className="mb-4">
-              <img src="/Craft_Logo.png" alt="Craft Automation" className="h-16" />
+              <img src={logoUrl} alt="Craft Automation" className="h-16" />
             </div>
           )}
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -166,15 +151,7 @@ export default function HubDashboard({ context }) {
                 </div>
                 <div className="md:col-span-2">
                   {activeTool ? (
-                    <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-900/60">
-                      <iframe
-                        key={activeTool.path}
-                        src={encodeURI(activeTool.path)}
-                        title={activeTool.title}
-                        style={{ width: '100%', height: 420, border: '0' }}
-                        sandbox="allow-scripts allow-forms allow-same-origin"
-                      />
-                    </div>
+                    <ToolIframe tool={activeTool} />
                   ) : (
                     <div className="p-6 text-sm text-slate-400">Select a tool to preview.</div>
                   )}
@@ -373,4 +350,46 @@ const DynamicIcon = ({ name, ...props }) => {
   const IconComponent = icons[name];
   if (!IconComponent) return <icons.HelpCircle {...props} />;
   return <IconComponent {...props} />;
+};
+
+const ToolIframe = ({ tool }) => {
+  const [iframeSrc, setIframeSrc] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadIframeSrc = async () => {
+      try {
+        setLoading(true);
+        const url = await window.api.getToolFileUrl(tool.path);
+        setIframeSrc(url);
+      } catch (error) {
+        console.error('Failed to get tool file URL:', error);
+        setIframeSrc(tool.path); // fallback to original path
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadIframeSrc();
+  }, [tool.path]);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-900/60 flex items-center justify-center" style={{ height: 420 }}>
+        <div className="text-sm text-slate-400">Loading tool...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-900/60">
+      <iframe
+        key={tool.path}
+        src={iframeSrc}
+        title={tool.title}
+        style={{ width: '100%', height: 420, border: '0' }}
+        sandbox="allow-scripts allow-forms allow-same-origin"
+      />
+    </div>
+  );
 };

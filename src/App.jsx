@@ -76,11 +76,7 @@ export default function App() {
   useEffect(() => {
     async function fetchPluginRegistry() {
       try {
-        const response = await fetch('/plugin_registry.json');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const registry = await response.json();
+        const registry = await window.api.getPluginRegistry();
         setPlugins(registry);
       } catch (error) {
         console.error("Failed to load plugin registry:", error);

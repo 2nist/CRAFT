@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wrench, Box, FileText, Search } from 'lucide-react';
+import { Wrench, Box, FileText, Search, Server } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export default function TopTabBar({ activeTab, setActiveTab }) {
   const navigate = useNavigate();
   const { openSearchModal } = useAppContext();
   const [runtimeStatus, setRuntimeStatus] = useState(null);
+  const [serverStatus, setServerStatus] = useState(null);
+  const [logoUrl, setLogoUrl] = useState('/Craft_Logo.png');
   
   const tabs = [
     { id: 'TOOLS', label: 'TOOLS', icon: Wrench },
@@ -19,6 +21,7 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
     let timerId;
 
     const fetchStatus = async () => {
+      // Check runtime status
       if (!window.runtime?.getStatus) {
         return;
       }
@@ -37,10 +40,53 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
           });
         }
       }
+
+      // Load logo URL
+      try {
+        const logo = await window.api.getLogoUrl();
+        if (!cancelled) {
+          setLogoUrl(logo);
+        }
+      } catch (error) {
+        console.error('Failed to load logo URL:', error);
+      }
+
+      // Check server status
+      try {
+        const response = await fetch('http://localhost:3001/api/health', {
+          method: 'GET',
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        
+        if (!cancelled) {
+          if (response.ok) {
+            const data = await response.json();
+            setServerStatus({
+              connected: true,
+              database: data.database === 'connected',
+              message: `API Server OK${data.database === 'connected' ? ' (DB Connected)' : ' (DB Disconnected)'}`
+            });
+          } else {
+            setServerStatus({
+              connected: false,
+              database: false,
+              message: `API Server Error (${response.status})`
+            });
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setServerStatus({
+            connected: false,
+            database: false,
+            message: `Server Unavailable: ${error.message}`
+          });
+        }
+      }
     };
 
     fetchStatus();
-    timerId = setInterval(fetchStatus, 30000);
+    timerId = setInterval(fetchStatus, 30000); // Check every 30 seconds
 
     return () => {
       cancelled = true;
@@ -82,6 +128,38 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
     };
   })();
 
+  const serverIndicator = (() => {
+    if (!serverStatus) {
+      return {
+        color: 'bg-slate-500',
+        label: 'API',
+        title: 'Checking server connection...'
+      };
+    }
+
+    if (serverStatus.connected && serverStatus.database) {
+      return {
+        color: 'bg-green-500',
+        label: 'API',
+        title: serverStatus.message || 'API Server & Database Connected'
+      };
+    }
+
+    if (serverStatus.connected && !serverStatus.database) {
+      return {
+        color: 'bg-yellow-500',
+        label: 'API',
+        title: serverStatus.message || 'API Server Connected (DB Issue)'
+      };
+    }
+
+    return {
+      color: 'bg-red-500',
+      label: 'API',
+      title: serverStatus.message || 'API Server Disconnected'
+    };
+  })();
+
   return (
     <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
       <div className="flex items-center h-16 px-6">
@@ -91,7 +169,7 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
           className="flex items-center mr-8 hover:opacity-80 transition-opacity"
           title="Go to Home"
         >
-          <img src="/Craft_Logo.png" alt="Craft Logo" className="h-10 w-auto" />
+          <img src={logoUrl} alt="Craft Logo" className="h-10 w-auto" />
         </button>
 
         {/* Tab Navigation */}
@@ -135,6 +213,14 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
 
         {/* Optional: User/Settings area */}
         <div className="flex items-center space-x-4">
+          <div
+            className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400"
+            title={serverIndicator.title}
+          >
+            <Server size={12} />
+            <span className={`inline-flex h-3 w-3 rounded-full ${serverIndicator.color}`} aria-hidden="true" />
+            <span className="hidden sm:inline">{serverIndicator.label}</span>
+          </div>
           <div
             className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400"
             title={indicator.title}

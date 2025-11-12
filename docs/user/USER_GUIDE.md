@@ -9,9 +9,11 @@ Welcome to Craft Tools Hub! This guide will help you navigate and use all the po
 1. [Getting Started](#getting-started)
 2. [Dashboard Overview](#dashboard-overview)
 3. [Plugin Tools](#plugin-tools)
-4. [Settings & Customization](#settings--customization)
-5. [Tips & Shortcuts](#tips--shortcuts)
-6. [Troubleshooting](#troubleshooting)
+4. [Component Management](#component-management)
+5. [Import/Export Features](#importexport-features)
+6. [Settings & Customization](#settings--customization)
+7. [Tips & Shortcuts](#tips--shortcuts)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -19,7 +21,13 @@ Welcome to Craft Tools Hub! This guide will help you navigate and use all the po
 
 ### Launching the App
 
-1. **Double-click** `run-app.bat` to start the application
+**For Teams (NAS Deployment):**
+1. Run the setup script: `\\NAS\updates\latest\Set-CTHRuntimeRoot.ps1`
+2. Launch: `\\NAS\updates\latest\run-app.bat`
+3. App connects to shared SQLite database with 1,335+ components
+
+**For Individual Use:**
+1. Double-click `run-app.bat` to start the application
 2. Wait for the **splash screen** (with animated spinner)
 3. The app will open to the **Dashboard** automatically
 
@@ -99,6 +107,423 @@ Access any plugin tool from the **left sidebar** or **top tabs**.
 - 🍺 **Brewery** (100-149): Brewhouse, Brite Tanks, Unitanks
 - 🍸 **Distillery** (150-199): Pot Stills, Column Stills, Spirit Vessels
 - 🍷 **Fermentation** (200-249): Fermenters, Glycol Systems, Valves
+- 🌾 **Grain** (250-299): Grain Handling, Milling, Storage
+- ⚙️ **Motor Control** (300-349): Drives, Soft Starters, Motors
+- 🎯 **Pneumatics** (400-449): Valves, Actuators, Regulators
+- 💧 **Sanitary** (450-499): CIP Systems, Pumps, Fittings
+- 📡 **Remote** (500-549): HMI, SCADA, PLCs
+- 🔥 **Heating** (550-599): Heat Exchangers, Boilers
+- 📦 **General** (990-999): Misc Components
+
+**How to Use**:
+1. Click **Product Template Manager**
+2. **Category View**: See all 10 categories with:
+   - Number of products in category
+   - Available product numbers
+   - Configuration progress bar
+3. Click a **category** to view products
+4. Select **available number** from dropdown
+5. Click **Create**, **Edit**, or **View** any product
+
+**Product Number Ranges**:
+- Each category has a dedicated range (shown above)
+- Available numbers show in green dropdown
+- Unavailable/used numbers are hidden
+
+---
+
+### 3️⃣ Component Manager
+
+**Purpose**: Manage the master component database
+
+**Features**:
+- **View all components**: Browse 1,335+ components from shared database
+- **Add new components**: Create custom component entries
+- **Edit existing**: Update prices, descriptions, specs
+- **Delete components**: Remove obsolete items
+- **Import/Export**: Bulk operations via CSV
+
+**Component Fields**:
+- SKU (unique identifier)
+- Description
+- Category
+- Manufacturer/Vendor
+- Price
+- Quantity
+- Part Abbreviation
+
+**Quick Actions**:
+- Use **Ctrl+K** to search components globally
+- Export filtered lists to CSV
+- Import from Excel/CSV templates
+
+---
+
+## 📊 Component Management
+
+### Shared Database System
+
+**How it works:**
+- **Shared SQLite Database**: All users access the same component database
+- **1,335+ Components**: Pre-loaded with brewery/distillery components
+- **Automatic Updates**: IT manages database updates via NAS
+- **No Sync Issues**: Everyone sees the same prices and components
+
+### Component Search & Discovery
+
+**Global Search (Ctrl+K)** - Most powerful feature:
+1. Press **Ctrl+K** anywhere in the app
+2. Search across all 1,335+ components instantly
+3. Search by SKU, description, category, or manufacturer
+4. View component details and specifications
+5. Access manufacturer manuals automatically
+6. Add components to quotes with one click
+
+### Manual System
+
+**Smart Manual Lookup:**
+- Click "View Manual" on any component
+- System automatically finds manufacturer documentation
+- Supported: Allen Bradley, Siemens, Schneider, ABB, Endress+Hauser, Festo
+- Manuals cached for instant access on repeat visits
+- Self-building library - grows as you use it
+
+### Import/Export Operations
+
+**Component Updates:**
+- **CSV Import**: Update pricing and add new components
+- **Smart Merge**: Updates existing components without overwriting custom fields
+- **Bulk Operations**: Handle thousands of components efficiently
+
+---
+
+## 📥📤 Import/Export Features
+
+### Component Data
+- **Import**: CSV files for price updates and new components
+- **Export**: Component lists filtered by category/vendor
+- **Sync**: Automatic synchronization across team
+
+### Quote Management
+- **Export**: Individual quotes to PDF or CSV
+- **Import**: Quote templates and configurations
+- **Backup**: Automatic snapshots with timestamps
+
+### BOM Operations
+- **Import**: CSV files with assembly mappings
+- **Export**: Organized BOMs with categories
+- **Templates**: Pre-formatted import templates available
+
+### Reporting & Logs
+- **Number Logs**: All generated quote/project numbers
+- **Margin Logs**: Cost calculation history
+- **Activity Logs**: User actions and system events
+
+---
+
+## ⚙️ Settings & Customization
+
+Access Settings via the **⚙️ icon** in the left sidebar.
+
+### Layout Settings
+
+**Welcome Message**:
+- Show/hide welcome message
+- Show/hide Craft logo
+- Custom title text
+- Custom subtitle text
+
+**Dashboard Widgets**:
+- ✓ Show Recent Quotes
+- ✓ Show Document Hub
+- ✓ Show Useful Links
+
+**Card Display**:
+- **Compact**: Smaller cards, more on screen
+- **Expanded**: Larger cards, easier to read
+
+### Export Settings
+
+**Default Export Location**:
+- Click **Browse** to select folder
+- All exports go here by default
+- Can override per export
+
+**Default Export Format**:
+- CSV (Excel compatible)
+- Excel (.xlsx)
+- PDF (formatted quote)
+
+**Timestamp Options**:
+- ✓ Include timestamp in filename
+- Format: `BOM_2025-11-06T14-30-00.csv`
+
+### Useful Links
+
+**Add Custom Links**:
+1. Click **+ Add Link**
+2. Enter **Title** (e.g., "Google Drive")
+3. Enter **URL** (e.g., https://drive.google.com)
+4. Select **Icon** (from Lucide icons)
+5. Click **Save**
+
+**Default Links**:
+- Component Database
+- External Link Reference
+- Hard Drive Backup
+- Database Docs
+
+### Document Hub
+
+**Add Documents**:
+1. Click **+ Add Document**
+2. Enter **Title** (e.g., "Safety Manual")
+3. Enter **Path** (file path or URL)
+4. Select **Icon**
+5. Click **Save**
+
+**Supported Types**:
+- PDF files
+- Word documents
+- Web links
+- Network drives
+
+---
+
+## ⌨️ Tips & Shortcuts
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+K` | Open Global Component Search |
+| `Esc` | Close modals/search |
+| `Tab` | Navigate between fields |
+| `Enter` | Submit search/forms |
+
+### Global Component Search (Ctrl+K)
+
+**Most Powerful Feature!**
+1. Press **Ctrl+K** anywhere in the app
+2. Type to search across **all 1,335+ components**
+3. Search by:
+   - SKU
+   - Description
+   - Category
+   - Manufacturer
+   - Part Abbreviation
+4. Click result to **view component details**
+5. Click **Use Component** to auto-fill into active form
+6. Click **View Manual** to access component documentation
+
+**Search Tips**:
+- Search is **case-insensitive**
+- Partial matches work (type "relay" finds "Safety Relay")
+- Results update **as you type**
+- Shows **100 most relevant** results
+- **Drag and resize** the search window
+- Press **ESC** to close search
+
+**Component Details Dialog**:
+- View full component specifications
+- **Copy Data**: Copy component info to clipboard
+- **View Manual**: Smart manual lookup (see below)
+- **Use Component**: Insert into active quote/form
+
+**Smart Manual System** 🎯:
+1. Click **View Manual** on any component
+2. System checks if manual is already cached
+3. If cached: Opens manual instantly
+4. If not cached:
+   - Automatically searches manufacturer website
+   - Opens browser with search results
+   - Prompts you to confirm if correct manual
+   - Click **Save Reference** to cache for next time
+5. Next time: Opens directly (zero wait!)
+
+**Supported Manufacturers**:
+- Allen Bradley / Rockwell Automation
+- Siemens
+- Schneider Electric
+- ABB
+- Endress+Hauser
+- Festo
+- Others (via Google search)
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+#### "Cannot connect to database"
+- **Solution**: Check network connection to NAS
+- Verify environment variable: `echo $env:CTH_RUNTIME_ROOT`
+- Contact IT if NAS is unavailable
+
+#### "Component not found"
+- **Solution**: Use Ctrl+K to search global database
+- Check spelling and SKU format
+- Component might be in different category
+
+#### "Settings not saving"
+- **Solution**: Settings save automatically
+- Check: `%APPDATA%\electron-vite-react-app\data\`
+- If missing, app will recreate defaults
+
+#### "Export failed"
+- **Solution**: Check export folder exists
+- Verify write permissions
+- Close any open Excel/PDF files with same name
+
+#### "App doesn't show latest components"
+- **Solution**: Components are in shared database on NAS
+- Contact IT to update component database
+- Restart app to refresh connection
+
+### Data Locations
+
+**Shared Database (NAS)**:
+```
+\\NAS\updates\latest\server\craft_tools.db
+└── 1,335+ components, prices, specifications
+```
+
+**User Data (Local)**:
+```
+%APPDATA%\electron-vite-react-app\data\
+├── quotes\           # Your saved quotes
+├── settings.json     # Your preferences
+├── manual_index.json # Cached manual links
+└── OUTPUT\LOGS\      # Your activity logs
+```
+
+**Export Location**:
+- Configurable in Settings
+- Default: Your Documents folder
+- Can be set to network share
+
+### Getting Help
+
+1. Check this guide first
+2. See `QUICK_START.md` for setup instructions
+3. See `DATABASE_USER_GUIDE.md` for database questions
+4. Check specific guides:
+   - `BOM_IMPORTER_GUIDE.md`
+   - `GLOBAL_COMPONENT_SEARCH.md`
+
+---
+
+## 📚 Additional Resources
+
+### Quick Start Guides
+- **Setup**: `QUICK_START.md`
+- **Database**: `DATABASE_USER_GUIDE.md`
+- **BOM Import**: `BOM_IMPORTER_GUIDE.md`
+- **Deployment**: `DEPLOYMENT_GUIDE.md`
+
+### Templates
+- **BOM Import**: `BOM_IMPORT_TEMPLATE.csv`
+- **Component Database**: `COMPONENT PRICE LIST [MASTER].csv`
+
+### Development
+- **Build App**: `build-app.bat`
+- **Run Dev**: `npm run electron:dev`
+- **API Server**: `server/server.js` (port 3001)
+
+---
+
+## 🎯 Best Practices
+
+### Workflow Recommendations
+
+1. **Start with Product Templates**
+   - Define all products in Product Template Manager
+   - Organize by category
+   - Complete configurations before quoting
+
+2. **Use Global Search**
+   - Press Ctrl+K frequently
+   - Faster than manual entry
+   - Reduces errors
+
+3. **Save Often**
+   - Quotes auto-save on step changes
+   - Manual save recommended for large changes
+   - Export backups regularly
+
+4. **Organize Components**
+   - Use consistent SKU formats
+   - Complete all fields (category, manufacturer)
+   - Keep descriptions clear and searchable
+
+5. **Customize Your Dashboard**
+   - Add your most-used links
+   - Hide widgets you don't need
+   - Choose display style that fits your workflow
+
+---
+
+## 🔄 Updates & Maintenance
+
+### Component Database Updates
+
+**For IT/Admin:**
+1. Update CSV file with new pricing/components
+2. Run database migration script
+3. Deploy updated database to NAS
+4. Users get updates automatically
+
+**For Users:**
+- Database updates happen automatically via NAS
+- No action required on your part
+- Restart app if you don't see changes immediately
+
+### Backing Up Your Work
+
+**Recommended backup locations**:
+- Quotes: `%APPDATA%\electron-vite-react-app\data\quotes\`
+- Settings: `%APPDATA%\electron-vite-react-app\data\settings.json`
+- Exports: Your chosen export folder
+
+**Backup Frequency**:
+- Daily: Export important quotes
+- Weekly: Check your quotes folder
+- Monthly: Backup settings if heavily customized
+
+---
+
+## 💡 Pro Tips
+
+1. **Dual Monitors**: Open search (Ctrl+K) on second screen while working
+2. **Templates**: Create product templates for repeat customers
+3. **Categories**: Use assembly categories to organize complex BOMs
+4. **Export Settings**: Set default location to shared network drive
+5. **Custom Links**: Add customer portals and supplier sites
+6. **Search**: Type part of description, don't need exact match
+7. **Keyboard**: Use Tab to navigate forms quickly
+8. **Database**: All components are shared - no need to maintain separate lists
+
+---
+
+## 📞 Support
+
+For technical issues or questions:
+- Check troubleshooting section above
+- Review relevant documentation files
+- Check GitHub repository: `github.com/2nist/craft_tools_hub`
+- Contact IT for database or deployment issues
+
+---
+
+**Version**: 1.0.0  
+**Last Updated**: November 2025  
+**Database**: SQLite with 1,335+ components  
+**Built for**: Craft Automation Sales Team
+
+---
+
+*Happy Quoting! 🍺⚙️*
 - 🌾 **Grain** (250-299): Grain Handling, Milling, Storage
 - ⚙️ **Motor Control** (300-349): Drives, Soft Starters, Motors
 - 🎯 **Pneumatics** (400-449): Valves, Actuators, Regulators

@@ -1,6 +1,16 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -9,28 +19,78 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Database setup
-require('./database');
+// Database connection - use a dedicated database directory
+const dbDir = path.join(__dirname, '..', 'database');
+const dbPath = path.join(dbDir, 'craft_tools.db');
+
+let db;
+async function initializeDatabase() {
+  try {
+    // Ensure database directory exists
+    await fs.mkdir(dbDir, { recursive: true });
+    
+    db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+    console.log('Connected to SQLite database at:', dbPath);
+  } catch (error) {
+    console.error('Database connection error:', error);
+  }
+}
+
+// Initialize database on startup
+try {
+  await initializeDatabase();
+  console.log('Database initialization completed');
+} catch (error) {
+  console.error('Failed to initialize database:', error);
+  process.exit(1);
+}
 
 // API Routes
-app.use('/api/components', require('./routes/components'));
-app.use('/api/sub-assemblies', require('./routes/sub_assemblies'));
-app.use('/api/projects', require('./routes/projects'));
-app.use('/api/quotes', require('./routes/quotes'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    database: db ? 'connected' : 'disconnected'
+  });
+});
+
+// Get all components
+app.get('/api/components', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    const components = await db.all('SELECT * FROM components LIMIT 100');
+    res.json(components);
+  } catch (error) {
+    console.error('Error fetching components:', error);
+    res.status(500).json({ error: 'Failed to fetch components' });
+  }
+});
+
+// Get component count
+app.get('/api/components/count', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    const result = await db.get('SELECT COUNT(*) as count FROM components');
+    res.json({ count: result.count });
+  } catch (error) {
+    console.error('Error getting component count:', error);
+    res.status(500).json({ error: 'Failed to get component count' });
+  }
 });
 
 // Start server
 const server = app.listen(PORT, () => {
   console.log(`API Server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/api/health`);
 });
-
-// Handle server errors
-server.on('error', (err) => {
-  console.error('Server error:', err);
-});
-
-module.exports = app;

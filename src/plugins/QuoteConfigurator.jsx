@@ -635,13 +635,7 @@ function ProjectDetails({
 // Step 2: Panel Configuration
 // Step 3: Product Configuration Form (Dynamic Form Renderer)
 function ProductConfigurationForm({ currentTemplate, productConfiguration, setProductConfiguration, defaultIOFields }) {
-  // CRITICAL DEBUG: Log when component loads
-  console.log('🚀 ProductConfigurationForm LOADED!', { 
-    timestamp: new Date().toISOString(),
-    hasTemplate: !!currentTemplate,
-    templateCode: currentTemplate?.productCode,
-    productConfig: productConfiguration
-  });
+  // Removed debug console.log that was causing repeated output
 
   const templateAssemblies = React.useMemo(
     () => (Array.isArray(currentTemplate?.assemblies) ? currentTemplate.assemblies : []),
@@ -1075,7 +1069,15 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
   
   // Initialize assembly instances when template or custom assemblies change
   React.useEffect(() => {
-    if (assembliesToRender.length === 0) {
+    if (!currentTemplate) {
+      return;
+    }
+
+    const templateAssemblies = Array.isArray(currentTemplate?.assemblies) ? currentTemplate.assemblies : [];
+    const customAssemblies = Array.isArray(productConfiguration?.__customAssemblies) ? productConfiguration.__customAssemblies : [];
+    const allAssemblies = [...templateAssemblies, ...customAssemblies];
+
+    if (allAssemblies.length === 0) {
       return;
     }
 
@@ -1083,7 +1085,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
       const updated = { ...prev };
       let hasChanges = false;
 
-      assembliesToRender.forEach(assembly => {
+      allAssemblies.forEach(assembly => {
         if (!assembly?.assemblyId) {
           return;
         }
@@ -1121,7 +1123,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
 
       return hasChanges ? updated : prev;
     });
-  }, [assembliesToRender, defaultIOFields, setProductConfiguration]);
+  }, [currentTemplate, productConfiguration?.__customAssemblies, defaultIOFields, setProductConfiguration]);
 
   React.useEffect(() => {
     if (!isAddAssemblyOpen) {

@@ -22,9 +22,26 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      external: ['electron', 'path', 'fs', 'fs/promises', 'url', 'crypto'],
+      external: ['electron', 'path', 'fs', 'fs/promises', 'url', 'crypto', 'express', 'cors', 'sqlite3', 'sqlite'],
       // Don't bundle the services - they'll be dynamically imported at runtime
       // This allows them to be imported from src/services/ in development
+      plugins: [
+        {
+          name: 'skip-analysis',
+          buildStart() {
+            // Hook to potentially skip analysis
+          },
+          transform(code, id) {
+            if (id.includes('electron/main.js')) {
+              // Return the code as-is without transformation
+              return {
+                code,
+                map: null
+              };
+            }
+          }
+        }
+      ]
     },
     emptyOutDir: true,
   },

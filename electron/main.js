@@ -6,6 +6,12 @@ import fssync from 'fs'
 import Ajv from 'ajv'
 import Papa from 'papaparse'
 
+// Server imports for embedded server
+import express from 'express'
+import cors from 'cors'
+import sqlite3 from 'sqlite3'
+import { open } from 'sqlite'
+
 // Note: Services are imported dynamically in IPC handlers to handle ES module resolution
 // This avoids import errors in development mode when Electron may not resolve paths correctly
 
@@ -84,8 +90,8 @@ async function getRuntimeStatus() {
   } catch (err) {
     status.ok = !usingOverride
     status.message = usingOverride
-      ? `Runtime override unavailable: ${err.message}`
-      : `Local runtime unavailable: ${err.message}`
+      ? 'Runtime override unavailable: ' + err.message
+      : 'Local runtime unavailable: ' + err.message
     status.error = err.message
     return status
   }
@@ -110,7 +116,7 @@ async function getRuntimeStatus() {
     if (usingOverride) {
       const version = info?.version || 'unknown version'
       const timestamp = info?.timestampUtc || status.buildInfoFileModified
-      status.message = `NAS build ${version} @ ${timestamp}`
+      status.message = 'NAS build ' + version + ' @ ' + timestamp
     } else {
       status.message = 'Using local runtime'
     }
@@ -119,7 +125,7 @@ async function getRuntimeStatus() {
       status.ok = false
       status.message = err.code === 'ENOENT'
         ? 'NAS build-info.json not found'
-        : `NAS runtime error: ${err.message}`
+        : 'NAS runtime error: ' + err.message
       status.error = err.message
     } else {
       status.message = 'Using local runtime'
@@ -152,6 +158,13 @@ let loadedSubAssemblies = []
 let cachedSubAssemblies = [] // Cache for all sub-assemblies
 let quoteSchema
 let quoteValidate
+
+// Embedded server variables
+let serverApp
+let serverDb
+let generatedNumbersDb
+let serverPort = 3001
+let serverInstance
 
 // Default customer data (same as in App.jsx)
 const DEFAULT_CUSTOMER_DATA = {
@@ -369,6 +382,492 @@ async function initPluginsDirectory() {
   }
 }
 
+// Initialize database tables
+async function initializeDatabaseTables(db) {
+  try {
+    console.log('Initializing database tables...')
+
+    // Components table (already exists, but ensure it has all columns)
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS components (
+        sku TEXT PRIMARY KEY,
+        description TEXT,
+        category TEXT,
+        vendor TEXT,
+        price REAL,
+        volt INTEGER,
+        phase INTEGER,
+        amps REAL,
+        tags TEXT,
+        manualLink TEXT,
+        uom TEXT,
+        vndrnum TEXT,
+        notes TEXT,
+        partAbbrev TEXT,
+        lastPriceUpdate TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS customers (
+        customerCode TEXT PRIMARY KEY,
+        customerName TEXT NOT NULL,
+        isActive BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // Sub-assemblies table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS sub_assemblies (
+        subAssemblyId TEXT PRIMARY KEY,
+        description TEXT NOT NULL,
+        category TEXT,
+        attributes TEXT, -- JSON string for complex attributes
+        components TEXT, -- JSON string for component list
+        estimatedLaborHours REAL,
+        isBundled BOOLEAN DEFAULT 0,
+        isUserCreated BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // Quotes table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS quotes (
+        quoteId TEXT PRIMARY KEY,
+        projectName TEXT,
+        customer TEXT,
+        salesRep TEXT,
+        status TEXT DEFAULT 'draft',
+        projectCodes TEXT, -- JSON string for project codes
+        controlPanelConfig TEXT, -- JSON string for panel config
+        operationalItems TEXT, -- JSON string for operational items
+        pricing TEXT, -- JSON string for pricing data
+        bom TEXT, -- JSON string for BOM data
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // Operational items table (for detailed BOM items)
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS operational_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quoteId TEXT,
+        sku TEXT,
+        description TEXT,
+        displayName TEXT,
+        quantity REAL,
+        unitPrice REAL,
+        totalPrice REAL,
+        vendor TEXT,
+        vndrnum TEXT,
+        category TEXT,
+        sectionGroup TEXT,
+        sourceAssembly TEXT,
+        sourceRule TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (quoteId) REFERENCES quotes (quoteId) ON DELETE CASCADE
+      )
+    `)
+
+    // Product templates table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS product_templates (
+        productCode INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        templateData TEXT, -- JSON string for template structure
+        isActive BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // Projects table (for project tracking)
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        projectNumber TEXT,
+        quoteNumber TEXT,
+        projectName TEXT,
+        customer TEXT,
+        industry TEXT,
+        product TEXT,
+        control TEXT,
+        scope TEXT,
+        poNumber TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    // Generated numbers table (for tracking quote and project number generation)
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS generated_numbers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL, -- 'quote' or 'project'
+        mainId TEXT NOT NULL,
+        fullId TEXT NOT NULL,
+        customerCode TEXT,
+        customerName TEXT,
+        industry TEXT,
+        product TEXT,
+        control TEXT,
+        scope TEXT,
+        poNumber TEXT,
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    console.log('Database tables initialized successfully')
+
+    // Run data migration from JSON files to database
+    await migrateExistingData(db)
+  } catch (error) {
+    console.error('Error initializing database tables:', error)
+    throw error
+  }
+}
+
+// Migrate existing JSON data to database tables
+async function migrateExistingData(db) {
+  try {
+    console.log('Checking for existing data to migrate...')
+
+    // Migrate customers from hardcoded data
+    try {
+      console.log('Migrating customers from hardcoded data...')
+
+      for (const [customerCode, customerName] of Object.entries(DEFAULT_CUSTOMER_DATA)) {
+        const existing = await db.get('SELECT customerCode FROM customers WHERE customerCode = ?', [customerCode])
+        if (!existing) {
+          await db.run(`
+            INSERT INTO customers (
+              customerCode, customerName, isActive, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?)
+          `, [
+            customerCode,
+            customerName,
+            1,
+            new Date().toISOString(),
+            new Date().toISOString()
+          ])
+        }
+      }
+      console.log('Customers migration completed')
+    } catch (error) {
+      console.log('Error migrating customers:', error.message)
+    }
+
+    // Migrate sub-assemblies
+    try {
+      const subAssembliesPath = path.join(dataPath, 'sub_assemblies.json')
+      const subAssembliesData = await fs.readFile(subAssembliesPath, 'utf-8')
+      const subAssemblies = JSON.parse(subAssembliesData)
+
+      if (Array.isArray(subAssemblies) && subAssemblies.length > 0) {
+        console.log(`Migrating ${subAssemblies.length} sub-assemblies to database...`)
+
+        for (const sa of subAssemblies) {
+          const existing = await db.get('SELECT subAssemblyId FROM sub_assemblies WHERE subAssemblyId = ?', [sa.subAssemblyId || sa.assemblyId])
+          if (!existing) {
+            await db.run(`
+              INSERT INTO sub_assemblies (
+                subAssemblyId, description, category, attributes, components,
+                estimatedLaborHours, isBundled, isUserCreated, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              sa.subAssemblyId || sa.assemblyId,
+              sa.description || '',
+              sa.category || '',
+              JSON.stringify(sa.attributes || {}),
+              JSON.stringify(sa.components || []),
+              sa.estimatedLaborHours || 0,
+              sa.isBundled ? 1 : 0,
+              sa.isUserCreated ? 1 : 0,
+              new Date().toISOString(),
+              new Date().toISOString()
+            ])
+          }
+        }
+        console.log('Sub-assemblies migration completed')
+      }
+    } catch (error) {
+      console.log('No sub-assemblies to migrate or migration failed:', error.message)
+    }
+
+    // Migrate quotes
+    try {
+      const quotesDir = path.join(dataPath, 'quotes')
+      const files = await fs.readdir(quotesDir)
+      const jsonFiles = files.filter(f => f.endsWith('.json'))
+
+      if (jsonFiles.length > 0) {
+        console.log(`Migrating ${jsonFiles.length} quotes to database...`)
+
+        for (const file of jsonFiles) {
+          const filePath = path.join(quotesDir, file)
+          const quoteData = await fs.readFile(filePath, 'utf-8')
+          const quote = JSON.parse(quoteData)
+
+          const existing = await db.get('SELECT quoteId FROM quotes WHERE quoteId = ?', [quote.quoteId])
+          if (!existing) {
+            await db.run(`
+              INSERT INTO quotes (
+                quoteId, projectName, customer, salesRep, status,
+                projectCodes, controlPanelConfig, operationalItems,
+                pricing, bom, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              quote.quoteId,
+              quote.projectName || '',
+              quote.customer || '',
+              quote.salesRep || '',
+              quote.status || 'draft',
+              JSON.stringify(quote.projectCodes || {}),
+              JSON.stringify(quote.controlPanelConfig || {}),
+              JSON.stringify(quote.operationalItems || []),
+              JSON.stringify(quote.pricing || {}),
+              JSON.stringify(quote.bom || null),
+              new Date().toISOString(),
+              new Date().toISOString()
+            ])
+
+            // Migrate operational items if they exist
+            if (Array.isArray(quote.operationalItems) && quote.operationalItems.length > 0) {
+              for (const item of quote.operationalItems) {
+                await db.run(`
+                  INSERT INTO operational_items (
+                    quoteId, sku, description, displayName, quantity, unitPrice, totalPrice,
+                    vendor, vndrnum, category, sectionGroup, sourceAssembly, sourceRule, notes
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [
+                  quote.quoteId,
+                  item.sku || '',
+                  item.description || '',
+                  item.displayName || '',
+                  item.quantity || 0,
+                  item.unitPrice || 0,
+                  item.totalPrice || 0,
+                  item.vendor || '',
+                  item.vndrnum || '',
+                  item.category || '',
+                  item.sectionGroup || '',
+                  item.sourceAssembly || '',
+                  item.sourceRule || '',
+                  item.notes || ''
+                ])
+              }
+            }
+          }
+        }
+        console.log('Quotes migration completed')
+      }
+    } catch (error) {
+      console.log('No quotes to migrate or migration failed:', error.message)
+    }
+
+    // Migrate projects
+    try {
+      const projectsPath = path.join(dataPath, 'projects.json')
+      const projectsData = await fs.readFile(projectsPath, 'utf-8')
+      const projects = JSON.parse(projectsData)
+
+      if (Array.isArray(projects) && projects.length > 0) {
+        console.log(`Migrating ${projects.length} projects to database...`)
+
+        for (const project of projects) {
+          const existing = await db.get('SELECT id FROM projects WHERE id = ?', [project.id])
+          if (!existing) {
+            await db.run(`
+              INSERT INTO projects (
+                id, projectNumber, quoteNumber, projectName, customer,
+                industry, product, control, scope, poNumber, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+              project.id,
+              project.projectNumber || '',
+              project.quoteNumber || '',
+              project.projectName || '',
+              project.customer || '',
+              project.industry || '',
+              project.product || '',
+              project.control || '',
+              project.scope || '',
+              project.poNumber || '',
+              project.createdAt || new Date().toISOString(),
+              new Date().toISOString()
+            ])
+          }
+        }
+        console.log('Projects migration completed')
+      }
+    } catch (error) {
+      console.log('No projects to migrate or migration failed:', error.message)
+    }
+
+    // Migrate product templates
+    try {
+      const templatesDir = path.join(dataPath, 'product-templates')
+      const files = await fs.readdir(templatesDir)
+      const jsonFiles = files.filter(f => f.endsWith('.json'))
+
+      if (jsonFiles.length > 0) {
+        console.log(`Migrating ${jsonFiles.length} product templates to database...`)
+
+        for (const file of jsonFiles) {
+          const productCode = file.replace('.json', '')
+          const filePath = path.join(templatesDir, file)
+          const templateData = await fs.readFile(filePath, 'utf-8')
+          const template = JSON.parse(templateData)
+
+          const existing = await db.get('SELECT productCode FROM product_templates WHERE productCode = ?', [parseInt(productCode)])
+          if (!existing) {
+            await db.run(`
+              INSERT INTO product_templates (
+                productCode, name, description, templateData, isActive, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [
+              parseInt(productCode),
+              template.name || `Product ${productCode}`,
+              template.description || '',
+              JSON.stringify(template),
+              1,
+              new Date().toISOString(),
+              new Date().toISOString()
+            ])
+          }
+        }
+        console.log('Product templates migration completed')
+      }
+    } catch (error) {
+      console.log('No product templates to migrate or migration failed:', error.message)
+    }
+
+    console.log('Data migration completed successfully')
+  } catch (error) {
+    console.error('Error during data migration:', error)
+  }
+}
+
+// Initialize generated numbers database tables
+async function initializeGeneratedNumbersDatabase() {
+  try {
+    console.log('Initializing generated numbers database...')
+
+    // Database path for generated numbers - use NAS if available, fallback to local
+    const dbDir = resolveRuntimePath('database')
+    const dbPath = path.join(dbDir, 'generated_numbers.db')
+
+    // Ensure database directory exists
+    await fs.mkdir(dbDir, { recursive: true })
+
+    generatedNumbersDb = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    })
+    console.log('Generated numbers database connected at:', dbPath)
+
+    // Create generated numbers table
+    await generatedNumbersDb.exec(`
+      CREATE TABLE IF NOT EXISTS generated_numbers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL, -- 'quote' or 'project'
+        mainId TEXT NOT NULL,
+        fullId TEXT NOT NULL,
+        customerCode TEXT,
+        customerName TEXT,
+        industry TEXT,
+        product TEXT,
+        control TEXT,
+        scope TEXT,
+        poNumber TEXT,
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    console.log('Generated numbers database initialized successfully')
+  } catch (error) {
+    console.error('Error initializing generated numbers database:', error)
+    // Don't throw error - allow app to continue without generated numbers database
+  }
+}
+
+// Initialize embedded API server
+async function initEmbeddedServer() {
+  try {
+    serverApp = express()
+    serverApp.use(cors())
+    serverApp.use(express.json())
+
+    // Database path - try NAS first, fallback to local
+    const dbDir = resolveRuntimePath('database')
+    const dbPath = path.join(dbDir, 'craft_tools.db')
+
+    // Ensure database directory exists
+    await fs.mkdir(dbDir, { recursive: true })
+
+    serverDb = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    })
+    console.log('Embedded server connected to database at:', dbPath)
+    console.log('Database location:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
+
+    // Initialize database tables
+    await initializeDatabaseTables(serverDb)
+
+    // API Routes
+    serverApp.get('/api/health', (req, res) => {
+      res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        database: serverDb ? 'connected' : 'disconnected'
+      })
+    })
+
+    serverApp.get('/api/components', async (req, res) => {
+      try {
+        if (!serverDb) {
+          return res.status(500).json({ error: 'Database not connected' })
+        }
+        const components = await serverDb.all('SELECT * FROM components LIMIT 100')
+        res.json(components)
+      } catch (error) {
+        console.error('Error fetching components:', error)
+        res.status(500).json({ error: 'Failed to fetch components' })
+      }
+    })
+
+    serverApp.get('/api/components/count', async (req, res) => {
+      try {
+        if (!serverDb) {
+          return res.status(500).json({ error: 'Database not connected' })
+        }
+        const result = await serverDb.get('SELECT COUNT(*) as count FROM components')
+        res.json({ count: result.count })
+      } catch (error) {
+        console.error('Error getting component count:', error)
+        res.status(500).json({ error: 'Failed to get component count' })
+      }
+    })
+
+    // Start server
+    serverInstance = serverApp.listen(serverPort, () => {
+      console.log(`Embedded API server running on port ${serverPort}`)
+    })
+
+  } catch (error) {
+    console.error('Failed to initialize embedded server:', error)
+  }
+}
+
 // Discover and load all plugins
 async function loadPlugins() {
   try {
@@ -449,12 +948,28 @@ function sanitizeComponentCatalog(list = []) {
   return sanitized
 }
 
-// Load component catalog from bundled data
+// Load component catalog from API server
 async function loadComponents() {
   try {
-    // First, try to load from synced data (user's uploaded CSV)
+    // Try to load from API server first
+    try {
+      console.log('Attempting to load components from API server...');
+      const response = await fetch('http://localhost:3001/api/components');
+      if (response.ok) {
+        const components = await response.json();
+        loadedComponents = sanitizeComponentCatalog(components);
+        console.log(`Loaded ${loadedComponents.length} components from API server`);
+        return loadedComponents;
+      } else {
+        console.log('API server responded with error:', response.status);
+      }
+    } catch (apiErr) {
+      console.log('API server not available, falling back to local data:', apiErr.message);
+    }
+
+    // Fallback to synced data (user's uploaded CSV)
     const syncedPath = path.join(dataPath, 'components', 'component_catalog.json');
-    
+
     try {
       const syncedData = await fs.readFile(syncedPath, 'utf-8');
       const parsed = JSON.parse(syncedData);
@@ -464,15 +979,15 @@ async function loadComponents() {
     } catch (syncErr) {
       console.log('No synced catalog found, loading bundled catalog...');
     }
-    
-    // Fallback to bundled data
+
+    // Final fallback to bundled data
     let componentsPath;
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       componentsPath = path.join(__dirname, '..', 'src', 'data', 'components', 'component_catalog.json');
     } else {
       componentsPath = path.join(process.resourcesPath, 'data', 'components', 'component_catalog.json');
     }
-    
+
     const data = await fs.readFile(componentsPath, 'utf-8');
     const parsed = JSON.parse(data);
     loadedComponents = sanitizeComponentCatalog(parsed);
@@ -540,7 +1055,9 @@ function csvEscape(value) {
 
   const stringValue = typeof value === 'string' ? value : String(value)
   if (stringValue.includes('"') || stringValue.includes(',') || /[\r\n]/.test(stringValue)) {
-    return `"${stringValue.replace(/"/g, '""')}"`
+    // Use string replacement instead of regex to avoid parsing issues
+    const escaped = stringValue.split('"').join('""')
+    return `"${escaped}"`
   }
 
   return stringValue
@@ -691,75 +1208,7 @@ function createSplashWindow() {
   });
 
   // Create a simple HTML splash screen
-  const splashHTML = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-          }
-          .splash {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-          }
-          .logo {
-            font-size: 48px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-          }
-          .title {
-            color: white;
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 30px;
-          }
-          .loader {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(59, 130, 246, 0.2);
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-          .status {
-            color: #94a3b8;
-            font-size: 14px;
-            margin-top: 20px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="splash">
-          <div class="logo">⚙️</div>
-          <div class="title">Craft Automation CPQ (Configure, Price Quote)</div>
-          <div class="loader"></div>
-          <div class="status">Loading workspace...</div>
-        </div>
-      </body>
-    </html>
-  `;
+  const splashHTML = '<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:transparent;display:flex;align-items:center;justify-content:center;height:100vh}.splash{background:linear-gradient(135deg,#1e293b 0%,#334155 100%);border-radius:16px;padding:40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}.logo{font-size:48px;font-weight:800;background:linear-gradient(135deg,#3b82f6 0%,#06b6d4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px}.title{color:white;font-size:24px;font-weight:600;margin-bottom:30px}.loader{width:60px;height:60px;border:4px solid rgba(59,130,246,0.2);border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.status{color:#94a3b8;font-size:14px;margin-top:20px}</style></head><body><div class="splash"><div class="logo">⚙️</div><div class="title">Craft Automation CPQ (Configure, Price Quote)</div><div class="loader"></div><div class="status">Loading workspace...</div></div></body></html>';
 
   splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(splashHTML));
 }
@@ -797,15 +1246,16 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://unpkg.com;",
+      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3001 https://unpkg.com;",
     },
   })
 
   // In development, load from Vite dev server; in production, load from dist folder
-  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+  const distPath = path.join(__dirname, '../dist/index.html')
+  if (isDev && !fssync.existsSync(distPath)) {
     mainWindow.loadURL('http://localhost:5174')
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(distPath)
   }
   mainWindow.webContents.openDevTools()
 
@@ -887,6 +1337,8 @@ app.whenReady().then(async () => {
   
   await initDataStorage()
   await initPluginsDirectory()
+  await initEmbeddedServer()
+  await initializeGeneratedNumbersDatabase()
   await loadPlugins()
   await loadComponents()
   await loadSubAssemblies()
@@ -919,7 +1371,43 @@ app.whenReady().then(async () => {
   
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
-      app.quit()
+      // Close the embedded server and databases before quitting
+      if (serverInstance) {
+        serverInstance.close(async () => {
+          console.log('Embedded server closed')
+          if (serverDb) {
+            await serverDb.close()
+            console.log('Main database closed')
+          }
+          if (generatedNumbersDb) {
+            await generatedNumbersDb.close()
+            console.log('Generated numbers database closed')
+          }
+          app.quit()
+        })
+      } else {
+        // Close databases even if no server
+        if (serverDb) {
+          serverDb.close().then(() => {
+            console.log('Main database closed')
+            if (generatedNumbersDb) {
+              generatedNumbersDb.close().then(() => {
+                console.log('Generated numbers database closed')
+                app.quit()
+              })
+            } else {
+              app.quit()
+            }
+          })
+        } else if (generatedNumbersDb) {
+          generatedNumbersDb.close().then(() => {
+            console.log('Generated numbers database closed')
+            app.quit()
+          })
+        } else {
+          app.quit()
+        }
+      }
     }
   })
   
@@ -1214,6 +1702,570 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
   } catch (error) {
     console.error('Error in Smart Sync:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// Database-based IPC handlers for new tables
+
+// Sub-assemblies database handlers
+ipcMain.handle('db:sub-assemblies:getAll', async () => {
+  try {
+    if (!serverDb) {
+      return await getAllSubAssemblies(); // Fallback to JSON
+    }
+    const subAssemblies = await serverDb.all('SELECT * FROM sub_assemblies ORDER BY updated_at DESC');
+    return subAssemblies.map(sa => ({
+      ...sa,
+      attributes: sa.attributes ? JSON.parse(sa.attributes) : {},
+      components: sa.components ? JSON.parse(sa.components) : []
+    }));
+  } catch (error) {
+    console.error('Error fetching sub-assemblies from database:', error);
+    return await getAllSubAssemblies(); // Fallback to JSON
+  }
+});
+
+ipcMain.handle('db:sub-assemblies:save', async (event, subAssembly) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('sub-assemblies:save', event, subAssembly); // Fallback to JSON
+    }
+
+    const now = new Date().toISOString();
+    const data = {
+      subAssemblyId: subAssembly.subAssemblyId || subAssembly.assemblyId,
+      description: subAssembly.description,
+      category: subAssembly.category,
+      attributes: JSON.stringify(subAssembly.attributes || {}),
+      components: JSON.stringify(subAssembly.components || []),
+      estimatedLaborHours: subAssembly.estimatedLaborHours || 0,
+      isBundled: subAssembly.isBundled ? 1 : 0,
+      isUserCreated: subAssembly.isUserCreated ? 1 : 0,
+      updated_at: now
+    };
+
+    // Check if sub-assembly exists
+    const existing = await serverDb.get('SELECT subAssemblyId FROM sub_assemblies WHERE subAssemblyId = ?', [data.subAssemblyId]);
+
+    if (existing) {
+      // Update
+      await serverDb.run(`
+        UPDATE sub_assemblies SET
+          description = ?, category = ?, attributes = ?, components = ?,
+          estimatedLaborHours = ?, isBundled = ?, isUserCreated = ?, updated_at = ?
+        WHERE subAssemblyId = ?
+      `, [
+        data.description, data.category, data.attributes, data.components,
+        data.estimatedLaborHours, data.isBundled, data.isUserCreated, data.updated_at,
+        data.subAssemblyId
+      ]);
+    } else {
+      // Insert
+      data.created_at = now;
+      await serverDb.run(`
+        INSERT INTO sub_assemblies (
+          subAssemblyId, description, category, attributes, components,
+          estimatedLaborHours, isBundled, isUserCreated, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        data.subAssemblyId, data.description, data.category, data.attributes, data.components,
+        data.estimatedLaborHours, data.isBundled, data.isUserCreated, data.created_at, data.updated_at
+      ]);
+    }
+
+    return { success: true, data: subAssembly };
+  } catch (error) {
+    console.error('Error saving sub-assembly to database:', error);
+    return await ipcMain.handle('sub-assemblies:save', event, subAssembly); // Fallback to JSON
+  }
+});
+
+ipcMain.handle('db:sub-assemblies:getById', async (event, subAssemblyId) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('sub-assemblies:getById', event, subAssemblyId); // Fallback to JSON
+    }
+
+    const row = await serverDb.get('SELECT * FROM sub_assemblies WHERE subAssemblyId = ?', [subAssemblyId]);
+    if (!row) return null;
+
+    return {
+      ...row,
+      attributes: row.attributes ? JSON.parse(row.attributes) : {},
+      components: row.components ? JSON.parse(row.components) : []
+    };
+  } catch (error) {
+    console.error('Error fetching sub-assembly from database:', error);
+    return await ipcMain.handle('sub-assemblies:getById', event, subAssemblyId); // Fallback to JSON
+  }
+});
+
+// Quotes database handlers
+ipcMain.handle('db:quotes:getAll', async () => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('quote:get-all'); // Fallback to JSON
+    }
+    const quotes = await serverDb.all('SELECT * FROM quotes ORDER BY updated_at DESC');
+    return quotes.map(q => ({
+      ...q,
+      projectCodes: q.projectCodes ? JSON.parse(q.projectCodes) : {},
+      controlPanelConfig: q.controlPanelConfig ? JSON.parse(q.controlPanelConfig) : {},
+      operationalItems: q.operationalItems ? JSON.parse(q.operationalItems) : [],
+      pricing: q.pricing ? JSON.parse(q.pricing) : {},
+      bom: q.bom ? JSON.parse(q.bom) : null
+    }));
+  } catch (error) {
+    console.error('Error fetching quotes from database:', error);
+    return await ipcMain.handle('quote:get-all'); // Fallback to JSON
+  }
+});
+
+ipcMain.handle('db:quotes:save', async (event, quote) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('quote:save', event, quote); // Fallback to JSON
+    }
+
+    const now = new Date().toISOString();
+    const data = {
+      quoteId: quote.quoteId,
+      projectName: quote.projectName || '',
+      customer: quote.customer || '',
+      salesRep: quote.salesRep || '',
+      status: quote.status || 'draft',
+      projectCodes: JSON.stringify(quote.projectCodes || {}),
+      controlPanelConfig: JSON.stringify(quote.controlPanelConfig || {}),
+      operationalItems: JSON.stringify(quote.operationalItems || []),
+      pricing: JSON.stringify(quote.pricing || {}),
+      bom: JSON.stringify(quote.bom || null),
+      updated_at: now
+    };
+
+    // Check if quote exists
+    const existing = await serverDb.get('SELECT quoteId FROM quotes WHERE quoteId = ?', [data.quoteId]);
+
+    if (existing) {
+      // Update
+      await serverDb.run(`
+        UPDATE quotes SET
+          projectName = ?, customer = ?, salesRep = ?, status = ?,
+          projectCodes = ?, controlPanelConfig = ?, operationalItems = ?,
+          pricing = ?, bom = ?, updated_at = ?
+        WHERE quoteId = ?
+      `, [
+        data.projectName, data.customer, data.salesRep, data.status,
+        data.projectCodes, data.controlPanelConfig, data.operationalItems,
+        data.pricing, data.bom, data.updated_at, data.quoteId
+      ]);
+    } else {
+      // Insert
+      data.created_at = now;
+      await serverDb.run(`
+        INSERT INTO quotes (
+          quoteId, projectName, customer, salesRep, status,
+          projectCodes, controlPanelConfig, operationalItems,
+          pricing, bom, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        data.quoteId, data.projectName, data.customer, data.salesRep, data.status,
+        data.projectCodes, data.controlPanelConfig, data.operationalItems,
+        data.pricing, data.bom, data.created_at, data.updated_at
+      ]);
+    }
+
+    return { success: true, data: quote };
+  } catch (error) {
+    console.error('Error saving quote to database:', error);
+    return await ipcMain.handle('quote:save', event, quote); // Fallback to JSON
+  }
+});
+
+ipcMain.handle('db:quotes:getById', async (event, quoteId) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('quote:get-by-id', event, quoteId); // Fallback to JSON
+    }
+
+    const row = await serverDb.get('SELECT * FROM quotes WHERE quoteId = ?', [quoteId]);
+    if (!row) return null;
+
+    return {
+      ...row,
+      projectCodes: row.projectCodes ? JSON.parse(row.projectCodes) : {},
+      controlPanelConfig: row.controlPanelConfig ? JSON.parse(row.controlPanelConfig) : {},
+      operationalItems: row.operationalItems ? JSON.parse(row.operationalItems) : [],
+      pricing: row.pricing ? JSON.parse(row.pricing) : {},
+      bom: row.bom ? JSON.parse(row.bom) : null
+    };
+  } catch (error) {
+    console.error('Error fetching quote from database:', error);
+    return await ipcMain.handle('quote:get-by-id', event, quoteId); // Fallback to JSON
+  }
+});
+
+// Operational items database handlers
+ipcMain.handle('db:operational-items:getByQuoteId', async (event, quoteId) => {
+  try {
+    if (!serverDb) {
+      // For JSON fallback, we'd need to get from quotes
+      const quote = await ipcMain.handle('quote:get-by-id', event, quoteId);
+      return quote ? quote.operationalItems || [] : [];
+    }
+
+    const items = await serverDb.all('SELECT * FROM operational_items WHERE quoteId = ? ORDER BY id', [quoteId]);
+    return items;
+  } catch (error) {
+    console.error('Error fetching operational items from database:', error);
+    // Fallback to JSON
+    const quote = await ipcMain.handle('quote:get-by-id', event, quoteId);
+    return quote ? quote.operationalItems || [] : [];
+  }
+});
+
+ipcMain.handle('db:operational-items:saveBulk', async (event, quoteId, items) => {
+  try {
+    if (!serverDb) {
+      // For JSON fallback, we'd need to update the quote
+      const quote = await ipcMain.handle('quote:get-by-id', event, quoteId);
+      if (quote) {
+        quote.operationalItems = items;
+        return await ipcMain.handle('quote:save', event, quote);
+      }
+      return { success: false, error: 'Quote not found' };
+    }
+
+    // First delete existing items for this quote
+    await serverDb.run('DELETE FROM operational_items WHERE quoteId = ?', [quoteId]);
+
+    // Insert new items
+    for (const item of items) {
+      await serverDb.run(`
+        INSERT INTO operational_items (
+          quoteId, sku, description, displayName, quantity, unitPrice, totalPrice,
+          vendor, vndrnum, category, sectionGroup, sourceAssembly, sourceRule, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        quoteId, item.sku || '', item.description || '', item.displayName || '',
+        item.quantity || 0, item.unitPrice || 0, item.totalPrice || 0,
+        item.vendor || '', item.vndrnum || '', item.category || '',
+        item.sectionGroup || '', item.sourceAssembly || '', item.sourceRule || '', item.notes || ''
+      ]);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving operational items to database:', error);
+    // Fallback to JSON
+    const quote = await ipcMain.handle('quote:get-by-id', event, quoteId);
+    if (quote) {
+      quote.operationalItems = items;
+      return await ipcMain.handle('quote:save', event, quote);
+    }
+    return { success: false, error: error.message };
+  }
+});
+
+// Product templates database handlers
+ipcMain.handle('db:product-templates:getAll', async () => {
+  try {
+    if (!serverDb) {
+      // For JSON fallback, we'd need to scan the product-templates directory
+      return [];
+    }
+    const templates = await serverDb.all('SELECT * FROM product_templates WHERE isActive = 1 ORDER BY productCode');
+    return templates.map(t => ({
+      ...t,
+      templateData: t.templateData ? JSON.parse(t.templateData) : {}
+    }));
+  } catch (error) {
+    console.error('Error fetching product templates from database:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('db:product-templates:getByCode', async (event, productCode) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('product-templates:get', event, productCode); // Fallback to JSON
+    }
+
+    const row = await serverDb.get('SELECT * FROM product_templates WHERE productCode = ? AND isActive = 1', [productCode]);
+    if (!row) return null;
+
+    return {
+      ...row,
+      templateData: row.templateData ? JSON.parse(row.templateData) : {}
+    };
+  } catch (error) {
+    console.error('Error fetching product template from database:', error);
+    return await ipcMain.handle('product-templates:get', event, productCode); // Fallback to JSON
+  }
+});
+
+ipcMain.handle('db:product-templates:save', async (event, template) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('product-templates:save', event, template); // Fallback to JSON
+    }
+
+    const now = new Date().toISOString();
+    const data = {
+      productCode: template.productCode,
+      name: template.name,
+      description: template.description || '',
+      templateData: JSON.stringify(template.templateData || {}),
+      isActive: template.isActive !== false ? 1 : 0,
+      updated_at: now
+    };
+
+    // Check if template exists
+    const existing = await serverDb.get('SELECT productCode FROM product_templates WHERE productCode = ?', [data.productCode]);
+
+    if (existing) {
+      // Update
+      await serverDb.run(`
+        UPDATE product_templates SET
+          name = ?, description = ?, templateData = ?, isActive = ?, updated_at = ?
+        WHERE productCode = ?
+      `, [
+        data.name, data.description, data.templateData, data.isActive, data.updated_at, data.productCode
+      ]);
+    } else {
+      // Insert
+      data.created_at = now;
+      await serverDb.run(`
+        INSERT INTO product_templates (
+          productCode, name, description, templateData, isActive, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+        data.productCode, data.name, data.description, data.templateData,
+        data.isActive, data.created_at, data.updated_at
+      ]);
+    }
+
+    return { success: true, data: template };
+  } catch (error) {
+    console.error('Error saving product template to database:', error);
+    return await ipcMain.handle('product-templates:save', event, template); // Fallback to JSON
+  }
+});
+
+// Projects database handlers
+ipcMain.handle('db:projects:getAll', async () => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('db:loadProjects'); // Fallback to JSON
+    }
+    const projects = await serverDb.all('SELECT * FROM projects ORDER BY created_at DESC');
+    return projects;
+  } catch (error) {
+    console.error('Error fetching projects from database:', error);
+    return await ipcMain.handle('db:loadProjects'); // Fallback to JSON
+  }
+});
+
+ipcMain.handle('db:projects:save', async (event, project) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('db:saveProject', event, project); // Fallback to JSON
+    }
+
+    const now = new Date().toISOString();
+    const data = {
+      id: project.id,
+      projectNumber: project.projectNumber || '',
+      quoteNumber: project.quoteNumber || '',
+      projectName: project.projectName || '',
+      customer: project.customer || '',
+      industry: project.industry || '',
+      product: project.product || '',
+      control: project.control || '',
+      scope: project.scope || '',
+      poNumber: project.poNumber || '',
+      updated_at: now
+    };
+
+    // Check if project exists
+    const existing = await serverDb.get('SELECT id FROM projects WHERE id = ?', [data.id]);
+
+    if (existing) {
+      // Update
+      await serverDb.run(`
+        UPDATE projects SET
+          projectNumber = ?, quoteNumber = ?, projectName = ?, customer = ?,
+          industry = ?, product = ?, control = ?, scope = ?, poNumber = ?, updated_at = ?
+        WHERE id = ?
+      `, [
+        data.projectNumber, data.quoteNumber, data.projectName, data.customer,
+        data.industry, data.product, data.control, data.scope, data.poNumber, data.updated_at, data.id
+      ]);
+    } else {
+      // Insert
+      data.created_at = now;
+      await serverDb.run(`
+        INSERT INTO projects (
+          id, projectNumber, quoteNumber, projectName, customer,
+          industry, product, control, scope, poNumber, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        data.id, data.projectNumber, data.quoteNumber, data.projectName, data.customer,
+        data.industry, data.product, data.control, data.scope, data.poNumber, data.created_at, data.updated_at
+      ]);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving project to database:', error);
+    return await ipcMain.handle('db:saveProject', event, project); // Fallback to JSON
+  }
+});
+
+// Customers IPC handlers
+
+ipcMain.handle('db:customers:getAll', async () => {
+  try {
+    if (!serverDb) {
+      // Fallback to JSON-based customers
+      const customCustomers = await readJSONFile('settings.json') || {}
+      const customCustomerData = customCustomers.customCustomers ? JSON.parse(customCustomers.customCustomers) : {}
+      
+      // Merge with default customers
+      const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+      
+      // Convert to array format expected by plugins
+      return Object.entries(allCustomers).map(([id, name]) => ({
+        id: id,
+        name: name
+      }))
+    }
+
+    const customers = await serverDb.all('SELECT * FROM customers ORDER BY customerCode');
+    return customers.map(customer => ({
+      id: customer.customerCode,
+      name: customer.customerName,
+      isActive: customer.isActive
+    }));
+  } catch (error) {
+    console.error('Error getting customers from database:', error);
+    // Fallback to JSON-based customers
+    const customCustomers = await readJSONFile('settings.json') || {}
+    const customCustomerData = customCustomers.customCustomers ? JSON.parse(customCustomers.customCustomers) : {}
+    
+    // Merge with default customers
+    const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+    
+    // Convert to array format expected by plugins
+    return Object.entries(allCustomers).map(([id, name]) => ({
+      id: id,
+      name: name
+    }))
+  }
+});
+
+ipcMain.handle('db:customers:getByCode', async (event, customerCode) => {
+  try {
+    if (!serverDb) {
+      // Fallback to JSON-based customers
+      const customCustomers = await readJSONFile('settings.json') || {}
+      const customCustomerData = customCustomers.customCustomers ? JSON.parse(customCustomers.customCustomers) : {}
+      
+      // Merge with default customers
+      const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+      
+      const customerName = allCustomers[customerCode];
+      return customerName ? { id: customerCode, name: customerName } : null;
+    }
+
+    const customer = await serverDb.get('SELECT * FROM customers WHERE customerCode = ? AND isActive = 1', [customerCode]);
+    return customer ? {
+      id: customer.customerCode,
+      name: customer.customerName,
+      isActive: customer.isActive
+    } : null;
+  } catch (error) {
+    console.error('Error getting customer by code from database:', error);
+    // Fallback to JSON-based customers
+    const customCustomers = await readJSONFile('settings.json') || {}
+    const customCustomerData = customCustomers.customCustomers ? JSON.parse(customCustomers.customCustomers) : {}
+    
+    // Merge with default customers
+    const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+    
+    const customerName = allCustomers[customerCode];
+    return customerName ? { id: customerCode, name: customerName } : null;
+  }
+});
+
+ipcMain.handle('db:customers:save', async (event, customer) => {
+  try {
+    if (!serverDb) {
+      return await ipcMain.handle('customers:add', event, { name: customer.name, isOEM: customer.isOEM }); // Fallback to JSON
+    }
+
+    const now = new Date().toISOString();
+    const data = {
+      customerCode: customer.id,
+      customerName: customer.name,
+      isActive: customer.isActive !== false, // Default to true
+      updated_at: now
+    };
+
+    // Check if customer exists
+    const existing = await serverDb.get('SELECT customerCode FROM customers WHERE customerCode = ?', [data.customerCode]);
+
+    if (existing) {
+      // Update
+      await serverDb.run(`
+        UPDATE customers SET
+          customerName = ?, isActive = ?, updated_at = ?
+        WHERE customerCode = ?
+      `, [
+        data.customerName, data.isActive, data.updated_at, data.customerCode
+      ]);
+    } else {
+      // Insert
+      data.created_at = now;
+      await serverDb.run(`
+        INSERT INTO customers (
+          customerCode, customerName, isActive, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+      `, [
+        data.customerCode, data.customerName, data.isActive, data.created_at, data.updated_at
+      ]);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving customer to database:', error);
+    return await ipcMain.handle('customers:add', event, { name: customer.name, isOEM: customer.isOEM }); // Fallback to JSON
+  }
+});
+
+// Generated numbers database handlers (separate database)
+ipcMain.handle('db:generated-numbers-separate:getAll', async () => {
+  try {
+    if (!generatedNumbersDb) {
+      return []; // No database, return empty
+    }
+    const numbers = await generatedNumbersDb.all('SELECT * FROM generated_numbers ORDER BY generated_at DESC');
+    return numbers;
+  } catch (error) {
+    console.error('Error fetching generated numbers from separate database:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('db:generated-numbers-separate:getByType', async (event, type) => {
+  try {
+    if (!generatedNumbersDb) {
+      return []; // No database, return empty
+    }
+    const numbers = await generatedNumbersDb.all('SELECT * FROM generated_numbers WHERE type = ? ORDER BY generated_at DESC', [type]);
+    return numbers;
+  } catch (error) {
+    console.error('Error fetching generated numbers by type from separate database:', error);
+    return [];
   }
 });
 
@@ -2613,6 +3665,58 @@ ipcMain.handle('api:get-plugin-registry', async () => {
   }
 });
 
+ipcMain.handle('api:get-toolbox-manifest', async () => {
+  try {
+    // Read toolbox manifest from public/toolbox directory
+    const manifestPath = isDev 
+      ? path.join(__dirname, '..', 'public', 'toolbox', 'manifest.json')
+      : path.join(process.resourcesPath, 'app.asar', 'dist', 'toolbox', 'manifest.json');
+    console.log('Reading toolbox manifest from:', manifestPath);
+    const data = await fs.readFile(manifestPath, 'utf-8');
+    const manifest = JSON.parse(data);
+    console.log('Loaded toolbox manifest:', manifest.length, 'tools');
+    return manifest || [];
+  } catch (err) {
+    console.error('Error loading toolbox manifest:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('api:get-tool-file-url', async (event, relativePath) => {
+  try {
+    // Convert relative paths like /toolbox/file.html to file:// URLs
+    if (relativePath.startsWith('/toolbox/')) {
+      const fileName = relativePath.replace('/toolbox/', '');
+      const filePath = isDev 
+        ? path.join(__dirname, '..', 'public', 'toolbox', fileName)
+        : path.join(process.resourcesPath, 'app.asar', 'dist', 'toolbox', fileName);
+      
+      // Check if file exists
+      await fs.access(filePath);
+      
+      // Return file:// URL
+      return 'file://' + filePath;
+    }
+    return relativePath;
+  } catch (err) {
+    console.error('Error getting tool file URL:', err);
+    return relativePath;
+  }
+});
+
+ipcMain.handle('api:get-logo-url', async () => {
+  const filePath = isDev 
+    ? path.join(__dirname, '..', 'public', 'Craft_Logo.png')
+    : path.join(process.resourcesPath, 'app.asar', 'dist', 'Craft_Logo.png');
+  try {
+    await fs.access(filePath);
+    return 'file://' + filePath;
+  } catch (err) {
+    console.error('Error getting logo URL:', err);
+    return '/Craft_Logo.png'; // fallback
+  }
+});
+
 ipcMain.handle('api:get-useful-links', async () => {
   try {
     const userLinksPath = path.join(dataPath, 'useful_links.json');
@@ -2813,14 +3917,14 @@ function generateSearchUrls(component) {
   
   // Manufacturer-specific search URLs
   const manufacturerUrls = {
-    'allen bradley': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${partNumber}/en-us.pdf`,
-    'rockwell': `https://literature.rockwellautomation.com/idc/groups/literature/documents/um/${partNumber}/en-us.pdf`,
-    'siemens': `https://support.industry.siemens.com/cs/ww/en/ps/${partNumber}/man`,
-    'schneider': `https://www.se.com/ww/en/search.html?q=${encodeURIComponent(partNumber)}+manual`,
-    'abb': `https://search.abb.com/library/Download.aspx?DocumentID=${partNumber}`,
-    'endress+hauser': `https://portal.endress.com/wa001/dla/5000000/${partNumber}.pdf`,
-    'endress hauser': `https://portal.endress.com/wa001/dla/5000000/${partNumber}.pdf`,
-    'festo': `https://www.festo.com/cat/${partNumber}`,
+    'allen bradley': 'https://literature.rockwellautomation.com/idc/groups/literature/documents/um/' + partNumber + '/en-us.pdf',
+    'rockwell': 'https://literature.rockwellautomation.com/idc/groups/literature/documents/um/' + partNumber + '/en-us.pdf',
+    'siemens': 'https://support.industry.siemens.com/cs/ww/en/ps/' + partNumber + '/man',
+    'schneider': 'https://www.se.com/ww/en/search.html?q=' + encodeURIComponent(partNumber) + '+manual',
+    'abb': 'https://search.abb.com/library/Download.aspx?DocumentID=' + partNumber,
+    'endress+hauser': 'https://portal.endress.com/wa001/dla/5000000/' + partNumber + '.pdf',
+    'endress hauser': 'https://portal.endress.com/wa001/dla/5000000/' + partNumber + '.pdf',
+    'festo': 'https://www.festo.com/cat/' + partNumber,
   };
   
   // Check if we have a specific manufacturer URL
@@ -2832,8 +3936,8 @@ function generateSearchUrls(component) {
   
   // Fallback to Google search with specific terms
   const numberHint = partNumber || sku || '';
-  const searchTerm = encodeURIComponent(`${manufacturer || ''} ${numberHint} manual pdf`.trim());
-  return `https://www.google.com/search?q=${searchTerm}`;
+  const searchTerm = encodeURIComponent((manufacturer || '') + ' ' + numberHint + ' manual pdf'.trim());
+  return 'https://www.google.com/search?q=' + searchTerm;
 }
 
 // Manual System IPC Handlers
@@ -3033,7 +4137,43 @@ ipcMain.handle('calc:get-quote-number', async (event, data) => {
     control: data.control,
     scope: data.scope
   });
-  
+
+  // Store in main database
+  try {
+    if (serverDb) {
+      await serverDb.run(`
+        INSERT INTO generated_numbers (
+          type, mainId, fullId, customerCode, customerName,
+          industry, product, control, scope, generated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'quote', mainId, fullId, cust, customerName,
+        data.industry || null, data.product || null, data.control || null, data.scope || null,
+        new Date().toISOString()
+      ]);
+    }
+  } catch (error) {
+    console.error('Error storing quote number in main database:', error);
+  }
+
+  // Store in generated numbers database
+  try {
+    if (generatedNumbersDb) {
+      await generatedNumbersDb.run(`
+        INSERT INTO generated_numbers (
+          type, mainId, fullId, customerCode, customerName,
+          industry, product, control, scope, generated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'quote', mainId, fullId, cust, customerName,
+        data.industry || null, data.product || null, data.control || null, data.scope || null,
+        new Date().toISOString()
+      ]);
+    }
+  } catch (error) {
+    console.error('Error storing quote number in generated numbers database:', error);
+  }
+
   return { mainId, fullId };
 });
 
@@ -3072,7 +4212,43 @@ ipcMain.handle('calc:get-project-number', async (event, data) => {
     scope: data.scope,
     poNumber: po
   });
-  
+
+  // Store in main database
+  try {
+    if (serverDb) {
+      await serverDb.run(`
+        INSERT INTO generated_numbers (
+          type, mainId, fullId, customerCode, customerName,
+          industry, product, control, scope, poNumber, generated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'project', mainId, fullId, cust, customerName,
+        data.industry || null, data.product || null, data.control || null, data.scope || null,
+        po, new Date().toISOString()
+      ]);
+    }
+  } catch (error) {
+    console.error('Error storing project number in main database:', error);
+  }
+
+  // Store in generated numbers database
+  try {
+    if (generatedNumbersDb) {
+      await generatedNumbersDb.run(`
+        INSERT INTO generated_numbers (
+          type, mainId, fullId, customerCode, customerName,
+          industry, product, control, scope, poNumber, generated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'project', mainId, fullId, cust, customerName,
+        data.industry || null, data.product || null, data.control || null, data.scope || null,
+        po, new Date().toISOString()
+      ]);
+    }
+  } catch (error) {
+    console.error('Error storing project number in generated numbers database:', error);
+  }
+
   return { mainId, fullId };
 });
 

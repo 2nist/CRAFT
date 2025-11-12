@@ -32,7 +32,7 @@ The repository includes `scripts/publish-to-nas.ps1` that automates the entire d
 - ✅ Builds the app (`npm run build`)
 - ✅ Creates versioned folder structure (`updates/v1.0rc/`)
 - ✅ Maintains `latest` pointer for auto-updates
-- ✅ Syncs all necessary files (dist, plugins, configs)
+- ✅ Syncs all necessary files (dist, plugins, configs, server/)
 - ✅ Generates build metadata with Git info
 - ✅ Creates workstation setup scripts
 - ✅ Uses Robocopy for efficient mirroring
@@ -49,6 +49,7 @@ The repository includes `scripts/publish-to-nas.ps1` that automates the entire d
 │   │   ├── public/         # Static assets
 │   │   ├── plugins/        # All plugin modules
 │   │   ├── src/            # React source
+│   │   ├── server/         # API server with SQLite database
 │   │   ├── docs/           # Documentation
 │   │   ├── OUTPUT/         # Logs folder
 │   │   ├── package.json
@@ -60,6 +61,14 @@ The repository includes `scripts/publish-to-nas.ps1` that automates the entire d
 ├── Set-CTHRuntimeRoot.ps1   # Workstation setup (PowerShell)
 └── Set-CTHRuntimeRoot.bat   # Workstation setup (Batch)
 ```
+
+#### Database Setup
+
+**SQLite Database**: `server/craft_tools.db`
+- Contains 1,335+ components from master pricelist
+- Automatically created during deployment
+- Shared across all users
+- No per-user database setup needed
 
 #### Permissions Setup
 
@@ -75,13 +84,13 @@ The repository includes `scripts/publish-to-nas.ps1` that automates the entire d
    ```powershell
    # PowerShell (User scope)
    \\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\Set-CTHRuntimeRoot.ps1
-   
+
    # PowerShell (Machine scope - requires admin)
    \\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\Set-CTHRuntimeRoot.ps1 -Scope Machine
-   
+
    # Batch (User scope)
    \\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\Set-CTHRuntimeRoot.bat
-   
+
    # Batch (Machine scope - requires admin)
    \\192.168.1.99\CraftAuto-Sales\Temp_Craft_Tools_Runtime\Set-CTHRuntimeRoot.bat /machine
    ```
@@ -94,17 +103,19 @@ The repository includes `scripts/publish-to-nas.ps1` that automates the entire d
 
 3. **First Launch**:
    - Creates user data folder at `%APPDATA%\electron-vite-react-app`
+   - Connects to shared SQLite database on NAS
    - Loads component database from NAS
    - Ready to use!
 
 **Advantages**:
-- ✅ Single source of truth
+- ✅ Single source of truth for components
 - ✅ Automated deployment script
 - ✅ Version tracking with Git metadata
 - ✅ Zero-downtime updates (latest folder)
 - ✅ Easy rollback (previous versions preserved)
 - ✅ No per-machine installation needed
 - ✅ Network-accessible documentation
+- ✅ Shared database prevents sync issues
 - ✅ Build metadata for troubleshooting
 
 ---
