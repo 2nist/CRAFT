@@ -34,14 +34,9 @@ function resolveRuntimePath(targetPath = '') {
   if (!targetPath) {
     // For root path, try network first, then fallback to local
     if (resolvedRuntimeRoot) {
-      try {
-        // Quick sync check - if we can access the directory, use it
-        fssync.accessSync(resolvedRuntimeRoot);
-        return resolvedRuntimeRoot;
-      } catch (err) {
-        console.log('Network runtime root not accessible, falling back to local:', err.message);
-        return defaultRuntimeRoot;
-      }
+      // In packaged apps, synchronous access checks may fail for network paths
+      // even when the paths are accessible. Trust the environment variable.
+      return resolvedRuntimeRoot;
     }
     return defaultRuntimeRoot;
   }
@@ -54,14 +49,9 @@ function resolveRuntimePath(targetPath = '') {
   let base = defaultRuntimeRoot; // Default to local
 
   if (resolvedRuntimeRoot) {
-    try {
-      // Quick sync check - if we can access the network directory, use it
-      fssync.accessSync(resolvedRuntimeRoot);
-      base = resolvedRuntimeRoot;
-    } catch (err) {
-      console.log('Network runtime root not accessible for path resolution, falling back to local:', err.message);
-      base = defaultRuntimeRoot;
-    }
+    // In packaged apps, synchronous access checks may fail for network paths
+    // even when the paths are accessible. Trust the environment variable.
+    base = resolvedRuntimeRoot;
   }
 
   return path.resolve(base, targetPath);
@@ -507,23 +497,23 @@ async function initializeDatabaseTables(db) {
       )
     `)
 
-    // Generated numbers table (for tracking quote and project number generation)
+    // Manual quotes table (for associating manual calculations with quote numbers)
+    console.log('Creating manual_quotes table...')
     await db.exec(`
-      CREATE TABLE IF NOT EXISTS generated_numbers (
+      CREATE TABLE IF NOT EXISTS manual_quotes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL, -- 'quote' or 'project'
-        mainId TEXT NOT NULL,
-        fullId TEXT NOT NULL,
-        customerCode TEXT,
-        customerName TEXT,
-        industry TEXT,
-        product TEXT,
-        control TEXT,
-        scope TEXT,
-        poNumber TEXT,
-        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        quoteNumber TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL, -- 'margin_calculation' or 'bom'
+        data TEXT NOT NULL, -- JSON string for the calculation or BOM data
+        projectName TEXT,
+        customer TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
+    console.log('manual_quotes table created successfully')
+
+    // Generated numbers table (for tracking quote and project number generation)
 
     console.log('Database tables initialized successfully')
 
@@ -802,6 +792,8 @@ async function initializeGeneratedNumbersDatabase() {
 // Initialize embedded API server
 async function initEmbeddedServer() {
   try {
+    console.log('Starting embedded server initialization...')
+
     serverApp = express()
     serverApp.use(cors())
     serverApp.use(express.json())
@@ -821,7 +813,9 @@ async function initEmbeddedServer() {
     console.log('Database location:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
 
     // Initialize database tables
+    console.log('About to initialize database tables...')
     await initializeDatabaseTables(serverDb)
+    console.log('Database tables initialization completed successfully')
 
     // API Routes
     serverApp.get('/api/health', (req, res) => {
@@ -2266,6 +2260,102 @@ ipcMain.handle('db:generated-numbers-separate:getByType', async (event, type) =>
   } catch (error) {
     console.error('Error fetching generated numbers by type from separate database:', error);
     return [];
+  }
+});
+
+// Manual quotes database handlers
+ipcMain.handle('db:manual-quotes:getAll', async () => {
+  try {
+    if (!serverDb) {
+      return []; // No database, return empty
+    }
+    const quotes = await serverDb.all('SELECT * FROM manual_quotes ORDER BY created_at DESC');
+    return quotes.map(q => ({
+      ...q,
+      data: q.data ? JSON.parse(q.data) : {}
+    }));
+  } catch (error) {
+    console.error('Error fetching manual quotes from database:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('db:manual-quotes:getByQuoteNumber', async (event, quoteNumber) => {
+  try {
+    if (!serverDb) {
+      return null; // No database, return null
+    }
+    const quote = await serverDb.get('SELECT * FROM manual_quotes WHERE quoteNumber = ?', [quoteNumber]);
+    if (!quote) return null;
+
+    return {
+      ...quote,
+      data: quote.data ? JSON.parse(quote.data) : {}
+    };
+  } catch (error) {
+    console.error('Error fetching manual quote by number from database:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('db:manual-quotes:save', async (event, manualQuote) => {
+  try {
+    if (!serverDb) {
+      return { success: false, error: 'Database not connected' };
+    }
+
+    const now = new Date().toISOString();
+    const data = {
+      quoteNumber: manualQuote.quoteNumber,
+      type: manualQuote.type,
+      data: JSON.stringify(manualQuote.data || {}),
+      projectName: manualQuote.projectName || null,
+      customer: manualQuote.customer || null,
+      updated_at: now
+    };
+
+    // Check if manual quote exists
+    const existing = await serverDb.get('SELECT quoteNumber FROM manual_quotes WHERE quoteNumber = ?', [data.quoteNumber]);
+
+    if (existing) {
+      // Update
+      await serverDb.run(`
+        UPDATE manual_quotes SET
+          type = ?, data = ?, projectName = ?, customer = ?, updated_at = ?
+        WHERE quoteNumber = ?
+      `, [
+        data.type, data.data, data.projectName, data.customer, data.updated_at, data.quoteNumber
+      ]);
+    } else {
+      // Insert
+      data.created_at = now;
+      await serverDb.run(`
+        INSERT INTO manual_quotes (
+          quoteNumber, type, data, projectName, customer, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+        data.quoteNumber, data.type, data.data, data.projectName, data.customer, data.created_at, data.updated_at
+      ]);
+    }
+
+    return { success: true, data: manualQuote };
+  } catch (error) {
+    console.error('Error saving manual quote to database:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db:manual-quotes:delete', async (event, quoteNumber) => {
+  try {
+    if (!serverDb) {
+      return { success: false, error: 'Database not connected' };
+    }
+
+    await serverDb.run('DELETE FROM manual_quotes WHERE quoteNumber = ?', [quoteNumber]);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting manual quote from database:', error);
+    return { success: false, error: error.message };
   }
 });
 
