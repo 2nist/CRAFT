@@ -36,13 +36,27 @@ if errorlevel 1 (
 
 echo.
 echo ========================================
-echo Build completed successfully!
+echo Creating Windows Installer...
 echo ========================================
 echo.
-echo To package the installer, run:
-echo   npx electron-builder
+
+call npx electron-builder --win --publish=never
+if errorlevel 1 (
+    echo.
+    echo ERROR: Installer creation failed
+    pause
+    exit /b 1
+)
+
 echo.
-echo The installer will be created in the 'release' folder.
+echo ========================================
+echo Build and installer creation completed successfully!
+echo ========================================
 echo.
+echo Installer created in the 'release' folder:
+echo - Craft Automation CPQ Setup 1.0.0.exe (installer)
+echo - win-unpacked\ (portable version)
+echo.
+echo Run the .exe file to install the app with shortcuts and uninstaller.
 
 pause

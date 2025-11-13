@@ -183,27 +183,115 @@ npm run electron:dev
 
 
 
-Building for Production
+### Option 3: Build Windows Installer
 
 
 
-# Build the Electron app
+For production deployment or local installation:
 
 
 
-npm run build  
+1. **Build and create installer**
 
 
 
-# Package for Windows
+   ```bash
 
 
 
-npm run electron:build  
+   # Double-click build-app.bat (recommended - does everything)
 
 
 
-Executable will be in `release/` folder.-----## NAS Deployment (For IT/Admins)
+   # OR run manually:
+
+
+
+   npm run build
+
+
+
+   npx electron-builder --win --publish=never
+
+
+
+   ```
+
+
+
+2. **Install the application**
+
+
+
+   - Navigate to the `release` folder
+
+
+
+   - Run `Craft Automation CPQ Setup 1.0.0.exe`
+
+
+
+   - Follow the installer wizard
+
+
+
+   - Choose installation directory (or use default)
+
+
+
+3. **Launch the installed app**
+
+
+
+   - Desktop shortcut: "Craft Automation CPQ"
+
+
+
+   - Start Menu: Search for "Craft Automation CPQ"
+
+
+
+   - The app will automatically connect to NAS if configured
+
+
+
+**Installer Features:**
+
+
+
+- Professional Windows installer with uninstaller
+
+
+
+- Desktop and Start Menu shortcuts
+
+
+
+- Automatic uninstaller in Add/Remove Programs
+
+
+
+- Configurable installation directory
+
+
+
+- Build-time NAS configuration (no manual setup needed)
+
+
+
+**Portable Option:**
+
+
+
+The `release\win-unpacked` folder contains a portable version that can be run without installation.
+
+
+
+---
+
+
+
+## NAS Deployment (For IT/Admins)
 
 Automate deployment to network share:
 
@@ -478,7 +566,7 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 
 For questions or support:
 **Internal Wiki**: [Link to internal documentation]
-**Repository**: https://github.com/matthewp-craft/Craft_Tool_Hub
+**Repository**: https://github.com/2nist/craft_tools_hub
 **Contact**: Craft Automation Sales Team
 -----## Acknowledgments
 
