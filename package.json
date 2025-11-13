@@ -108,7 +108,9 @@
           "arch": ["x64"]
         }
       ],
-      "sign": false
+      "sign": false,
+      "certificateFile": null,
+      "certificatePassword": null
     },
     "nsis": {
       "oneClick": false,
