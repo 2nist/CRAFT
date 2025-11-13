@@ -107,7 +107,8 @@
           "target": "nsis",
           "arch": ["x64"]
         }
-      ]
+      ],
+      "sign": false
     },
     "nsis": {
       "oneClick": false,
