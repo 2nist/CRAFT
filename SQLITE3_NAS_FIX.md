@@ -23,11 +23,17 @@
 - Synchronous access checks failing on network paths
 - Missing error handling for ASAR-packed environments
 - Insufficient logging to diagnose issues
+- SQLite database locking conflicts with multiple concurrent users
 
 **Solution**:
 - Enhanced error logging with detailed error codes and messages
 - Added ASAR path detection and replacement logic
 - Improved fallback handling when databases fail to initialize
+- **Implemented Local DB + NAS Master Sync Architecture**:
+  - Each user works with local SQLite database (no locking conflicts)
+  - Master database on NAS serves as source of truth
+  - Scheduled bi-directional sync (2-4 times daily)
+  - Supports 4-5 concurrent users with offline capability
 
 ## 📝 Changes Made
 

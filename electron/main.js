@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import fs from 'fs/promises'
 import fssync from 'fs'
+import os from 'os'
 import Ajv from 'ajv'
 import Papa from 'papaparse'
 
@@ -11,6 +12,9 @@ import express from 'express'
 import cors from 'cors'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
+
+// Sync Manager
+import SyncManager from './sync-manager.js'
 
 // Note: Services are imported dynamically in IPC handlers to handle ES module resolution
 // This avoids import errors in development mode when Electron may not resolve paths correctly
@@ -511,6 +515,9 @@ let serverDb
 let generatedNumbersDb
 let serverPort = 3001
 let serverInstance
+
+// Sync Manager instance
+let syncManager = null
 
 // Default customer data (same as in App.jsx)
 const DEFAULT_CUSTOMER_DATA = {
@@ -1157,6 +1164,66 @@ async function initializeGeneratedNumbersDatabase() {
   }
 }
 
+/**
+ * Initialize the Sync Manager for multi-user database synchronization
+ */
+async function initializeSyncManager() {
+  try {
+    console.log('Initializing Sync Manager...')
+
+    // Get local database directory (user-specific)
+    const userDataPath = app.getPath('userData')
+    const localDbDir = path.join(userDataPath, 'database')
+    await fs.mkdir(localDbDir, { recursive: true })
+
+    // Local database paths
+    const localServerDbPath = path.join(localDbDir, 'server.db')
+    const localGeneratedNumbersDbPath = path.join(localDbDir, 'generated_numbers.db')
+
+    // NAS master database paths (if available)
+    let nasServerDbPath = null
+    let nasGeneratedNumbersDbPath = null
+    
+    if (resolvedRuntimeRoot) {
+      const nasDbDir = await resolveRuntimePath('database')
+      nasServerDbPath = path.join(nasDbDir, 'server.db')
+      nasGeneratedNumbersDbPath = path.join(nasDbDir, 'generated_numbers.db')
+    }
+
+    // Create sync manager instance
+    syncManager = new SyncManager({
+      localServerDb: localServerDbPath,
+      localGeneratedNumbersDb: localGeneratedNumbersDbPath,
+      nasServerDb: nasServerDbPath,
+      nasGeneratedNumbersDb: nasGeneratedNumbersDbPath,
+      syncIntervalMinutes: 120, // Sync every 2 hours by default
+      username: os.userInfo().username
+    })
+
+    // Initialize the sync manager
+    await syncManager.initialize()
+
+    // Start scheduled synchronization
+    await syncManager.startScheduledSync()
+
+    console.log('✅ Sync Manager initialized successfully')
+    console.log(`   Local DB: ${localServerDbPath}`)
+    if (nasServerDbPath) {
+      console.log(`   NAS Master DB: ${nasServerDbPath}`)
+      console.log(`   Sync interval: 120 minutes`)
+    } else {
+      console.log('   NAS sync disabled (no shared network path configured)')
+    }
+  } catch (error) {
+    console.error('❌ Error initializing Sync Manager:', error)
+    console.error('   Error code:', error.code)
+    console.error('   Error message:', error.message)
+    if (error.stack) console.error('   Stack:', error.stack)
+    // Don't throw - allow app to continue without sync capability
+    syncManager = null
+  }
+}
+
 // Initialize embedded API server
 async function initEmbeddedServer() {
   try {
@@ -1728,6 +1795,9 @@ app.whenReady().then(async () => {
   cachedSubAssemblies = await getAllSubAssemblies();
   console.log(`Cached ${cachedSubAssemblies.length} sub-assemblies.`);
   
+  // Initialize Sync Manager
+  await initializeSyncManager()
+  
   createMenu();
   createWindow()
   
@@ -1744,6 +1814,10 @@ app.whenReady().then(async () => {
       if (serverInstance) {
         serverInstance.close(async () => {
           console.log('Embedded server closed')
+          if (syncManager) {
+            await syncManager.cleanup()
+            console.log('Sync manager cleaned up')
+          }
           if (serverDb) {
             await serverDb.close()
             console.log('Main database closed')
@@ -1756,7 +1830,20 @@ app.whenReady().then(async () => {
         })
       } else {
         // Close databases even if no server
-        if (serverDb) {
+        if (syncManager) {
+          syncManager.cleanup().then(async () => {
+            console.log('Sync manager cleaned up')
+            if (serverDb) {
+              await serverDb.close()
+              console.log('Main database closed')
+            }
+            if (generatedNumbersDb) {
+              await generatedNumbersDb.close()
+              console.log('Generated numbers database closed')
+            }
+            app.quit()
+          })
+        } else if (serverDb) {
           serverDb.close().then(() => {
             console.log('Main database closed')
             if (generatedNumbersDb) {
@@ -1795,6 +1882,66 @@ app.whenReady().then(async () => {
       author: plugin.author
     }))
   })
+
+// Sync Manager IPC handlers
+
+// Get sync status (last sync time, next sync time, enabled status)
+ipcMain.handle('sync:getStatus', async () => {
+  try {
+    if (!syncManager) {
+      return {
+        enabled: false,
+        message: 'Sync manager not initialized'
+      }
+    }
+    return await syncManager.getStatus()
+  } catch (error) {
+    console.error('Error getting sync status:', error)
+    throw error
+  }
+})
+
+// Trigger manual sync
+ipcMain.handle('sync:manual', async () => {
+  try {
+    if (!syncManager) {
+      throw new Error('Sync manager not initialized')
+    }
+    await syncManager.sync()
+    return { success: true, message: 'Sync completed successfully' }
+  } catch (error) {
+    console.error('Error during manual sync:', error)
+    throw error
+  }
+})
+
+// Update sync schedule
+ipcMain.handle('sync:setSchedule', async (event, intervalMinutes) => {
+  try {
+    if (!syncManager) {
+      throw new Error('Sync manager not initialized')
+    }
+    await syncManager.stopScheduledSync()
+    await syncManager.startScheduledSync(intervalMinutes)
+    return { success: true, message: `Sync schedule updated to ${intervalMinutes} minutes` }
+  } catch (error) {
+    console.error('Error updating sync schedule:', error)
+    throw error
+  }
+})
+
+// Get sync history/logs
+ipcMain.handle('sync:getHistory', async () => {
+  try {
+    if (!syncManager) {
+      return []
+    }
+    return await syncManager.getSyncHistory()
+  } catch (error) {
+    console.error('Error getting sync history:', error)
+    throw error
+  }
+})
   
 // Get HTML content for a specific plugin
 ipcMain.handle('plugins:getHTML', async (event, pluginId) => {

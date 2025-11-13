@@ -45,8 +45,6 @@ export default function Settings() {
   const [message, setMessage] = useState(null);
   const [newLink, setNewLink] = useState({ title: '', link: '', icon: 'Link' });
   const [newDoc, setNewDoc] = useState({ title: '', path: '', icon: 'FileText' });
-  const [runtimeStatus, setRuntimeStatus] = useState(null);
-  const [runtimeLoading, setRuntimeLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -74,15 +72,7 @@ export default function Settings() {
       } finally {
         setGsLoading(false);
       }
-      // load runtime status
-      if (window.runtime?.getStatus) {
-        try {
-          const status = await window.runtime.getStatus();
-          setRuntimeStatus(status);
-        } catch (e) {
-          console.error('Failed to load runtime status:', e);
-        }
-      }
+
     } catch (error) {
       console.error('Failed to load settings:', error);
       setMessage({ type: 'error', text: 'Failed to load settings' });
@@ -299,95 +289,23 @@ export default function Settings() {
         <TabsContent value="runtime" className="space-y-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle>Runtime Configuration</CardTitle>
+              <CardTitle>Database Synchronization</CardTitle>
               <CardDescription>
-                Configure where the app reads/writes shared data, exports, and logs.
+                Multi-user database sync is now handled automatically by the Sync Manager.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {runtimeStatus ? (
-                <div className="space-y-3">
-                  <div className="p-4 rounded-lg border border-gray-700 bg-gray-900/50">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-gray-400">Current Runtime Root:</span>
-                        <div className="font-mono text-xs mt-1 break-all">{runtimeStatus.runtimeRoot}</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Using Override:</span>
-                        <div className="mt-1">
-                          {runtimeStatus.usingOverride ? (
-                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/30">
-                              Yes (NAS/Network)
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-700 text-gray-300">
-                              No (Local)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="md:col-span-2">
-                        <span className="text-gray-400">Status:</span>
-                        <div className="mt-1 text-sm">{runtimeStatus.message}</div>
-                      </div>
-                      {runtimeStatus.buildInfo && (
-                        <div className="md:col-span-2">
-                          <span className="text-gray-400">Build Info:</span>
-                          <div className="font-mono text-xs mt-1">
-                            Version: {runtimeStatus.buildInfo.version || 'N/A'} | 
-                            Branch: {runtimeStatus.buildInfo.branch || 'N/A'} | 
-                            Commit: {runtimeStatus.buildInfo.commit?.slice(0, 7) || 'N/A'}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      setRuntimeLoading(true);
-                      try {
-                        const status = await window.runtime.getStatus();
-                        setRuntimeStatus(status);
-                        setMessage({ type: 'success', text: 'Runtime status refreshed' });
-                      } catch (e) {
-                        setMessage({ type: 'error', text: 'Failed to refresh runtime status' });
-                      } finally {
-                        setRuntimeLoading(false);
-                      }
-                    }}
-                    disabled={runtimeLoading}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Refresh Status
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-sm text-gray-400">Runtime status not available.</div>
-              )}
-
-              <div className="pt-4 border-t border-gray-700">
-                <h4 className="text-sm font-semibold mb-2">How to Configure NAS Runtime</h4>
-                <div className="text-sm text-gray-300 space-y-2">
-                  <p>
-                    To point this app to a shared NAS location for centralized data and logs, 
-                    set the <code className="px-1.5 py-0.5 rounded bg-gray-900 text-blue-300 font-mono text-xs">CTH_RUNTIME_ROOT</code> environment variable 
-                    on this machine.
-                  </p>
-                  <div className="p-3 rounded bg-gray-900/70 border border-gray-700 font-mono text-xs space-y-1">
-                    <div className="text-gray-400"># PowerShell (run as Administrator):</div>
-                    <div>[System.Environment]::SetEnvironmentVariable('CTH_RUNTIME_ROOT', '\\\\NAS\\CraftTools\\v1.0.0', 'Machine')</div>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    After setting the variable, <strong>restart the app</strong> for changes to take effect.
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    See <strong>ADMIN_GUIDE_DEPLOYMENT.md</strong> for full NAS setup instructions.
-                  </p>
-                </div>
+              <div className="text-sm text-gray-300 space-y-2">
+                <p>
+                  The app now uses a local database with automatic synchronization to the network master database.
+                  This allows multiple users to work simultaneously without conflicts.
+                </p>
+                <p>
+                  Sync happens automatically every 2 hours, or you can trigger it manually using the Sync Status component in the app.
+                </p>
+                <p className="text-xs text-gray-400">
+                  For more information, see <strong>MULTI_USER_SYNC.md</strong> or <strong>SYNC_QUICK_START.md</strong>.
+                </p>
               </div>
             </CardContent>
           </Card>
