@@ -580,7 +580,6 @@ export function generateOperationalItems(quote, subAssemblies, components, templ
       // This is the assembly-level structure from Step 2
       // Treat it as a single instance with assembly-level fields
       const instanceFields = assemblyData;
-      const instanceSubAssemblies = [];
 
       // Auto-add required sub-assemblies
       const requiredSubAssemblies = assembly.subAssemblies?.required || [];

@@ -432,15 +432,13 @@ function validateRequiredSubAssemblies(template, productConfiguration, bom) {
           continue;
         }
 
-        const instanceSubAssemblies = instance.selectedSubAssemblies || [];
-        const instanceSelectedIds = new Set(instanceSubAssemblies);
-
         // Check each required sub-assembly for this instance
         // Required sub-assemblies are auto-added by BOMGenerationService during BOM generation,
         // but we validate the structure is correct. If required sub-assemblies are missing from
         // selectedSubAssemblies, BOM generation will auto-add them, so this is just a structural check.
         // However, if a required sub-assembly is explicitly missing and not in legacy BOM, we can note it.
-        for (const requiredId of requiredSubAssemblies) {
+        // eslint-disable-next-line no-unused-vars
+        for (const _ of requiredSubAssemblies) {
           // Check if required sub-assembly would be included (either in instance or legacy BOM)
           // Since BOMGenerationService auto-adds required sub-assemblies, we don't error here,
           // but we could add a warning if the structure seems incomplete.

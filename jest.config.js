@@ -8,7 +8,7 @@ export default {
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/TEST/__mocks__/fileMock.js',
-    '^@\/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1'
   },
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest'

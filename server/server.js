@@ -90,7 +90,7 @@ app.get('/api/components/count', async (req, res) => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`API Server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
 });

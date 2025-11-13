@@ -25,7 +25,7 @@ exports.default = async function(context) {
 
   // Create runtime config file with NAS path
   const configPath = path.join(appDir, 'runtime-config.json');
-  const nasPath = process.env.BUILD_NAS_PATH || '\\\\192.168.1.99\\CraftTools\\v1.0.0';
+  const nasPath = process.env.BUILD_NAS_PATH || '\\\\192.168.1.99\\CraftAuto-Sales\\Temp_Craft_Tools_Runtime\\updates\\latest';
 
   const configContent = JSON.stringify({
     runtimeRoot: nasPath,

@@ -21,6 +21,7 @@ const __dirname = path.dirname(__filename)
 // Initialize runtime configuration
 let runtimeConfigLoaded = false;
 let packagedRuntimeRoot = null;
+let networkCredentials = null; // Store network credentials in memory
 
 async function loadRuntimeConfig() {
   try {
@@ -42,6 +43,204 @@ async function initializeRuntimeConfig() {
     runtimeConfigLoaded = true;
   }
   return packagedRuntimeRoot;
+}
+
+// Load network credentials from Windows Credential Manager
+async function loadNetworkCredentials() {
+  try {
+    const { execSync } = await import('child_process');
+    const output = execSync('cmdkey /list:target:"CraftAuto-Sales"', { encoding: 'utf8' });
+    const lines = output.split('\n');
+    const targetLine = lines.find(line => line.includes('Target: CraftAuto-Sales'));
+    if (targetLine) {
+      // Credentials exist, try to extract username
+      const userMatch = output.match(/User: ([^\r\n]+)/);
+      if (userMatch) {
+        return { username: userMatch[1].trim() };
+      }
+    }
+  } catch (err) {
+    // Credentials don't exist or cmdkey failed
+    console.log('No stored network credentials found');
+  }
+  return null;
+}
+
+// Save network credentials to Windows Credential Manager
+async function saveNetworkCredentials(username, password) {
+  try {
+    const { execSync } = await import('child_process');
+    // Delete existing credentials first
+    try {
+      execSync('cmdkey /delete:CraftAuto-Sales', { stdio: 'ignore' });
+    } catch (e) {
+      // Ignore if no existing credentials
+    }
+    // Add new credentials
+    execSync(`cmdkey /add:CraftAuto-Sales /user:${username} /pass:${password}`);
+    console.log('Network credentials saved to Windows Credential Manager');
+    return true;
+  } catch (err) {
+    console.error('Failed to save network credentials:', err);
+    return false;
+  }
+}
+
+// Test network connection with credentials
+async function testNetworkConnection(username, password) {
+  try {
+    const { execSync } = await import('child_process');
+    // Temporarily map the drive to test credentials
+    execSync(`net use Z: "\\\\192.168.1.99\\CraftAuto-Sales" /user:${username} /pass:${password} /persistent:no`, { timeout: 10000 });
+    // If successful, unmap the test drive
+    try {
+      execSync('net use Z: /delete /y');
+    } catch (e) {
+      // Ignore unmap errors
+    }
+    return true;
+  } catch (err) {
+    console.error('Network connection test failed:', err.message);
+    return false;
+  }
+}
+
+// Prompt user for network credentials
+async function promptForNetworkCredentials(mainWindow) {
+  return new Promise((resolve) => {
+    // Create a modal dialog for credential input
+    const credentialDialog = new BrowserWindow({
+      parent: mainWindow,
+      modal: true,
+      show: false,
+      width: 400,
+      height: 300,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: mainWindow.webContents.getURL().includes('http') ? null : path.join(__dirname, 'preload.cjs')
+      }
+    });
+
+    // Create HTML for credential input
+    const credentialHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; }
+          .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          h2 { margin-top: 0; color: #333; }
+          .form-group { margin-bottom: 15px; }
+          label { display: block; margin-bottom: 5px; font-weight: 500; }
+          input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+          .buttons { display: flex; gap: 10px; margin-top: 20px; }
+          button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+          .btn-primary { background: #007bff; color: white; }
+          .btn-secondary { background: #6c757d; color: white; }
+          .error { color: #dc3545; font-size: 14px; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>Network Access Required</h2>
+          <p>The application needs access to the network storage. Please enter your network credentials:</p>
+          <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="domain\\username or username">
+          </div>
+          <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password">
+          </div>
+          <div id="error" class="error" style="display: none;"></div>
+          <div class="buttons">
+            <button id="cancel" class="btn-secondary">Use Local Storage</button>
+            <button id="save" class="btn-primary">Connect</button>
+          </div>
+        </div>
+        <script>
+          // eslint-disable-next-line no-undef
+          const { ipcRenderer } = require('electron');
+
+          document.getElementById('save').addEventListener('click', async () => {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+              document.getElementById('error').textContent = 'Please enter both username and password';
+              document.getElementById('error').style.display = 'block';
+              return;
+            }
+
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('save').disabled = true;
+            document.getElementById('save').textContent = 'Testing...';
+
+            try {
+              const result = await ipcRenderer.invoke('network:test-credentials', { username, password });
+              if (result.success) {
+                ipcRenderer.send('credentials:save', { username, password });
+                window.close();
+              } else {
+                document.getElementById('error').textContent = result.error || 'Connection failed. Please check your credentials.';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('save').disabled = false;
+                document.getElementById('save').textContent = 'Connect';
+              }
+            } catch (error) {
+              document.getElementById('error').textContent = 'Connection test failed: ' + error.message;
+              document.getElementById('error').style.display = 'block';
+              document.getElementById('save').disabled = false;
+              document.getElementById('save').textContent = 'Connect';
+            }
+          });
+
+          document.getElementById('cancel').addEventListener('click', () => {
+            ipcRenderer.send('credentials:cancel');
+            window.close();
+          });
+
+          // Load stored credentials if available
+          ipcRenderer.invoke('network:get-stored-credentials').then(creds => {
+            if (creds && creds.username) {
+              document.getElementById('username').value = creds.username;
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `;
+
+    credentialDialog.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(credentialHTML));
+
+    credentialDialog.once('ready-to-show', () => {
+      credentialDialog.show();
+    });
+
+    // Handle credential save
+    const saveHandler = (event, creds) => {
+      networkCredentials = creds;
+      resolve(creds);
+    };
+
+    // Handle cancel
+    const cancelHandler = () => {
+      resolve(null);
+    };
+
+    ipcMain.once('credentials:save', saveHandler);
+    ipcMain.once('credentials:cancel', cancelHandler);
+
+    credentialDialog.on('closed', () => {
+      ipcMain.removeListener('credentials:save', saveHandler);
+      ipcMain.removeListener('credentials:cancel', cancelHandler);
+      resolve(null);
+    });
+  });
 }
 
 const ENV_RUNTIME_ROOT = [
@@ -85,6 +284,124 @@ async function resolveRuntimePath(targetPath = '') {
     // In packaged apps, synchronous access checks may fail for network paths
     // even when the paths are accessible. Trust the environment variable.
     base = resolvedRuntimeRoot;
+  } else {
+    // Check packaged config as fallback
+    const configRoot = await initializeRuntimeConfig();
+    if (configRoot) {
+      base = configRoot;
+    }
+  }
+
+  return path.resolve(base, targetPath);
+}
+
+// Enhanced runtime path resolution with credential prompting
+async function resolveRuntimePathWithCredentials(targetPath = '', mainWindow = null) {
+  if (!targetPath) {
+    // For root path, try network first, then fallback to local
+    if (resolvedRuntimeRoot) {
+      // Test network access
+      try {
+        await fs.access(resolvedRuntimeRoot);
+        return resolvedRuntimeRoot;
+      } catch (err) {
+        console.log('Network path not accessible:', err.message);
+        // Try to load stored credentials and test connection
+        if (!networkCredentials) {
+          networkCredentials = await loadNetworkCredentials();
+        }
+
+        if (networkCredentials && mainWindow) {
+          // Test if stored credentials work
+          const testResult = await testNetworkConnection(networkCredentials.username, ''); // Password not stored in memory
+          if (!testResult) {
+            // Stored credentials don't work, prompt user
+            const newCreds = await promptForNetworkCredentials(mainWindow);
+            if (newCreds) {
+              networkCredentials = newCreds;
+              // Test the new credentials
+              const newTestResult = await testNetworkConnection(newCreds.username, newCreds.password);
+              if (newTestResult) {
+                // Save credentials and try network again
+                await saveNetworkCredentials(newCreds.username, newCreds.password);
+                try {
+                  await fs.access(resolvedRuntimeRoot);
+                  return resolvedRuntimeRoot;
+                } catch (e) {
+                  console.log('Network still not accessible after credential update');
+                }
+              }
+            }
+          } else {
+            // Stored credentials work
+            try {
+              await fs.access(resolvedRuntimeRoot);
+              return resolvedRuntimeRoot;
+            } catch (e) {
+              console.log('Network not accessible despite valid credentials');
+            }
+          }
+        }
+        // Fall back to local
+        return defaultRuntimeRoot;
+      }
+    }
+
+    // Check packaged config as fallback
+    const configRoot = await initializeRuntimeConfig();
+    if (configRoot) {
+      return configRoot;
+    }
+
+    return defaultRuntimeRoot;
+  }
+
+  if (path.isAbsolute(targetPath)) {
+    return targetPath;
+  }
+
+  // For relative paths, try network first, then fallback to local
+  let base = defaultRuntimeRoot; // Default to local
+
+  if (resolvedRuntimeRoot) {
+    // Test network access for relative paths too
+    try {
+      await fs.access(resolvedRuntimeRoot);
+      base = resolvedRuntimeRoot;
+    } catch (err) {
+      console.log('Network path not accessible for relative path:', err.message);
+      // Try credential prompting here too if we have a main window
+      if (mainWindow && !networkCredentials) {
+        networkCredentials = await loadNetworkCredentials();
+      }
+
+      if (networkCredentials && mainWindow) {
+        const testResult = await testNetworkConnection(networkCredentials.username, '');
+        if (!testResult) {
+          const newCreds = await promptForNetworkCredentials(mainWindow);
+          if (newCreds) {
+            networkCredentials = newCreds;
+            const newTestResult = await testNetworkConnection(newCreds.username, newCreds.password);
+            if (newTestResult) {
+              await saveNetworkCredentials(newCreds.username, newCreds.password);
+              try {
+                await fs.access(resolvedRuntimeRoot);
+                base = resolvedRuntimeRoot;
+              } catch (e) {
+                console.log('Network still not accessible after credential update');
+              }
+            }
+          }
+        } else {
+          try {
+            await fs.access(resolvedRuntimeRoot);
+            base = resolvedRuntimeRoot;
+          } catch (e) {
+            console.log('Network not accessible despite valid credentials');
+          }
+        }
+      }
+    }
   } else {
     // Check packaged config as fallback
     const configRoot = await initializeRuntimeConfig();
@@ -1018,7 +1335,7 @@ async function loadComponents() {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       componentsPath = path.join(__dirname, '..', 'src', 'data', 'components', 'component_catalog.json');
     } else {
-      componentsPath = path.join(process.resourcesPath, 'data', 'components', 'component_catalog.json');
+      componentsPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'components', 'component_catalog.json');
     }
 
     const data = await fs.readFile(componentsPath, 'utf-8');
@@ -1049,7 +1366,7 @@ async function loadSubAssemblies() {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       subAssembliesPath = path.join(__dirname, '..', 'src', 'data', 'sub-assemblies', 'sub_assemblies.json')
     } else {
-      subAssembliesPath = path.join(process.resourcesPath, 'data', 'sub-assemblies', 'sub_assemblies.json')
+      subAssembliesPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'sub-assemblies', 'sub_assemblies.json')
     }
 
     const data = await fs.readFile(subAssembliesPath, 'utf-8')
@@ -1381,7 +1698,7 @@ app.whenReady().then(async () => {
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     quoteSchemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json')
   } else {
-    quoteSchemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json')
+    quoteSchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json')
   }
   const quoteSchemaData = await fs.readFile(quoteSchemaPath, 'utf-8')
   quoteSchema = JSON.parse(quoteSchemaData)
@@ -2507,7 +2824,7 @@ ipcMain.handle('sub-assemblies:save', async (event, subAssemblyToSave) => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       subAssemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'sub_assembly_schema.json')
     } else {
-      subAssemblySchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'sub_assembly_schema.json')
+      subAssemblySchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'schemas', 'sub_assembly_schema.json')
     }
     
     const schemaData = await fs.readFile(subAssemblySchemaPath, 'utf-8')
@@ -3014,7 +3331,7 @@ ipcMain.handle('schemas:getIndustry', async () => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+      schemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json');
     }
     
     const data = await fs.readFile(schemaPath, 'utf-8');
@@ -3045,7 +3362,7 @@ ipcMain.handle('schemas:getProduct', async () => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+      schemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json');
     }
     
     console.log('Loading product schema from:', schemaPath);
@@ -3081,7 +3398,7 @@ ipcMain.handle('schemas:getControl', async () => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+      schemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json');
     }
     
     const data = await fs.readFile(schemaPath, 'utf-8');
@@ -3111,7 +3428,7 @@ ipcMain.handle('schemas:getScope', async () => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+      schemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json');
     }
     
     const data = await fs.readFile(schemaPath, 'utf-8');
@@ -3184,7 +3501,7 @@ ipcMain.handle('schemas:get-product', async () => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+      schemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json');
     }
     
     const data = await fs.readFile(schemaPath, 'utf-8');
@@ -3211,7 +3528,7 @@ ipcMain.handle('schemas:add-product', async (event, productData) => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       schemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json');
     } else {
-      schemaPath = path.join(process.resourcesPath, 'data', 'quotes', 'project_quote_schema.json');
+      schemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json');
     }
     
     // Read current schema
@@ -3527,7 +3844,7 @@ ipcMain.handle('product-templates:save', async (event, templateObject) => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       templateSchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'product_template_schema.json')
     } else {
-      templateSchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'product_template_schema.json')
+      templateSchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'schemas', 'product_template_schema.json')
     }
     
     const schemaData = await fs.readFile(templateSchemaPath, 'utf-8')
@@ -3604,7 +3921,7 @@ ipcMain.handle('boms:save', async (event, bomToSave) => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       bomSchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'manual_bom_schema.json')
     } else {
-      bomSchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'manual_bom_schema.json')
+      bomSchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'schemas', 'manual_bom_schema.json')
     }
     
     const schemaData = await fs.readFile(bomSchemaPath, 'utf-8')
@@ -3700,7 +4017,7 @@ ipcMain.handle('app:show-open-dialog', async (event, options) => {
 
 // Read file
 ipcMain.handle('app:read-file', async (event, filePath) => {
-  const fullPath = await resolveRuntimePath(filePath)
+  const fullPath = await resolveRuntimePathWithCredentials(filePath, mainWindow)
 
   if (resolvedRuntimeRoot) {
     console.log(`[app:read-file] overridden root => ${fullPath}`)
@@ -3711,7 +4028,7 @@ ipcMain.handle('app:read-file', async (event, filePath) => {
 
 // Write file
 ipcMain.handle('app:write-file', async (event, filePath, content) => {
-  const fullPath = await resolveRuntimePath(filePath)
+  const fullPath = await resolveRuntimePathWithCredentials(filePath, mainWindow)
   await ensureDirectoryForFile(fullPath)
 
   if (resolvedRuntimeRoot) {
@@ -4165,7 +4482,7 @@ ipcMain.handle('manuals:get-index', async () => {
 // Helper function to log number generation to CSV
 async function logNumberGeneration(type, numberData) {
   try {
-    const logsDir = await resolveRuntimePath('OUTPUT/LOGS');
+    const logsDir = await resolveRuntimePathWithCredentials('OUTPUT/LOGS', mainWindow);
     const csvPath = path.join(logsDir, `${type}Numbers.csv`);
 
     // Ensure LOGS directory exists
@@ -4200,7 +4517,7 @@ async function logNumberGeneration(type, numberData) {
 // Helper function to log margin calculations
 async function logMarginCalculation(marginData) {
   try {
-    const logsDir = await resolveRuntimePath('OUTPUT/LOGS');
+    const logsDir = await resolveRuntimePathWithCredentials('OUTPUT/LOGS', mainWindow);
     const csvPath = path.join(logsDir, 'Margin.csv');
 
     // Ensure LOGS directory exists
@@ -4303,7 +4620,7 @@ ipcMain.handle('calc:get-quote-number', async (event, data) => {
     console.error('Error storing quote number in generated numbers database:', error);
   }
 
-  return { mainId, fullId };
+  return { mainId, fullId, customerName };
 });
 
 ipcMain.handle('calc:get-project-number', async (event, data) => {
@@ -4381,6 +4698,115 @@ ipcMain.handle('calc:get-project-number', async (event, data) => {
   return { mainId, fullId };
 });
 
+// Network credential IPC handlers
+ipcMain.handle('network:test-credentials', async (event, { username, password }) => {
+  try {
+    const success = await testNetworkConnection(username, password);
+    return { success, error: success ? null : 'Invalid credentials or network unreachable' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('network:get-stored-credentials', async () => {
+  return await loadNetworkCredentials();
+});
+
+ipcMain.handle('network:save-credentials', async (event, { username, password }) => {
+  const success = await saveNetworkCredentials(username, password);
+  if (success) {
+    networkCredentials = { username };
+  }
+  return { success };
+});
+
+ipcMain.handle('network:clear-credentials', async () => {
+  try {
+    const { execSync } = await import('child_process');
+    execSync('cmdkey /delete:CraftAuto-Sales', { stdio: 'ignore' });
+    networkCredentials = null;
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to clear network credentials:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Enhanced runtime status with credential prompting
+ipcMain.handle('runtime:get-status-enhanced', async () => {
+  try {
+    const runtimeRoot = await resolveRuntimePathWithCredentials('', mainWindow);
+    const usingOverride = Boolean(resolvedRuntimeRoot) || Boolean(await initializeRuntimeConfig());
+    const status = {
+      runtimeRoot,
+      usingOverride,
+      ok: true,
+      message: usingOverride ? 'Runtime override active.' : 'Using local runtime.',
+      buildInfo: null,
+      buildInfoFileModified: null,
+      buildInfoAgeMinutes: null
+    };
+
+    try {
+      await fs.access(runtimeRoot);
+    } catch (err) {
+      status.ok = !usingOverride;
+      status.message = usingOverride
+        ? 'Runtime override unavailable: ' + err.message
+        : 'Local runtime unavailable: ' + err.message;
+      status.error = err.message;
+      return status;
+    }
+
+    const buildInfoPath = path.join(runtimeRoot, 'build-info.json');
+
+    try {
+      const content = await fs.readFile(buildInfoPath, 'utf-8');
+      const info = JSON.parse(content);
+      status.buildInfo = info;
+
+      const stats = await fs.stat(buildInfoPath);
+      status.buildInfoFileModified = stats.mtime.toISOString();
+
+      if (info?.timestampUtc) {
+        const parsed = Date.parse(info.timestampUtc);
+        if (!Number.isNaN(parsed)) {
+          status.buildInfoAgeMinutes = Math.round((Date.now() - parsed) / 60000);
+        }
+      }
+
+      if (usingOverride) {
+        const version = info?.version || 'unknown version';
+        const timestamp = info?.timestampUtc || status.buildInfoFileModified;
+        status.message = 'NAS build ' + version + ' @ ' + timestamp;
+      } else {
+        status.message = 'Using local runtime';
+      }
+    } catch (err) {
+      if (usingOverride) {
+        status.ok = false;
+        status.message = err.code === 'ENOENT'
+          ? 'NAS build-info.json not found'
+          : 'NAS runtime error: ' + err.message;
+        status.error = err.message;
+      } else {
+        status.message = 'Using local runtime';
+      }
+    }
+
+    return status;
+  } catch (err) {
+    console.error('Failed to resolve runtime status:', err);
+    return {
+      runtimeRoot: await resolveRuntimePath(),
+      usingOverride: Boolean(resolvedRuntimeRoot),
+      ok: false,
+      message: `Failed to resolve runtime status: ${err.message}`,
+      error: err.message
+    };
+  }
+});
+
 // Logical Assemblies IPC handlers
 
 // Get all logical assemblies
@@ -4412,7 +4838,7 @@ ipcMain.handle('assemblies:save', async (event, assemblyToSave) => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       assemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'assembly_schema.json');
     } else {
-      assemblySchemaPath = path.join(process.resourcesPath, 'data', 'schemas', 'assembly_schema.json');
+      assemblySchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'schemas', 'assembly_schema.json');
     }
     
     const schemaData = await fs.readFile(assemblySchemaPath, 'utf-8');
@@ -4611,7 +5037,7 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     // 2. Determine paths - sub_assemblies.json is in root dataPath
     const subAssembliesPath = path.join(dataPath, 'sub_assemblies.json');
     const masterListPath = path.join(dataPath, 'schemas', 'product_master_list.json');
-    const templatesPath = path.join(dataPath, 'product-templates');
+    const templatesPath = await resolveRuntimePathWithCredentials('product-templates', mainWindow);
     
     // Ensure directories exist
     await fs.mkdir(path.join(dataPath, 'schemas'), { recursive: true });

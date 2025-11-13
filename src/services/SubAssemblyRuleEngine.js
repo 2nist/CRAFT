@@ -25,7 +25,6 @@ export function evaluateSubAssemblyRules(template, quote) {
   }
 
   const productConfiguration = quote.productConfiguration || {};
-  const panelConfig = quote.controlPanelConfig || {};
 
   // Create assembly lookup map
   const assemblyMap = new Map();

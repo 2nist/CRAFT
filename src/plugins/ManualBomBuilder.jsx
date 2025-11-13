@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown, Download, Upload, FileText, BookOpen } from 'lucide-react';
+import { Search, Plus, X, ChevronsUpDown, Copy, Save, AlertCircle, Info, Calculator, ListPlus, Tag, ArrowUpDown, Download, Upload, FileText, BookOpen, Edit, Trash2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ManualBomBuilder() {
   // === STATE ===
@@ -37,6 +41,27 @@ export default function ManualBomBuilder() {
   const [detailData, setDetailData] = useState(null); // enriched data (from IPC)
   const [detailLoading, setDetailLoading] = useState(false);
   const modalRef = useRef(null);
+
+  // === SUBASSEMBLY CRUD STATE ===
+  const [subAssemblyDialogOpen, setSubAssemblyDialogOpen] = useState(false);
+  const [editingSubAssembly, setEditingSubAssembly] = useState(null);
+  const [subAssemblyForm, setSubAssemblyForm] = useState({
+    subAssemblyId: '',
+    description: '',
+    category: '',
+    components: [],
+    tags: []
+  });
+  const [subAssemblyCategories, setSubAssemblyCategories] = useState([]);
+  const [subAssemblyFormError, setSubAssemblyFormError] = useState(null);
+  const [subAssemblyFormLoading, setSubAssemblyFormLoading] = useState(false);
+
+  // === MANUAL QUOTE SYSTEM STATE ===
+  const [quoteNumber, setQuoteNumber] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [customer, setCustomer] = useState('');
+  const [savedQuote, setSavedQuote] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const openDetail = useCallback(async (item, type) => {
     try {
@@ -166,7 +191,7 @@ export default function ManualBomBuilder() {
   const handlePriceChange = (e) => {
     const price = parseFloat(e.target.value) || 0;
     const margin = window.calc?.getMarginFromPrice
-      ? window.calc.getMarginFromPrice(prev.totalMaterialCost, price)
+      ? window.calc.getMarginFromPrice(costData.totalMaterialCost, price)
       : ((price - costData.totalMaterialCost) / price) * 100;
     
     setCostData(prev => ({
@@ -175,6 +200,19 @@ export default function ManualBomBuilder() {
       marginPercent: margin
     }));
   };
+
+  // Load subassembly categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await window.subAssemblies.getCategories();
+        setSubAssemblyCategories(categories || []);
+      } catch (err) {
+        console.error('Error loading subassembly categories:', err);
+      }
+    };
+    loadCategories();
+  }, []);
 
   // === BOM ITEM HANDLERS ===
   const addItem = (item, type) => {
@@ -219,6 +257,140 @@ export default function ManualBomBuilder() {
       );
       return { ...prev, [list]: newList };
     });
+  };
+
+  // === SUBASSEMBLY CRUD HANDLERS ===
+  const openSubAssemblyDialog = (subAssembly = null) => {
+    if (subAssembly) {
+      setEditingSubAssembly(subAssembly);
+      setSubAssemblyForm({
+        subAssemblyId: subAssembly.subAssemblyId || '',
+        description: subAssembly.description || '',
+        category: subAssembly.category || '',
+        components: subAssembly.components || [],
+        tags: subAssembly.tags || []
+      });
+    } else {
+      setEditingSubAssembly(null);
+      setSubAssemblyForm({
+        subAssemblyId: '',
+        description: '',
+        category: '',
+        components: [],
+        tags: []
+      });
+    }
+    setSubAssemblyDialogOpen(true);
+    setSubAssemblyFormError(null);
+  };
+
+  const closeSubAssemblyDialog = () => {
+    setSubAssemblyDialogOpen(false);
+    setEditingSubAssembly(null);
+    setSubAssemblyForm({
+      subAssemblyId: '',
+      description: '',
+      category: '',
+      components: [],
+      tags: []
+    });
+    setSubAssemblyFormError(null);
+  };
+
+  const saveSubAssembly = async () => {
+    if (!subAssemblyForm.subAssemblyId.trim() || !subAssemblyForm.description.trim()) {
+      setSubAssemblyFormError('Sub-Assembly ID and Description are required');
+      return;
+    }
+
+    setSubAssemblyFormLoading(true);
+    setSubAssemblyFormError(null);
+
+    try {
+      const subAssemblyData = {
+        ...subAssemblyForm,
+        subAssemblyId: subAssemblyForm.subAssemblyId.trim(),
+        description: subAssemblyForm.description.trim(),
+        category: subAssemblyForm.category.trim(),
+        components: subAssemblyForm.components,
+        tags: subAssemblyForm.tags.filter(tag => tag.trim()),
+        createdAt: editingSubAssembly?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const result = await window.subAssemblies.save(subAssemblyData);
+      
+      if (result.success) {
+        setSuccess(editingSubAssembly ? 'Sub-Assembly updated successfully!' : 'Sub-Assembly created successfully!');
+        closeSubAssemblyDialog();
+        // Refresh the search results by triggering a re-search
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setSubAssemblyFormError(result.error || 'Failed to save sub-assembly');
+      }
+    } catch (err) {
+      setSubAssemblyFormError(err.message || 'Failed to save sub-assembly');
+    } finally {
+      setSubAssemblyFormLoading(false);
+    }
+  };
+
+  const deleteSubAssembly = async (subAssemblyId) => {
+    if (!confirm(`Are you sure you want to delete sub-assembly "${subAssemblyId}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const result = await window.subAssemblies.delete(subAssemblyId);
+      if (result.success) {
+        setSuccess('Sub-Assembly deleted successfully!');
+        // Remove from BOM if it was added
+        removeItem(subAssemblyId, 'subAssembly');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(result.error || 'Failed to delete sub-assembly');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete sub-assembly');
+    }
+  };
+
+  const addComponentToSubAssembly = (component) => {
+    setSubAssemblyForm(prev => {
+      const existing = prev.components.find(c => c.sku === component.sku);
+      if (existing) {
+        return {
+          ...prev,
+          components: prev.components.map(c => 
+            c.sku === component.sku ? { ...c, quantity: c.quantity + 1 } : c
+          )
+        };
+      } else {
+        return {
+          ...prev,
+          components: [...prev.components, { ...component, quantity: 1 }]
+        };
+      }
+    });
+  };
+
+  const removeComponentFromSubAssembly = (sku) => {
+    setSubAssemblyForm(prev => ({
+      ...prev,
+      components: prev.components.filter(c => c.sku !== sku)
+    }));
+  };
+
+  const updateComponentQuantityInSubAssembly = (sku, quantity) => {
+    const qty = parseInt(quantity, 10);
+    if (qty < 1) return;
+    
+    setSubAssemblyForm(prev => ({
+      ...prev,
+      components: prev.components.map(c => 
+        c.sku === sku ? { ...c, quantity: qty } : c
+      )
+    }));
   };
 
   // === TAG HANDLERS ===
@@ -453,10 +625,119 @@ export default function ManualBomBuilder() {
     }
   };
 
+  // === MANUAL QUOTE SYSTEM HANDLERS ===
+  const generateQuoteNumber = async () => {
+    try {
+      if (window.electronAPI && window.electronAPI.calc) {
+        const result = await window.electronAPI.calc.getQuoteNumber({
+          customerCode: '001',
+          industry: '99',
+          product: '999',
+          control: '9',
+          scope: '99'
+        });
+        setQuoteNumber(result.fullId);
+        if (result.customerName) {
+          setCustomer(result.customerName);
+        }
+        return result.fullId;
+      }
+    } catch (error) {
+      console.error('Error generating quote number:', error);
+    }
+    return null;
+  };
+
+  const saveToQuote = async () => {
+    if (!quoteNumber.trim()) {
+      alert('Please enter or generate a quote number');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const bomData = {
+        bom: bom,
+        bomId: bomId,
+        version: version,
+        parentId: parentId,
+        costData: costData,
+        timestamp: new Date().toISOString()
+      };
+
+      const manualQuote = {
+        quoteNumber: quoteNumber.trim(),
+        type: 'bom_data',
+        data: bomData,
+        projectName: projectName.trim() || null,
+        customer: customer.trim() || null
+      };
+
+      if (window.electronAPI && window.electronAPI.db && window.electronAPI.db.manualQuotes) {
+        const result = await window.electronAPI.db.manualQuotes.save(manualQuote);
+        if (result.success) {
+          setSavedQuote(manualQuote);
+          setSuccess('BOM saved to quote successfully!');
+        } else {
+          setError('Error saving to quote: ' + (result.error || 'Unknown error'));
+        }
+      } else {
+        setError('Manual quotes API not available');
+      }
+    } catch (error) {
+      console.error('Error saving to quote:', error);
+      setError('Error saving to quote: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const loadFromQuote = async () => {
+    if (!quoteNumber.trim()) {
+      alert('Please enter a quote number to load');
+      return;
+    }
+
+    try {
+      if (window.electronAPI && window.electronAPI.db && window.electronAPI.db.manualQuotes) {
+        const result = await window.electronAPI.db.manualQuotes.getByQuoteNumber(quoteNumber.trim());
+        if (result && result.type === 'bom_data') {
+          const data = result.data;
+          setBom(data.bom || {
+            name: "",
+            description: "",
+            tags: [],
+            subAssemblies: [],
+            components: [],
+          });
+          setBomId(data.bomId || null);
+          setVersion(data.version || 1);
+          setParentId(data.parentId || null);
+          setCostData(data.costData || {
+            totalMaterialCost: 0,
+            marginPercent: 40.0,
+            finalPrice: 0
+          });
+          setProjectName(result.projectName || '');
+          setCustomer(result.customer || '');
+          setSavedQuote(result);
+          setSuccess('BOM loaded from quote successfully!');
+        } else {
+          setError('No BOM data found for this quote number');
+        }
+      } else {
+        setError('Manual quotes API not available');
+      }
+    } catch (error) {
+      console.error('Error loading from quote:', error);
+      setError('Error loading from quote: ' + error.message);
+    }
+  };
+
   return (
-    <div className="flex h-full max-h-screen overflow-hidden bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-4 gap-4">
+    <div className="flex h-full max-h-screen overflow-hidden bg-background text-foreground p-4 gap-4">
       {/* Left Column (2/3): Add to BOM Search */}
-      <Card className="w-2/3 flex flex-col shadow-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <Card className="w-2/3 flex flex-col shadow-lg border-border bg-card">
         <CardContent className="flex-1 overflow-y-auto p-4">
           <Tabs defaultValue="components">
             <TabsList className="grid w-full grid-cols-2 max-w-md">
@@ -464,12 +745,22 @@ export default function ManualBomBuilder() {
               <TabsTrigger value="components">Components</TabsTrigger>
             </TabsList>
             <TabsContent value="subAssemblies">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Sub-Assemblies</h3>
+                <Button onClick={() => openSubAssemblyDialog()} className="bg-success hover:bg-success/80">
+                  <Plus size={16} className="mr-2" />
+                  Create Sub-Assembly
+                </Button>
+              </div>
               <SearchableList 
                 searchFn={window.subAssemblies.search}
                 itemKey="subAssemblyId"
                 itemDisplay="description"
                 onAdd={(item) => addItem(item, 'subAssembly')}
                 onShowDetail={(item) => openDetail(item, 'subAssembly')}
+                onEdit={openSubAssemblyDialog}
+                onDelete={deleteSubAssembly}
+                showCrudActions={true}
               />
             </TabsContent>
             <TabsContent value="components">
@@ -486,10 +777,10 @@ export default function ManualBomBuilder() {
       </Card>
 
       {/* Right Column (1/3): Manual BOM Editor */}
-      <Card className="w-1/3 flex flex-col shadow-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <Card className="w-1/3 flex flex-col shadow-lg border-border bg-card">
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* BOM ID Version Info */}
-          <div className="text-xs text-slate-500 dark:text-slate-400 text-right -mt-2 mb-2">
+          <div className="text-xs text-muted-foreground text-right -mt-2 mb-2">
             {bomId ? `${bomId} (v${version})` : "New BOM"}
           </div>
           
@@ -509,6 +800,76 @@ export default function ManualBomBuilder() {
               value={bom.description}
               onChange={e => setBom(prev => ({...prev, description: e.target.value}))}
             />
+          </div>
+
+          {/* Manual Quote System Section */}
+          <div className="p-4 bg-muted rounded-lg">
+            <h4 className="text-sm font-semibold mb-3">Quote Association</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Quote Number</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="CA251112001-99999-00"
+                    value={quoteNumber}
+                    onChange={(e) => setQuoteNumber(e.target.value)}
+                    className="flex-1 text-sm"
+                  />
+                  <Button
+                    onClick={generateQuoteNumber}
+                    size="sm"
+                    variant="outline"
+                    className="px-3"
+                    title="Generate new quote number"
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Project Name</label>
+                <Input
+                  placeholder="Project name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Customer</label>
+                <Input
+                  placeholder="Customer name"
+                  value={customer}
+                  onChange={(e) => setCustomer(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={saveToQuote}
+                  disabled={isSaving || !quoteNumber.trim()}
+                  size="sm"
+                  className="bg-success hover:bg-success/80"
+                >
+                  {isSaving ? 'Saving...' : 'Save to Quote'}
+                </Button>
+                <Button
+                  onClick={loadFromQuote}
+                  disabled={!quoteNumber.trim()}
+                  size="sm"
+                  variant="outline"
+                >
+                  Load from Quote
+                </Button>
+              </div>
+              {savedQuote && (
+                <div className="p-2 bg-success/10 border border-success/30 rounded text-xs">
+                  <span className="text-success">
+                    ✓ BOM saved to quote {savedQuote.quoteNumber}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           
           {/* Tags */}
@@ -556,22 +917,22 @@ export default function ManualBomBuilder() {
           />
           
           {/* Total Material Cost - Prominent Display */}
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+          <div className="border-t border-border pt-4">
+            <div className="bg-muted rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Material Cost</span>
-                <span className="font-bold text-2xl text-blue-600 dark:text-blue-400">${costData.totalMaterialCost.toFixed(2)}</span>
+                <span className="text-sm font-medium text-muted-foreground">Total Material Cost</span>
+                <span className="font-bold text-2xl text-accent">${costData.totalMaterialCost.toFixed(2)}</span>
               </div>
             </div>
           </div>
           
           {/* Save Area */}
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-2">
-            {error && <div className="text-red-500 text-sm flex items-center"><AlertCircle size={16} className="mr-2" /> {error}</div>}
-            {success && <div className="text-green-500 text-sm">{success}</div>}
+          <div className="border-t border-border pt-4 space-y-2">
+            {error && <div className="text-danger text-sm flex items-center"><AlertCircle size={16} className="mr-2" /> {error}</div>}
+            {success && <div className="text-success text-sm">{success}</div>}
             
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={handleExportBomToCsv} className="w-full bg-purple-600 hover:bg-purple-700">
+              <Button onClick={handleExportBomToCsv} className="w-full bg-info hover:bg-info/80">
                 <Download size={16} className="mr-2" />
                 Export CSV
               </Button>
@@ -598,8 +959,8 @@ export default function ManualBomBuilder() {
       {/* Detail Modal */}
       {detailOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onMouseDown={(e) => { if (e.target === e.currentTarget) closeDetail(); }}>
-          <div ref={modalRef} role="dialog" aria-modal="true" className="w-full max-w-2xl mx-4 rounded-lg shadow-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+          <div ref={modalRef} role="dialog" aria-modal="true" className="w-full max-w-2xl mx-4 rounded-lg shadow-xl bg-card border border-border">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <Info size={18} className="text-accent" />
                 <h3 className="text-lg font-semibold">{detailType === 'component' ? 'Component Details' : 'Sub-Assembly Details'}</h3>
@@ -611,44 +972,44 @@ export default function ManualBomBuilder() {
 
             <div className="p-4">
               {detailLoading ? (
-                <div className="text-sm text-slateish/60">Loading…</div>
+                <div className="text-sm text-muted-foreground">Loading…</div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-sm text-slateish/60">{detailType === 'component' ? 'Part #' : 'ID'}</div>
+                      <div className="text-sm text-muted-foreground">{detailType === 'component' ? 'Part #' : 'ID'}</div>
                       <div className="font-mono">{detailType === 'component' ? (detailData?.sku || detailItem?.sku || detailItem?.partNumber) : (detailData?.subAssemblyId || detailItem?.subAssemblyId)}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm text-slateish/60">Vendor</div>
+                      <div className="text-sm text-muted-foreground">Vendor</div>
                       <div>{detailData?.manufacturer || detailData?.vendor || '—'}</div>
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-sm text-slateish/60">Description</div>
+                    <div className="text-sm text-muted-foreground">Description</div>
                     <div className="font-medium">{detailData?.description || detailItem?.description || '—'}</div>
                   </div>
 
                   {detailType === 'component' && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <div className="text-sm text-slateish/60">Category</div>
+                        <div className="text-sm text-muted-foreground">Category</div>
                         <div>{detailData?.category || '—'}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-slateish/60">Price</div>
+                        <div className="text-sm text-muted-foreground">Price</div>
                         <div className="font-semibold">{detailData?.price != null ? `$${Number(detailData.price).toFixed(2)}` : '—'}</div>
                       </div>
                       {detailData?.voltage && (
                         <div>
-                          <div className="text-sm text-slateish/60">Voltage</div>
+                          <div className="text-sm text-muted-foreground">Voltage</div>
                           <div>{detailData.voltage}</div>
                         </div>
                       )}
                       {detailData?.stock != null && (
                         <div className="text-right">
-                          <div className="text-sm text-slateish/60">Stock</div>
+                          <div className="text-sm text-muted-foreground">Stock</div>
                           <div>{detailData.stock}</div>
                         </div>
                       )}
@@ -735,13 +1096,220 @@ export default function ManualBomBuilder() {
           </div>
         </div>
       )}
+
+      {/* Sub-Assembly CRUD Dialog */}
+      <SubAssemblyCrudDialog
+        open={subAssemblyDialogOpen}
+        onOpenChange={setSubAssemblyDialogOpen}
+        editingSubAssembly={editingSubAssembly}
+        formData={subAssemblyForm}
+        onFormChange={setSubAssemblyForm}
+        onSave={saveSubAssembly}
+        onCancel={closeSubAssemblyDialog}
+        categories={subAssemblyCategories}
+        error={subAssemblyFormError}
+        loading={subAssemblyFormLoading}
+        onAddComponent={addComponentToSubAssembly}
+        onRemoveComponent={removeComponentFromSubAssembly}
+        onUpdateComponentQuantity={updateComponentQuantityInSubAssembly}
+      />
+
     </div>
+  );
+}
+
+// === Sub-Assembly CRUD Dialog Component ===
+function SubAssemblyCrudDialog({ 
+  open, 
+  onOpenChange, 
+  editingSubAssembly, 
+  formData, 
+  onFormChange, 
+  onSave, 
+  onCancel, 
+  categories, 
+  error, 
+  loading,
+  onAddComponent,
+  onRemoveComponent,
+  onUpdateComponentQuantity
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editingSubAssembly ? 'Edit Sub-Assembly' : 'Create New Sub-Assembly'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {error && (
+            <div className="text-danger text-sm flex items-center">
+              <AlertCircle size={16} className="mr-2" /> {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="subAssemblyId">Sub-Assembly ID *</Label>
+              <Input
+                id="subAssemblyId"
+                value={formData.subAssemblyId}
+                onChange={(e) => onFormChange({ ...formData, subAssemblyId: e.target.value })}
+                placeholder="e.g., SUB-001"
+                disabled={!!editingSubAssembly}
+              />
+            </div>
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => onFormChange({ ...formData, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description *</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => onFormChange({ ...formData, description: e.target.value })}
+              placeholder="Describe this sub-assembly..."
+              rows={3}
+            />
+          </div>
+
+          {/* Components Section */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Components ({formData.components.length})</Label>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search components..."
+                    className="pl-8 w-48"
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter' && e.target.value.trim()) {
+                        try {
+                          const results = await window.components.search({ description: e.target.value.trim() });
+                          if (results && results.length > 0) {
+                            onAddComponent(results[0]); // Add first result
+                            e.target.value = '';
+                          }
+                        } catch (err) {
+                          console.error('Component search error:', err);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-lg p-4 max-h-64 overflow-y-auto">
+              {formData.components.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No components added yet. Search and press Enter to add components.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {formData.components.map(component => (
+                    <div key={component.sku} className="flex items-center space-x-2 p-2 bg-muted rounded">
+                      <Input
+                        type="number"
+                        value={component.quantity}
+                        onChange={(e) => onUpdateComponentQuantity(component.sku, e.target.value)}
+                        className="w-16"
+                        min="1"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{component.description || component.sku}</div>
+                        <div className="text-xs text-muted-foreground">{component.sku}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onRemoveComponent(component.sku)}
+                        className="text-danger hover:text-danger/80"
+                      >
+                        <X size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tags Section */}
+          <div>
+            <Label>Tags</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {formData.tags.map((tag, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  {tag}
+                  <X
+                    size={12}
+                    className="cursor-pointer"
+                    onClick={() => onFormChange({
+                      ...formData,
+                      tags: formData.tags.filter((_, i) => i !== index)
+                    })}
+                  />
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Input
+                placeholder="Add tag..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    e.preventDefault();
+                    onFormChange({
+                      ...formData,
+                      tags: [...formData.tags, e.target.value.trim()]
+                    });
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              onClick={onSave}
+              disabled={loading}
+              className="bg-accent hover:bg-accent/80"
+            >
+              {loading ? 'Saving...' : (editingSubAssembly ? 'Update' : 'Create')}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // === Sub-Components ===
 
-function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail }) {
+function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail, onEdit, onDelete, showCrudActions = false, compact = false }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -808,7 +1376,7 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail })
     <div className="flex flex-col h-full">
       <div className="flex gap-2 flex-shrink-0">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Search by description..." 
             value={searchTerm}
@@ -818,11 +1386,11 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail })
         </div>
         {itemKey === 'sku' && (
           <div className="flex items-center gap-2">
-            <ArrowUpDown size={14} className="text-slate-400" />
+            <ArrowUpDown size={14} className="text-muted-foreground" />
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              className="text-xs px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="text-xs px-2 py-1.5 border border-border rounded-md bg-background text-foreground"
             >
               <option value="">Sort by...</option>
               <option value="part">Part #</option>
@@ -835,39 +1403,64 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail })
         )}
       </div>
       <div className="flex-1 overflow-y-auto mt-3">
-        {isLoading && <div className="text-sm text-slate-500 p-2">Searching...</div>}
-        {!isLoading && results.length === 0 && searchTerm.length > 1 && <div className="text-sm text-slate-500 p-2">No results found.</div>}
-        {!isLoading && results.length === 0 && searchTerm.length < 2 && <div className="text-sm text-slate-400 p-2">Enter at least 2 characters to search...</div>}
+        {isLoading && <div className="text-sm text-muted-foreground p-2">Searching...</div>}
+        {!isLoading && results.length === 0 && searchTerm.length > 1 && <div className="text-sm text-muted-foreground p-2">No results found.</div>}
+        {!isLoading && results.length === 0 && searchTerm.length < 2 && <div className="text-sm text-muted-foreground p-2">Enter at least 2 characters to search...</div>}
         {sortedResults.length > 0 && (
-          <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+          <div className="border border-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+              <thead className="bg-muted border-b border-border">
                 <tr>
-                  {itemKey === 'sku' && <th className="text-left px-2 py-1.5 font-semibold">Part #</th>}
+                  <th className="text-left px-2 py-1.5 font-semibold">ID</th>
                   <th className="text-left px-2 py-1.5 font-semibold">Description</th>
                   {itemKey === 'sku' && <th className="text-left px-2 py-1.5 font-semibold">Vendor</th>}
                   {itemKey === 'sku' && <th className="text-right px-2 py-1.5 font-semibold">Price</th>}
                   {itemKey !== 'sku' && <th className="text-left px-2 py-1.5 font-semibold">Category</th>}
                   <th className="text-center px-2 py-1.5 font-semibold w-12">Add</th>
+                  {showCrudActions && <th className="text-center px-2 py-1.5 font-semibold w-20">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {sortedResults.map(item => (
                   <tr 
                     key={item[itemKey]} 
-                    className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                    className="border-b border-border hover:bg-muted cursor-pointer"
                     onClick={() => onShowDetail && onShowDetail(item)}
                   >
-                    {itemKey === 'sku' && <td className="px-2 py-1.5 font-mono text-xs">{item.sku || item.partNumber || '-'}</td>}
+                    <td className="px-2 py-1.5 font-mono text-xs">{item[itemKey]}</td>
                     <td className="px-2 py-1.5">{item[itemDisplay]}</td>
                     {itemKey === 'sku' && <td className="px-2 py-1.5 text-xs">{item.manufacturer || item.vendor || '-'}</td>}
                     {itemKey === 'sku' && <td className="px-2 py-1.5 text-right font-medium">{item.price ? `$${item.price.toFixed(2)}` : '-'}</td>}
-                    {itemKey !== 'sku' && <td className="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-400">{item.category || '-'}</td>}
+                    {itemKey !== 'sku' && <td className="px-2 py-1.5 text-xs text-muted-foreground">{item.category || '-'}</td>}
                     <td className="px-2 py-1.5 text-center">
                       <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onAdd(item); }} className="h-6 w-6 p-0">
                         <Plus size={14} />
                       </Button>
                     </td>
+                    {showCrudActions && (
+                      <td className="px-2 py-1.5 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={(e) => { e.stopPropagation(); onEdit(item); }} 
+                            className="h-6 w-6 p-0 text-accent hover:text-accent/80"
+                            title="Edit"
+                          >
+                            <Edit size={12} />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={(e) => { e.stopPropagation(); onDelete(item[itemKey]); }} 
+                            className="h-6 w-6 p-0 text-danger hover:text-danger/80"
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -882,11 +1475,11 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail })
 function BomSection({ title, items, itemKey, type, updateQuantity, removeItem, onShowDetail }) {
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{title} ({items.length})</h3>
+      <h3 className="text-lg font-semibold mb-2 border-b border-border pb-1">{title} ({items.length})</h3>
       <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-        {items.length === 0 && <p className="text-sm text-slate-500 dark:text-slate-400">No items added.</p>}
+        {items.length === 0 && <p className="text-sm text-muted-foreground">No items added.</p>}
         {items.map(item => (
-          <div key={item[itemKey]} className="flex items-center space-x-2 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg cursor-pointer" onClick={() => onShowDetail && onShowDetail(item)}>
+          <div key={item[itemKey]} className="flex items-center space-x-2 p-2 bg-muted rounded-lg cursor-pointer" onClick={() => onShowDetail && onShowDetail(item)}>
             <Input 
               type="number" 
               value={item.quantity} 
@@ -895,10 +1488,10 @@ function BomSection({ title, items, itemKey, type, updateQuantity, removeItem, o
             />
             <div className="flex-1">
               <div className="text-sm font-medium">{item.description || item[itemKey]}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">{item[itemKey]}</div>
+              <div className="text-xs text-muted-foreground">{item[itemKey]}</div>
             </div>
             <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeItem(item[itemKey], type); }}>
-              <X size={16} className="text-red-500" />
+              <X size={16} className="text-danger" />
             </Button>
           </div>
         ))}

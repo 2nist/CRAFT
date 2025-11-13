@@ -61,6 +61,13 @@
             const [markup, setMarkup] = useState('');
             const [price, setPrice] = useState('');
             const [profit, setProfit] = useState('');
+            
+            // Manual quote system state
+            const [quoteNumber, setQuoteNumber] = useState('');
+            const [projectName, setProjectName] = useState('');
+            const [customer, setCustomer] = useState('');
+            const [savedQuote, setSavedQuote] = useState(null);
+            const [isSaving, setIsSaving] = useState(false);
 
             // This effect calculates Price based on Cost and Margin
             useEffect(() => {
@@ -190,9 +197,177 @@
             const handleCostChange = (e) => setCost(e.target.value);
             const handleMarginChange = (e) => setMargin(e.target.value);
 
+            // Manual quote system handlers
+            const generateQuoteNumber = async () => {
+                try {
+                    if (window.electronAPI && window.electronAPI.calc) {
+                        const result = await window.electronAPI.calc.getQuoteNumber({
+                            customerCode: '001', // Default customer code
+                            industry: '99', // General industry
+                            product: '999', // General product
+                            control: '9', // None
+                            scope: '99' // General scope
+                        });
+                        setQuoteNumber(result.fullId);
+                        if (result.customerName) {
+                            setCustomer(result.customerName);
+                        }
+                        return result.fullId;
+                    }
+                } catch (error) {
+                    console.error('Error generating quote number:', error);
+                }
+                return null;
+            };
+
+            const saveToQuote = async () => {
+                if (!quoteNumber.trim()) {
+                    alert('Please enter or generate a quote number');
+                    return;
+                }
+
+                setIsSaving(true);
+                try {
+                    const calculationData = {
+                        cost: parseFloat(cost) || 0,
+                        margin: parseFloat(margin) || 0,
+                        markup: parseFloat(markup) || 0,
+                        price: parseFloat(price) || 0,
+                        profit: parseFloat(profit) || 0,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    const manualQuote = {
+                        quoteNumber: quoteNumber.trim(),
+                        type: 'margin_calculation',
+                        data: calculationData,
+                        projectName: projectName.trim() || null,
+                        customer: customer.trim() || null
+                    };
+
+                    if (window.electronAPI && window.electronAPI.db && window.electronAPI.db.manualQuotes) {
+                        const result = await window.electronAPI.db.manualQuotes.save(manualQuote);
+                        if (result.success) {
+                            setSavedQuote(manualQuote);
+                            alert('Margin calculation saved to quote successfully!');
+                        } else {
+                            alert('Error saving to quote: ' + (result.error || 'Unknown error'));
+                        }
+                    } else {
+                        alert('Manual quotes API not available');
+                    }
+                } catch (error) {
+                    console.error('Error saving to quote:', error);
+                    alert('Error saving to quote: ' + error.message);
+                } finally {
+                    setIsSaving(false);
+                }
+            };
+
+            const loadFromQuote = async () => {
+                if (!quoteNumber.trim()) {
+                    alert('Please enter a quote number to load');
+                    return;
+                }
+
+                try {
+                    if (window.electronAPI && window.electronAPI.db && window.electronAPI.db.manualQuotes) {
+                        const result = await window.electronAPI.db.manualQuotes.getByQuoteNumber(quoteNumber.trim());
+                        if (result && result.type === 'margin_calculation') {
+                            const data = result.data;
+                            setCost(data.cost?.toString() || '');
+                            setMargin(data.margin?.toString() || '');
+                            setMarkup(data.markup?.toString() || '');
+                            setPrice(data.price?.toString() || '');
+                            setProfit(data.profit?.toString() || '');
+                            setProjectName(result.projectName || '');
+                            setCustomer(result.customer || '');
+                            setSavedQuote(result);
+                            alert('Margin calculation loaded from quote successfully!');
+                        } else {
+                            alert('No margin calculation found for this quote number');
+                        }
+                    } else {
+                        alert('Manual quotes API not available');
+                    }
+                } catch (error) {
+                    console.error('Error loading from quote:', error);
+                    alert('Error loading from quote: ' + error.message);
+                }
+            };
+
             return (
-                <div className="p-4 md:p-8 max-w-3xl mx-auto">
+                <div className="p-4 md:p-8 max-w-4xl mx-auto">
                     <h1 className="text-3xl font-bold text-white mb-6">Margin & Price Calculator</h1>
+                    
+                    {/* Manual Quote System Section */}
+                    <div className="mb-6 p-6 bg-gray-900 rounded-lg shadow-lg">
+                        <h2 className="text-xl font-semibold text-white mb-4">Quote Association</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label className="label">Quote Number</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="input-base flex-1"
+                                        placeholder="CA241201001-99XXX9XX-00"
+                                        value={quoteNumber}
+                                        onChange={(e) => setQuoteNumber(e.target.value)}
+                                    />
+                                    <button
+                                        onClick={generateQuoteNumber}
+                                        className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                                        title="Generate new quote number"
+                                    >
+                                        Generate
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="label">Project Name</label>
+                                <input
+                                    type="text"
+                                    className="input-base"
+                                    placeholder="Project name"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Customer</label>
+                                <input
+                                    type="text"
+                                    className="input-base"
+                                    placeholder="Customer name"
+                                    value={customer}
+                                    onChange={(e) => setCustomer(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={saveToQuote}
+                                disabled={isSaving || !quoteNumber.trim()}
+                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSaving ? 'Saving...' : 'Save to Quote'}
+                            </button>
+                            <button
+                                onClick={loadFromQuote}
+                                disabled={!quoteNumber.trim()}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Load from Quote
+                            </button>
+                        </div>
+                        {savedQuote && (
+                            <div className="mt-4 p-3 bg-green-900 border border-green-700 rounded">
+                                <p className="text-green-300 text-sm">
+                                    ✓ Calculation saved to quote {savedQuote.quoteNumber}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* --- INPUTS --- */}

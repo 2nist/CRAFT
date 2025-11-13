@@ -99,7 +99,8 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "src/data/**/*"
     ],
     "win": {
       "target": [
@@ -110,7 +111,9 @@
       ],
       "sign": false,
       "certificateFile": null,
-      "certificatePassword": null
+      "certificatePassword": null,
+      "verifyUpdateCodeSignature": false,
+      "signDlls": false
     },
     "nsis": {
       "oneClick": false,
