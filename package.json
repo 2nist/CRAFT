@@ -103,8 +103,24 @@
     ],
     "win": {
       "target": [
-        "dir"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Craft Automation CPQ",
+      "installerIcon": "build/installerIcon.ico",
+      "uninstallerIcon": "build/uninstallerIcon.ico",
+      "installerHeaderIcon": "build/installerHeaderIcon.ico",
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false
     },
     "extraMetadata": {
       "main": "dist-electron/main.cjs"

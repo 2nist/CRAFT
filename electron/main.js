@@ -18,6 +18,32 @@ import { open } from 'sqlite'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Initialize runtime configuration
+let runtimeConfigLoaded = false;
+let packagedRuntimeRoot = null;
+
+async function loadRuntimeConfig() {
+  try {
+    // Try to load runtime config from the packaged app directory
+    const configPath = path.join(process.resourcesPath, 'runtime-config.json');
+    const configData = await fs.readFile(configPath, 'utf-8');
+    const config = JSON.parse(configData);
+    console.log('Loaded runtime config:', config);
+    return config.runtimeRoot || null;
+  } catch (err) {
+    console.log('No runtime config found or error loading:', err.message);
+    return null;
+  }
+}
+
+async function initializeRuntimeConfig() {
+  if (!runtimeConfigLoaded) {
+    packagedRuntimeRoot = await loadRuntimeConfig();
+    runtimeConfigLoaded = true;
+  }
+  return packagedRuntimeRoot;
+}
+
 const ENV_RUNTIME_ROOT = [
   process.env.CTH_RUNTIME_ROOT,
   process.env.CRAFT_TOOLS_RUNTIME_ROOT,
@@ -30,7 +56,7 @@ const resolvedRuntimeRoot = ENV_RUNTIME_ROOT
 
 const defaultRuntimeRoot = path.resolve(app.getPath('userData'), 'data')
 
-function resolveRuntimePath(targetPath = '') {
+async function resolveRuntimePath(targetPath = '') {
   if (!targetPath) {
     // For root path, try network first, then fallback to local
     if (resolvedRuntimeRoot) {
@@ -38,6 +64,13 @@ function resolveRuntimePath(targetPath = '') {
       // even when the paths are accessible. Trust the environment variable.
       return resolvedRuntimeRoot;
     }
+
+    // Check packaged config as fallback
+    const configRoot = await initializeRuntimeConfig();
+    if (configRoot) {
+      return configRoot;
+    }
+
     return defaultRuntimeRoot;
   }
 
@@ -52,6 +85,12 @@ function resolveRuntimePath(targetPath = '') {
     // In packaged apps, synchronous access checks may fail for network paths
     // even when the paths are accessible. Trust the environment variable.
     base = resolvedRuntimeRoot;
+  } else {
+    // Check packaged config as fallback
+    const configRoot = await initializeRuntimeConfig();
+    if (configRoot) {
+      base = configRoot;
+    }
   }
 
   return path.resolve(base, targetPath);
@@ -63,8 +102,8 @@ async function ensureDirectoryForFile(targetPath) {
 }
 
 async function getRuntimeStatus() {
-  const runtimeRoot = resolveRuntimePath()
-  const usingOverride = Boolean(resolvedRuntimeRoot)
+  const runtimeRoot = await resolveRuntimePath()
+  const usingOverride = Boolean(resolvedRuntimeRoot) || Boolean(await initializeRuntimeConfig())
   const status = {
     runtimeRoot,
     usingOverride,
@@ -752,7 +791,7 @@ async function initializeGeneratedNumbersDatabase() {
     console.log('Initializing generated numbers database...')
 
     // Database path for generated numbers - use NAS if available, fallback to local
-    const dbDir = resolveRuntimePath('database')
+    const dbDir = await resolveRuntimePath('database')
     const dbPath = path.join(dbDir, 'generated_numbers.db')
 
     // Ensure database directory exists
@@ -799,7 +838,7 @@ async function initEmbeddedServer() {
     serverApp.use(express.json())
 
     // Database path - try NAS first, fallback to local
-    const dbDir = resolveRuntimePath('database')
+    const dbDir = await resolveRuntimePath('database')
     const dbPath = path.join(dbDir, 'craft_tools.db')
 
     // Ensure database directory exists
@@ -1059,7 +1098,7 @@ function csvEscape(value) {
 
 // CSV export helper
 async function appendProjectToCSV(project) {
-  const csvPath = resolveRuntimePath(path.join('OUTPUT', 'quote_project_log.csv'))
+  const csvPath = await resolveRuntimePath(path.join('OUTPUT', 'quote_project_log.csv'))
   const headers = 'ID,Project Number,Quote Number,Project Name,Customer,Industry,Product,Control,Scope,PO Number,Created At\n'
 
   await ensureDirectoryForFile(csvPath)
@@ -1104,8 +1143,8 @@ async function writeQuoteSnapshotCSV(quoteObject) {
   const timestamp = new Date().toISOString()
   const safeTimestamp = timestamp.replace(/[:.]/g, '-').replace(/\s+/g, '_')
 
-  const quotesDir = resolveRuntimePath(path.join('OUTPUT', 'quotes'))
-  const historyDir = resolveRuntimePath(path.join('OUTPUT', 'quotes', 'history'))
+  const quotesDir = await resolveRuntimePath(path.join('OUTPUT', 'quotes'))
+  const historyDir = await resolveRuntimePath(path.join('OUTPUT', 'quotes', 'history'))
   const currentPath = path.join(quotesDir, `${safeIdentifier}.csv`)
   const historicalPath = path.join(historyDir, `${safeIdentifier}_${safeTimestamp}.csv`)
 
@@ -3661,7 +3700,7 @@ ipcMain.handle('app:show-open-dialog', async (event, options) => {
 
 // Read file
 ipcMain.handle('app:read-file', async (event, filePath) => {
-  const fullPath = resolveRuntimePath(filePath)
+  const fullPath = await resolveRuntimePath(filePath)
 
   if (resolvedRuntimeRoot) {
     console.log(`[app:read-file] overridden root => ${fullPath}`)
@@ -3672,7 +3711,7 @@ ipcMain.handle('app:read-file', async (event, filePath) => {
 
 // Write file
 ipcMain.handle('app:write-file', async (event, filePath, content) => {
-  const fullPath = resolveRuntimePath(filePath)
+  const fullPath = await resolveRuntimePath(filePath)
   await ensureDirectoryForFile(fullPath)
 
   if (resolvedRuntimeRoot) {
@@ -3692,7 +3731,7 @@ ipcMain.handle('runtime:get-status', async () => {
   } catch (err) {
     console.error('Failed to resolve runtime status:', err)
     return {
-      runtimeRoot: resolveRuntimePath(),
+      runtimeRoot: await resolveRuntimePath(),
       usingOverride: Boolean(resolvedRuntimeRoot),
       ok: false,
       message: `Failed to resolve runtime status: ${err.message}`,
@@ -4126,7 +4165,7 @@ ipcMain.handle('manuals:get-index', async () => {
 // Helper function to log number generation to CSV
 async function logNumberGeneration(type, numberData) {
   try {
-    const logsDir = resolveRuntimePath('OUTPUT/LOGS');
+    const logsDir = await resolveRuntimePath('OUTPUT/LOGS');
     const csvPath = path.join(logsDir, `${type}Numbers.csv`);
 
     // Ensure LOGS directory exists
@@ -4161,7 +4200,7 @@ async function logNumberGeneration(type, numberData) {
 // Helper function to log margin calculations
 async function logMarginCalculation(marginData) {
   try {
-    const logsDir = resolveRuntimePath('OUTPUT/LOGS');
+    const logsDir = await resolveRuntimePath('OUTPUT/LOGS');
     const csvPath = path.join(logsDir, 'Margin.csv');
 
     // Ensure LOGS directory exists
