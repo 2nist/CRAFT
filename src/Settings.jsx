@@ -10,21 +10,22 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loadGlobalSettings, writeGlobalSettings } from './plugins/global-settings';
 import loggingService from './services/LoggingService';
 
-const THEMES = [
-  { value: 'slate', label: 'Slate (Default)', colors: 'bg-slate-900' },
-  { value: 'zinc', label: 'Zinc', colors: 'bg-zinc-900' },
-  { value: 'stone', label: 'Stone', colors: 'bg-stone-900' },
-  { value: 'gray', label: 'Gray', colors: 'bg-gray-900' },
-  { value: 'neutral', label: 'Neutral', colors: 'bg-neutral-900' }
-];
+// Unused for now - may be used in future theme customization
+// const THEMES = [
+//   { value: 'slate', label: 'Slate (Default)', colors: 'bg-slate-900' },
+//   { value: 'zinc', label: 'Zinc', colors: 'bg-zinc-900' },
+//   { value: 'stone', label: 'Stone', colors: 'bg-stone-900' },
+//   { value: 'gray', label: 'Gray', colors: 'bg-gray-900' },
+//   { value: 'neutral', label: 'Neutral', colors: 'bg-neutral-900' }
+// ];
 
-const ACCENT_COLORS = [
-  { value: 'blue', label: 'Blue', class: 'bg-blue-600' },
-  { value: 'purple', label: 'Purple', class: 'bg-purple-600' },
-  { value: 'green', label: 'Green', class: 'bg-green-600' },
-  { value: 'orange', label: 'Orange', class: 'bg-orange-600' },
-  { value: 'red', label: 'Red', class: 'bg-red-600' }
-];
+// const ACCENT_COLORS = [
+//   { value: 'blue', label: 'Blue', class: 'bg-blue-600' },
+//   { value: 'purple', label: 'Purple', class: 'bg-purple-600' },
+//   { value: 'green', label: 'Green', class: 'bg-green-600' },
+//   { value: 'orange', label: 'Orange', class: 'bg-orange-600' },
+//   { value: 'red', label: 'Red', class: 'bg-red-600' }
+// ];
 
 export default function Settings() {
   const [settings, setSettings] = useState(null);

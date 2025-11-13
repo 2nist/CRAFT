@@ -19,12 +19,21 @@ export default function SyncStatus() {
 
   const loadSyncStatus = async () => {
     try {
+      if (!window.electron?.ipcRenderer) {
+        throw new Error('Electron IPC not available')
+      }
       const status = await window.electron.ipcRenderer.invoke('sync:getStatus')
+      console.log('Sync status loaded:', status)
       setSyncStatus(status)
       setLastError(null)
     } catch (error) {
       console.error('Failed to load sync status:', error)
       setLastError(error.message)
+      // Set a minimal status to stop the loading spinner
+      setSyncStatus({
+        enabled: false,
+        message: 'Sync manager not available: ' + error.message
+      })
     }
   }
 

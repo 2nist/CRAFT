@@ -9,10 +9,14 @@ import { open } from 'sqlite'
 import sqlite3 from 'sqlite3'
 
 class SyncManager {
-  constructor(localDbPath, nasDbPath, userId) {
-    this.localDbPath = localDbPath
-    this.nasDbPath = nasDbPath
-    this.userId = userId
+  constructor(config) {
+    this.localServerDb = config.localServerDb
+    this.localGeneratedNumbersDb = config.localGeneratedNumbersDb
+    this.nasServerDb = config.nasServerDb
+    this.nasGeneratedNumbersDb = config.nasGeneratedNumbersDb
+    this.syncIntervalMinutes = config.syncIntervalMinutes || 120
+    this.username = config.username
+    
     this.localDb = null
     this.nasDb = null
     this.syncInterval = null
@@ -31,12 +35,12 @@ class SyncManager {
   async initialize() {
     try {
       console.log('🔄 Initializing Sync Manager...')
-      console.log(`   Local DB: ${this.localDbPath}`)
-      console.log(`   NAS Master DB: ${this.nasDbPath}`)
+      console.log(`   Local DB: ${this.localServerDb}`)
+      console.log(`   NAS Master DB: ${this.nasServerDb || 'Not configured'}`)
 
       // Open local database
       this.localDb = await open({
-        filename: this.localDbPath,
+        filename: this.localServerDb,
         driver: sqlite3.Database
       })
 
@@ -107,7 +111,7 @@ class SyncManager {
   /**
    * Perform bi-directional sync
    */
-  async sync(options = {}) {
+  async sync() {
     if (this.isSyncing) {
       console.log('⏭️  Sync already in progress, skipping...')
       return { success: false, reason: 'already_syncing' }
@@ -230,7 +234,8 @@ class SyncManager {
    */
   async checkNasAccess() {
     try {
-      const nasDir = path.dirname(this.nasDbPath)
+      if (!this.nasServerDb) return false
+      const nasDir = path.dirname(this.nasServerDb)
       await fs.access(nasDir)
       return true
     } catch (error) {
@@ -244,11 +249,11 @@ class SyncManager {
   async openNasDatabase() {
     try {
       // Ensure NAS directory exists
-      const nasDir = path.dirname(this.nasDbPath)
+      const nasDir = path.dirname(this.nasServerDb)
       await fs.mkdir(nasDir, { recursive: true })
 
       this.nasDb = await open({
-        filename: this.nasDbPath,
+        filename: this.nasServerDb,
         driver: sqlite3.Database
       })
 
@@ -550,7 +555,7 @@ class SyncManager {
       scheduledSync: this.syncInterval !== null,
       intervalMinutes: this.syncIntervalMinutes,
       username: this.username,
-      nasDbPath: this.nasServerDbPath || 'Not configured'
+      nasDbPath: this.nasServerDb || 'Not configured'
     }
   }
 
