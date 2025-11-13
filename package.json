@@ -126,6 +126,6 @@
       "main": "dist-electron/main.cjs"
     },
     "npmRebuild": false,
-    "afterPack": "scripts/after-pack.js"
+    "afterPack": "scripts/after-pack.cjs"
   }
 }
