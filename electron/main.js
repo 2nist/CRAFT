@@ -1114,11 +1114,19 @@ async function initializeGeneratedNumbersDatabase() {
     // Ensure database directory exists
     await fs.mkdir(dbDir, { recursive: true })
 
+    // For ASAR-packed applications, sqlite3 binaries must be unpacked
+    const actualDbPath = app.isPackaged && dbPath.includes('app.asar')
+      ? dbPath.replace('app.asar', 'app.asar.unpacked')
+      : dbPath
+
+    console.log('Opening generated numbers database at:', actualDbPath)
+    console.log('Database location type:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
+
     generatedNumbersDb = await open({
-      filename: dbPath,
+      filename: actualDbPath,
       driver: sqlite3.Database
     })
-    console.log('Generated numbers database connected at:', dbPath)
+    console.log('Generated numbers database connected successfully')
 
     // Create generated numbers table
     await generatedNumbersDb.exec(`
@@ -1140,8 +1148,12 @@ async function initializeGeneratedNumbersDatabase() {
 
     console.log('Generated numbers database initialized successfully')
   } catch (error) {
-    console.error('Error initializing generated numbers database:', error)
+    console.error('❌ Error initializing generated numbers database:', error)
+    console.error('   Error code:', error.code)
+    console.error('   Error message:', error.message)
+    if (error.stack) console.error('   Stack:', error.stack)
     // Don't throw error - allow app to continue without generated numbers database
+    generatedNumbersDb = null
   }
 }
 
@@ -1161,12 +1173,19 @@ async function initEmbeddedServer() {
     // Ensure database directory exists
     await fs.mkdir(dbDir, { recursive: true })
 
+    // For ASAR-packed applications, sqlite3 binaries must be unpacked
+    const actualDbPath = app.isPackaged && dbPath.includes('app.asar')
+      ? dbPath.replace('app.asar', 'app.asar.unpacked')
+      : dbPath
+
+    console.log('Opening main database at:', actualDbPath)
+    console.log('Database location type:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
+
     serverDb = await open({
-      filename: dbPath,
+      filename: actualDbPath,
       driver: sqlite3.Database
     })
-    console.log('Embedded server connected to database at:', dbPath)
-    console.log('Database location:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
+    console.log('Embedded server connected to database successfully')
 
     // Initialize database tables
     console.log('About to initialize database tables...')

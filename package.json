@@ -100,10 +100,18 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "src/data/**/*"
+      "src/data/**/*",
+      "!node_modules/sqlite3/build-tmp-napi-*/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/sqlite3/**/*"
     ],
     "win": {
       "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
         {
           "target": "dir",
           "arch": ["x64"]
@@ -131,7 +139,9 @@
     "extraMetadata": {
       "main": "dist-electron/main.cjs"
     },
-    "npmRebuild": false,
+    "npmRebuild": true,
+    "buildDependenciesFromSource": true,
+    "nodeGypRebuild": false,
     "afterPack": "scripts/after-pack.cjs"
   }
 }
