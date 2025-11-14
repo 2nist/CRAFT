@@ -1,6 +1,22 @@
 # SIMPLE BUILD INSTRUCTIONS
 
-## You already have Node.js installed! Just run these commands:
+## EASIEST OPTION: One-Click Build
+
+**Just double-click:** `ONE_CLICK_BUILD.bat`
+
+This will:
+- Create a folder on your Desktop
+- Open PowerShell automatically
+- Run all build commands for you
+- Open the output folder when done
+
+**Total time:** 3-4 minutes
+
+---
+
+## Manual Options (if needed)
+
+## Option 1: Copy-Paste Commands
 
 Open PowerShell in this folder and run:
 
@@ -15,7 +31,7 @@ That's it! Your app will be in: `release\win-unpacked\Craft Automation CPQ.exe`
 
 ---
 
-## OR Copy-Paste This One-Liner:
+## Option 2: One-Liner
 
 ```powershell
 npm install; npm run build:electron; npm run build:renderer; npx electron-builder --win --dir; explorer release\win-unpacked
@@ -23,7 +39,7 @@ npm install; npm run build:electron; npm run build:renderer; npx electron-builde
 
 ---
 
-## Step by Step (if you prefer):
+## Option 3: Step by Step
 
 ### 1. Install dependencies
 ```powershell
