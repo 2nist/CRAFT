@@ -12,7 +12,7 @@ export default function RuntimeStatus() {
         const s = await window.runtime.getStatus()
         setStatus(s)
       } else if (window.electron && window.electron.ipcRenderer) {
-        const s = await window.electron.ipcRenderer.invoke('runtime:get-status')
+        const s = await window.electron.ipcRenderer.invoke('runtime:getStatus')
         setStatus(s)
       }
     } catch (err) {

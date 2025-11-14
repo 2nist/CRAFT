@@ -11,6 +11,7 @@ import { loadGlobalSettings, writeGlobalSettings } from './plugins/global-settin
 import loggingService from './services/LoggingService';
 import ThemeToggle from './components/ThemeToggle';
 import RuntimeStatus from './components/RuntimeStatus';
+import SyncStatus from './components/SyncStatus';
 
 // Unused for now - may be used in future theme customization
 // const THEMES = [
@@ -31,9 +32,9 @@ import RuntimeStatus from './components/RuntimeStatus';
 
 export default function Settings() {
   console.log('🔧 Settings component loaded');
-  console.log('🔧 Available tabs:', ['appearance', 'layout', 'runtime', 'customers', 'links', 'docs', 'global']);
+  console.log('🔧 Available tabs:', ['appearance', 'layout', 'runtime', 'sync', 'customers', 'links', 'docs', 'global']);
   console.log('🎨 Settings component loaded - checking for theme tabs...');
-  console.log('Available tabs should include: appearance, layout, runtime, customers, links, docs, global');
+  console.log('Available tabs should include: appearance, layout, runtime, sync, customers, links, docs, global');
   const [settings, setSettings] = useState(null);
   const [globalSettings, setGlobalSettings] = useState({});
   const [gsLoading, setGsLoading] = useState(true);
@@ -278,6 +279,10 @@ export default function Settings() {
             <SettingsIcon className="h-4 w-4 mr-2" />
             Runtime
           </TabsTrigger>
+          <TabsTrigger value="sync" className="data-[state=active]:bg-gray-700">
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Sync
+          </TabsTrigger>
           <TabsTrigger value="customers" className="data-[state=active]:bg-gray-700">
             <Users className="h-4 w-4 mr-2" />
             Customers
@@ -350,6 +355,32 @@ export default function Settings() {
 
               <div className="mt-4">
                 <RuntimeStatus />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sync Tab */}
+        <TabsContent value="sync" className="space-y-6">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">Database Synchronization Status</CardTitle>
+              <CardDescription>Monitor and control database synchronization between local and network databases</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-300 space-y-2">
+                <p>
+                  This section provides detailed information about the current synchronization status,
+                  including last sync time, pending changes, and manual sync controls.
+                </p>
+                <p>
+                  The sync system automatically synchronizes your local database with the network master database
+                  every 2 hours, or you can trigger manual synchronization using the controls below.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <SyncStatus />
               </div>
             </CardContent>
           </Card>

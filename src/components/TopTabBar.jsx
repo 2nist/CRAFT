@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wrench, Box, FileText, Search } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import SyncStatus from './SyncStatus';
 
 export default function TopTabBar({ activeTab, setActiveTab }) {
   const navigate = useNavigate();
@@ -85,9 +84,6 @@ export default function TopTabBar({ activeTab, setActiveTab }) {
         >
           <Search size={20} />
         </button>
-
-        {/* Sync Status */}
-        <SyncStatus />
 
         {/* App Title */}
         <div className="flex items-center ml-4">
