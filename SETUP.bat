@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 title Craft Automation CPQ - Setup and Build
 color 0B
 
@@ -61,18 +62,16 @@ if %errorlevel% neq 0 (
 )
 
 REM Node.js is installed, show version
-for /f "tokens=*" %%v in ('node -v') do set NODE_VERSION=%%v
-for /f "tokens=*" %%v in ('npm -v') do set NPM_VERSION=%%v
 color 0A
 echo  SUCCESS: Node.js is installed!
-echo  Node.js version: %NODE_VERSION%
-echo  npm version: %NPM_VERSION%
+node -v
+npm -v
 echo.
 
 timeout /t 2 >nul
 
 REM Check if we're in the correct directory
-if not exist "package.json" (
+if not exist package.json (
     color 0C
     echo.
     echo  ERROR: package.json not found!
