@@ -225,11 +225,11 @@ export default function LegacyBomImporter({ context }) {
               <CardDescription>Upload your legacy BOM in .csv format. The importer will find the header row automatically.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Input type="file" accept=".csv" onChange={handleFileChange} className="file:text-white file:bg-blue-600 file:hover:bg-blue-700 file:font-medium" />
+              <Input type="file" accept=".csv" onChange={handleFileChange} className="file:text-primary-foreground file:bg-primary file:hover:bg-primary/90 file:font-medium" />
               {file && (
-                <div className="mt-4 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center">
-                  <FileText className="h-5 w-5 text-blue-500 mr-3" />
-                  <span className="font-medium text-slate-800 dark:text-slate-100">{file.name}</span>
+                <div className="mt-4 p-4 bg-muted rounded-lg flex items-center">
+                  <FileText className="h-5 w-5 text-primary mr-3" />
+                  <span className="font-medium text-foreground">{file.name}</span>
                 </div>
               )}
             </CardContent>
@@ -249,12 +249,12 @@ export default function LegacyBomImporter({ context }) {
               <CardDescription>Match our system's fields to the headers found in your CSV file. This is how we know what's what.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <h3 className="font-semibold text-slate-900 dark:text-white">Required Fields</h3>
+              <h3 className="font-semibold text-foreground">Required Fields</h3>
               {REQUIRED_COLUMNS.map(ourField => (
                 <ColumnMapper key={ourField} ourField={ourField} csvHeaders={csvHeaders} columnMap={columnMap} onChange={handleColumnMapChange} isRequired={true} />
               ))}
-              <h3 className="font-semibold text-slate-900 dark:text-white mt-6">Optional Attributes</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Map these if you have them. They add powerful, searchable data to your assemblies.</p>
+              <h3 className="font-semibold text-foreground mt-6">Optional Attributes</h3>
+              <p className="text-sm text-muted-foreground">Map these if you have them. They add powerful, searchable data to your assemblies.</p>
               {OPTIONAL_COLUMNS.map(ourField => (
                 <ColumnMapper key={ourField} ourField={ourField} csvHeaders={csvHeaders} columnMap={columnMap} onChange={handleColumnMapChange} />
               ))}
@@ -279,21 +279,21 @@ export default function LegacyBomImporter({ context }) {
             </CardHeader>
             <CardContent className="space-y-4">
               {productNames.map(name => (
-                <div key={name} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <div key={name} className="p-4 border border-border rounded-lg">
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
-                      <label className="text-sm font-medium text-slate-500 dark:text-slate-400">CSV Product Name</label>
-                      <div className="font-semibold text-lg text-slate-900 dark:text-white">{name}</div>
+                      <label className="text-sm font-medium text-muted-foreground">CSV Product Name</label>
+                      <div className="font-semibold text-lg text-foreground">{name}</div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-slate-400" />
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
-                      <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Map to System Product</label>
+                      <label className="text-sm font-medium text-muted-foreground">Map to System Product</label>
                       <Select value={typeof productCodeMap[name] === 'object' ? 'CREATE_NEW' : productCodeMap[name]} onValueChange={(value) => handleProductMapChange(name, value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a product..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem key="CREATE_NEW" value="CREATE_NEW" className="font-bold text-blue-600">-- Create new product... --</SelectItem>
+                          <SelectItem key="CREATE_NEW" value="CREATE_NEW" className="font-bold text-primary">-- Create new product... --</SelectItem>
                           {allProductCodes.map(p => (
                             <SelectItem key={p.code} value={p.code}>{p.code} - {p.name}</SelectItem>
                           ))}
@@ -302,7 +302,7 @@ export default function LegacyBomImporter({ context }) {
                     </div>
                   </div>
                   {typeof productCodeMap[name] === 'object' && (
-                    <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-md grid grid-cols-2 gap-4">
+                    <div className="mt-4 p-3 bg-muted rounded-md grid grid-cols-2 gap-4">
                       <Input
                         placeholder="New Product Code (e.g., 700)"
                         value={productCodeMap[name].newCode}
@@ -345,21 +345,21 @@ export default function LegacyBomImporter({ context }) {
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-2">Column Map:</h4>
-                    <ul className="list-disc list-inside p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                    <ul className="list-disc list-inside p-3 bg-muted rounded-md">
                       {Object.entries(columnMap).filter(([key, val]) => val).map(([key, val]) => (
-                        <li key={key} className="text-sm"><span className="font-medium text-slate-800 dark:text-slate-100">{key}</span> will use your column <span className="font-mono text-blue-600 dark:text-blue-400">"{val}"</span></li>
+                        <li key={key} className="text-sm"><span className="font-medium text-foreground">{key}</span> will use your column <span className="font-mono text-primary">"{val}"</span></li>
                       ))}
                     </ul>
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2">Product Map:</h4>
-                    <ul className="list-disc list-inside p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                    <ul className="list-disc list-inside p-3 bg-muted rounded-md">
                       {Object.entries(productCodeMap).map(([name, mapping]) => (
                         <li key={name} className="text-sm">
-                          <span className="font-mono text-blue-600 dark:text-blue-400">"{name}"</span> will be mapped to: {
+                          <span className="font-mono text-primary">"{name}"</span> will be mapped to: {
                             typeof mapping === 'object' 
                             ? <span className="font-medium text-green-600 dark:text-green-400">NEW Product ({mapping.newCode} - {mapping.newName})</span>
-                            : <span className="font-medium text-slate-800 dark:text-slate-100">{mapping}</span>
+                            : <span className="font-medium text-foreground">{mapping}</span>
                           }
                         </li>
                       ))}
@@ -388,7 +388,7 @@ export default function LegacyBomImporter({ context }) {
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">Legacy BOM Importer</h1>
+      <h1 className="text-3xl font-bold text-foreground mb-6">Legacy BOM Importer</h1>
       {error && (
         <Alert variant="destructive" className="mb-4">
           <XCircle className="h-4 w-4" />

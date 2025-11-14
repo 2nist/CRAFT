@@ -14,7 +14,7 @@
   body {
     @apply text-foreground;
   }
-  button {
+  button:not([class*="btn"]):not([class*="bg-"]) {
     @apply inline-flex items-center justify-center gap-1 px-1.5 text-sm font-medium tracking-wide rounded-lg transition-colors duration-150 ease-out;
     padding-top: 0.1875rem;
     padding-bottom: 0.1875rem;
@@ -22,145 +22,155 @@
     border: 1px solid #475569;
     color: inherit;
   }
-  button:not([class*="bg-"]) {
-    background-color: transparent;
-    border-color: #475569;
-    color: inherit;
-  }
-  button:not([class*="bg-"]):hover:not(:disabled) {
+  button:not([class*="btn"]):not([class*="bg-"]):hover:not(:disabled) {
     border-color: #fb923c;
   }
   button:disabled {
-    @apply opacity-60 cursor-not-allowed;
+    @apply cursor-not-allowed opacity-60;
   }
+  
   :root {
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent-hsl: 217 91% 60%; /* Default blue accent */
-    --accent: var(--accent-hsl); /* Use accent-hsl for accent color */
-    --accent-foreground: 0 0% 98%;
-    --success: 142 76% 36%; /* Green */
+    /* HSL Values (Hue Saturation Lightness) - Wrapper removed for config compatibility */
+    --background: 40.0000 60.0000% 98.0392%;
+    --foreground: 20.8696 18.4000% 24.5098%;
+    --card: 36.0000 41.6667% 95.2941%;
+    --card-foreground: 20.8696 18.4000% 24.5098%;
+    --popover: 36.0000 41.6667% 95.2941%;
+    --popover-foreground: 20.8696 18.4000% 24.5098%;
+    --primary: 25.9649 90.4762% 37.0588%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 32.3077 46.4286% 78.0392%;
+    --muted: 39.1304 45.0980% 90.0000%;
+    --muted-foreground: 25.0000 5.2632% 44.7059%;
+    --accent: 32.3077 46.4286% 78.0392%;
+    --accent-hsl: 32.3077 46.4286% 78.0392%; /* Kept for backwards compatibility */
+    --accent-foreground: 33.3333 5.4545% 32.3529%;
+    --destructive: 0 70% 35.2941%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 43.5000 42.5532% 81.5686%;
+    --input: 43.5000 42.5532% 81.5686%;
+    --ring: 25.9649 90.4762% 37.0588%;
+
+    /* Legacy color mappings for backwards compatibility */
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --danger: 0 84% 60%; /* Red */
+    --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
-    --info: 199 89% 48%; /* Blue */
+    --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
-    --brown: 30 25% 40%; /* Neutral brown for icons */
-    --olive: 80 25% 40%; /* Neutral olive for icons */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --brown: 30 25% 40%;
+    --olive: 80 25% 40%;
+
+    /* Chart and Sidebar Colors */
+    --chart-1: 25.9649 90.4762% 37.0588%;
+    --chart-2: 25.0000 5.2632% 44.7059%;
+    --chart-3: 35.4545 91.6667% 32.9412%;
+    --chart-4: 25.0000 5.2632% 44.7059%;
+    --chart-5: 40.6061 96.1165% 40.3922%;
+    --sidebar: 39.1304 45.0980% 90.0000%;
+    --sidebar-foreground: 20.8696 18.4000% 24.5098%;
+    --sidebar-primary: 25.9649 90.4762% 37.0588%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 35.4545 91.6667% 32.9412%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 43.5000 42.5532% 81.5686%;
+    --sidebar-ring: 25.9649 90.4762% 37.0588%;
+
+    /* Typography and Radius */
+    --font-sans: Poppins, ui-sans-serif, sans-serif, system-ui;
+    --font-serif: Bungee, ui-serif, serif;
+    --font-mono: Bungee, ui-serif, serif;
+    --radius: 0.3rem;
+
+    /* Shadow Variables */
+    --shadow-x: 0px;
+    --shadow-y: 2px;
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.18;
+    --shadow-color: hsl(28 18% 25%);
+    --shadow-2xs: 0px 2px 3px 0px hsl(28 18% 25% / 0.09);
+    --shadow-xs: 0px 2px 3px 0px hsl(28 18% 25% / 0.09);
+    --shadow-sm: 0px 2px 3px 0px hsl(28 18% 25% / 0.18), 0px 1px 2px -1px hsl(28 18% 25% / 0.18);
+    --shadow: 0px 2px 3px 0px hsl(28 18% 25% / 0.18), 0px 1px 2px -1px hsl(28 18% 25% / 0.18);
+    --shadow-md: 0px 2px 3px 0px hsl(28 18% 25% / 0.18), 0px 2px 4px -1px hsl(28 18% 25% / 0.18);
+    --shadow-lg: 0px 2px 3px 0px hsl(28 18% 25% / 0.18), 0px 4px 6px -1px hsl(28 18% 25% / 0.18);
+    --shadow-xl: 0px 2px 3px 0px hsl(28 18% 25% / 0.18), 0px 8px 10px -1px hsl(28 18% 25% / 0.18);
+    --shadow-2xl: 0px 2px 3px 0px hsl(28 18% 25% / 0.45);
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
   }
-  
-  /* Theme variations - slate (default) */
-  .dark.theme-slate, .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: var(--accent-hsl);
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-  
-  .dark.theme-zinc {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: var(--accent-hsl);
-    --accent-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-  }
-  
-  .dark.theme-stone {
-    --background: 20 14.3% 4.1%;
-    --foreground: 60 9.1% 97.8%;
-    --card: 20 14.3% 4.1%;
-    --card-foreground: 60 9.1% 97.8%;
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 60 9.1% 97.8%;
-    --primary: 60 9.1% 97.8%;
-    --primary-foreground: 24 9.8% 10%;
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 60 9.1% 97.8%;
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
-    --accent: var(--accent-hsl);
-    --accent-foreground: 60 9.1% 97.8%;
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 24 5.7% 82.9%;
-  }
-  
-  .dark.theme-gray {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: var(--accent-hsl);
-    --accent-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-  }
-  
-  .dark.theme-neutral {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 64.9%;
-    --accent: var(--accent-hsl);
-    --accent-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 82.9%;
+
+  .dark {
+    /* HSL Values (Hue Saturation Lightness) - Wrapper removed for config compatibility */
+    --background: 24 9.8039% 10%;
+    --foreground: 60 4.7619% 95.8824%;
+    --card: 12.0000 6.4935% 15.0980%;
+    --card-foreground: 60 4.7619% 95.8824%;
+    --popover: 12.0000 6.4935% 15.0980%;
+    --popover-foreground: 60 4.7619% 95.8824%;
+    --primary: 24.5815 94.9791% 53.1373%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 33.3333 5.4545% 32.3529%;
+    --secondary-foreground: 20 5.8824% 90%;
+    --muted: 30 10.3448% 11.3725%;
+    --muted-foreground: 24.0000 5.4348% 63.9216%;
+    --accent: 198.4615 46.4286% 21.9608%;
+    --accent-hsl: 198.4615 46.4286% 21.9608%; /* Kept for backwards compatibility */
+    --accent-foreground: 20 5.8824% 90%;
+    --destructive: 0 72.2222% 50.5882%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 6.2500% 25.0980%;
+    --input: 30 6.2500% 25.0980%;
+    --ring: 24.5815 94.9791% 53.1373%;
+
+    /* Legacy color mappings for backwards compatibility */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --brown: 30 25% 60%;
+    --olive: 80 25% 60%;
+
+    /* Chart and Sidebar Colors */
+    --chart-1: 24.5815 94.9791% 53.1373%;
+    --chart-2: 198.6301 88.6640% 48.4314%;
+    --chart-3: 45.3982 93.3884% 47.4510%;
+    --chart-4: 24.0000 5.4348% 63.9216%;
+    --chart-5: 25.0000 5.2632% 44.7059%;
+    --sidebar: 12.0000 6.4935% 15.0980%;
+    --sidebar-foreground: 60 4.7619% 95.8824%;
+    --sidebar-primary: 24.5815 94.9791% 53.1373%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 198.6301 88.6640% 48.4314%;
+    --sidebar-accent-foreground: 212.3077 73.0337% 17.4510%;
+    --sidebar-border: 30 6.2500% 25.0980%;
+    --sidebar-ring: 24.5815 94.9791% 53.1373%;
+
+    /* Typography and Radius */
+    --font-sans: Poppins, ui-sans-serif, sans-serif, system-ui;
+    --font-serif: Bungee, ui-serif, serif;
+    --font-mono: Bungee, ui-serif, serif;
+    --radius: 0.3rem;
+
+    /* Shadow Variables */
+    --shadow-x: 0px;
+    --shadow-y: 2px;
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.18;
+    --shadow-color: hsl(0 0% 5%);
+    --shadow-2xs: 0px 2px 3px 0px hsl(0 0% 5% / 0.09);
+    --shadow-xs: 0px 2px 3px 0px hsl(0 0% 5% / 0.09);
+    --shadow-sm: 0px 2px 3px 0px hsl(0 0% 5% / 0.18), 0px 1px 2px -1px hsl(0 0% 5% / 0.18);
+    --shadow: 0px 2px 3px 0px hsl(0 0% 5% / 0.18), 0px 1px 2px -1px hsl(0 0% 5% / 0.18);
+    --shadow-md: 0px 2px 3px 0px hsl(0 0% 5% / 0.18), 0px 2px 4px -1px hsl(0 0% 5% / 0.18);
+    --shadow-lg: 0px 2px 3px 0px hsl(0 0% 5% / 0.18), 0px 4px 6px -1px hsl(0 0% 5% / 0.18);
+    --shadow-xl: 0px 2px 3px 0px hsl(0 0% 5% / 0.18), 0px 8px 10px -1px hsl(0 0% 5% / 0.18);
+    --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 5% / 0.45);
   }
 }
 
@@ -256,16 +266,39 @@
     @apply font-bungee text-lgc leading-[1.1] text-accent break-all;
   }
   .ca-price-hero { @apply text-lgp; }
+  
+  /* Accessible button base — prefer this for all interactive buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-xs2 text-sm font-semibold transition-colors border border-transparent shadow-sm;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  .btn:hover:not(:disabled) { opacity: 0.98; }
+  .btn:disabled { @apply cursor-not-allowed opacity-60; }
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.22);
+    border-color: hsl(var(--ring));
+  }
 
+  /* Backwards-compatible CA button classes build on the accessible base */
   .ca-btn {
-    @apply px-2 py-1 text-sm font-semibold text-white transition-colors shadow-sm bg-accent rounded-xs2 border border-transparent;
+    @apply px-2 py-1 text-sm font-semibold text-white transition-colors border border-transparent shadow-sm rounded-xs2;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
-  .ca-btn:focus { 
-    @apply outline-none ring-offset-2;
-    box-shadow: 0 0 0 2px hsl(var(--accent-hsl) / 0.2);
-  }
-  .ca-btn:hover { 
-    background-color: hsl(var(--accent-hsl) / 0.85);
+  .ca-btn:hover:not(:disabled) { opacity: 0.98; }
+  .ca-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px hsl(var(--ring) / 0.22); border-color: hsl(var(--ring)); }
+  /* Ensure all CA button variants have the accessible focus-visible ring */
+  .ca-btn-primary:focus-visible,
+  .ca-btn-outline:focus-visible,
+  .ca-btn-success:focus-visible,
+  .ca-btn-danger:focus-visible,
+  .ca-btn-info:focus-visible,
+  .ca-btn-secondary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.22);
+    border-color: hsl(var(--ring));
   }
 
   .ca-btn-outline {
@@ -277,15 +310,15 @@
 
   /* Design System Button Utilities */
   .ca-btn-primary {
-    @apply px-2 py-1 text-sm font-semibold text-white transition-colors shadow-sm rounded-xs2 border border-transparent;
-    background-color: hsl(var(--accent));
+    @apply px-2 py-1 text-sm font-semibold text-white transition-colors border border-transparent shadow-sm rounded-xs2;
+    background-color: hsl(var(--primary));
   }
   .ca-btn-primary:hover {
     background-color: hsl(var(--accent) / 0.85);
   }
 
   .ca-btn-success {
-    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border border-transparent;
+    @apply px-2 py-1 text-sm font-semibold transition-colors border border-transparent shadow-sm rounded-xs2;
     background-color: hsl(var(--success));
     color: hsl(var(--success-foreground));
   }
@@ -294,7 +327,7 @@
   }
 
   .ca-btn-danger {
-    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border border-transparent;
+    @apply px-2 py-1 text-sm font-semibold transition-colors border border-transparent shadow-sm rounded-xs2;
     background-color: hsl(var(--danger));
     color: hsl(var(--danger-foreground));
   }
@@ -303,7 +336,7 @@
   }
 
   .ca-btn-info {
-    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border border-transparent;
+    @apply px-2 py-1 text-sm font-semibold transition-colors border border-transparent shadow-sm rounded-xs2;
     background-color: hsl(var(--info));
     color: hsl(var(--info-foreground));
   }
@@ -312,7 +345,7 @@
   }
 
   .ca-btn-secondary {
-    @apply px-2 py-1 text-sm font-semibold transition-colors shadow-sm rounded-xs2 border;
+    @apply px-2 py-1 text-sm font-semibold transition-colors border shadow-sm rounded-xs2;
     background-color: transparent;
     border-color: #475569;
     color: inherit;

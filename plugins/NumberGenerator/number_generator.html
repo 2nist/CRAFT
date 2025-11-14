@@ -35,26 +35,110 @@
             if (!window.api) {
                 window.api = {
                     schemas: {
-                        getIndustry: () => new Promise(res => res(MOCK_SCHEMAS.industry)),
-                        getProduct: () => new Promise(res => res(MOCK_SCHEMAS.product)),
-                        getControl: () => new Promise(res => res(MOCK_SCHEMAS.control)),
-                        getScope: () => new Promise(res => res(MOCK_SCHEMAS.scope)),
+                        getIndustry: () => {
+                            // Try real API first via Electron IPC
+                            if (window.electronAPI && window.electronAPI.invoke) {
+                                return window.electronAPI.invoke('schemas:get-industry')
+                                    .then(items => items.map(s => ({ code: s.const, name: s.description })))
+                                    .catch(err => {
+                                        console.error('Failed to get industry schemas via IPC:', err);
+                                        return MOCK_SCHEMAS.industry;
+                                    });
+                            }
+                            // Fallback to mock
+                            return Promise.resolve(MOCK_SCHEMAS.industry);
+                        },
+                        getProduct: () => {
+                            // Try real API first via Electron IPC
+                            if (window.electronAPI && window.electronAPI.invoke) {
+                                return window.electronAPI.invoke('schemas:get-product')
+                                    .then(items => items.map(s => ({ code: s.const, name: s.description })))
+                                    .catch(err => {
+                                        console.error('Failed to get product schemas via IPC:', err);
+                                        return MOCK_SCHEMAS.product;
+                                    });
+                            }
+                            // Fallback to mock
+                            return Promise.resolve(MOCK_SCHEMAS.product);
+                        },
+                        getControl: () => {
+                            // Try real API first via Electron IPC
+                            if (window.electronAPI && window.electronAPI.invoke) {
+                                return window.electronAPI.invoke('schemas:get-control')
+                                    .then(items => items.map(s => ({ code: s.const, name: s.description })))
+                                    .catch(err => {
+                                        console.error('Failed to get control schemas via IPC:', err);
+                                        return MOCK_SCHEMAS.control;
+                                    });
+                            }
+                            // Fallback to mock
+                            return Promise.resolve(MOCK_SCHEMAS.control);
+                        },
+                        getScope: () => {
+                            // Try real API first via Electron IPC
+                            if (window.electronAPI && window.electronAPI.invoke) {
+                                return window.electronAPI.invoke('schemas:get-scope')
+                                    .then(items => items.map(s => ({ code: s.const, name: s.description })))
+                                    .catch(err => {
+                                        console.error('Failed to get scope schemas via IPC:', err);
+                                        return MOCK_SCHEMAS.scope;
+                                    });
+                            }
+                            // Fallback to mock
+                            return Promise.resolve(MOCK_SCHEMAS.scope);
+                        },
                     },
                     customers: {
-                        getAll: () => new Promise(res => res(MOCK_CUSTOMERS)),
+                        getAll: () => {
+                            // Try real API first via Electron IPC
+                            if (window.electronAPI && window.electronAPI.invoke) {
+                                return window.electronAPI.invoke('customers:get-all')
+                                    .catch(err => {
+                                        console.error('Failed to get customers via IPC:', err);
+                                        return MOCK_CUSTOMERS;
+                                    });
+                            }
+                            // Fallback to mock
+                            return Promise.resolve(MOCK_CUSTOMERS);
+                        },
                     },
                     calc: {
-                        getQuoteNumber: (data) => new Promise(res => {
-                            const now = new Date();
-                            const yy = now.getFullYear().toString().slice(-2);
-                            const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-                            const dd = now.getDate().toString().padStart(2, '0');
-                            const cust = data.customerCode || "XX";
-                            const seq = "0";
-                            const mainId = `CQ${yy}${mm}${dd}${cust}`;
-                            const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
-                            res({ mainId, fullId });
-                        })
+                        getQuoteNumber: (data) => {
+                            // Try real API first via Electron IPC
+                            if (window.electronAPI && window.electronAPI.invoke) {
+                                console.log('Calling calc:get-quote-number via IPC with data:', data);
+                                return window.electronAPI.invoke('calc:get-quote-number', data)
+                                    .then(result => {
+                                        console.log('Quote number generated successfully:', result);
+                                        return result;
+                                    })
+                                    .catch(err => {
+                                        console.error('Failed to generate quote number via IPC:', err);
+                                        // Fallback to mock generation
+                                        const now = new Date();
+                                        const yy = now.getFullYear().toString().slice(-2);
+                                        const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+                                        const dd = now.getDate().toString().padStart(2, '0');
+                                        const cust = data.customerCode || "XX";
+                                        const seq = "0";
+                                        const mainId = `CQ${yy}${mm}${dd}${cust}`;
+                                        const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
+                                        return { mainId, fullId };
+                                    });
+                            }
+                            // Fallback to mock generation
+                            return new Promise(res => {
+                                const now = new Date();
+                                const yy = now.getFullYear().toString().slice(-2);
+                                const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+                                const dd = now.getDate().toString().padStart(2, '0');
+                                const cust = data.customerCode || "XX";
+                                const seq = "0";
+                                const mainId = `CQ${yy}${mm}${dd}${cust}`;
+                                const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
+                                res({ mainId, fullId });
+                            });
+                        }
                     }
                 };
             }

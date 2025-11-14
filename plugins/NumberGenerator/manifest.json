@@ -1,0 +1,10 @@
+{
+  "id": "number-generator",
+  "name": "Number Generator",
+  "version": "1.0.0",
+  "description": "Generate quote and project numbers with database persistence.",
+  "author": "Craft Automation",
+  "entry": "number_generator.html",
+  "icon": "Hash",
+  "category": "Number Tools"
+}

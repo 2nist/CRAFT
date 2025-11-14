@@ -311,7 +311,7 @@ const SelectCode = ({ label, value, onFieldChange, options, fieldName }) => {
   return (
     <div className="w-full">
       <select
-        className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        className="w-full px-3 py-2 text-sm transition border rounded-xl border-input bg-background text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
         value={value ?? ""}
         onChange={e => {
           const selectedValue = e.target.value;
@@ -334,7 +334,7 @@ const SelectCustomer = ({ label, value, onFieldChange, customers }) => {
   return (
     <div className="w-full">
       <select
-        className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        className="w-full px-3 py-2 text-sm transition border rounded-xl border-input bg-background text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
         value={value || ""}
         onChange={e => {
           const custId = e.target.value;
@@ -360,7 +360,7 @@ const Input = ({ value, onFieldChange, fieldName, type = "text", placeholder = "
       <input
         type={type}
         placeholder={placeholder}
-        className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        className="w-full px-3 py-2 text-sm transition border rounded-xl border-input bg-background text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
         value={value || ""}
         onChange={e => onFieldChange(fieldName, e.target.value)}
       />
@@ -372,7 +372,7 @@ const Select = ({ label, value, onFieldChange, fieldName, children }) => {
   return (
     <div className="w-full">
       <select
-        className="w-full px-3 py-2 text-sm transition border rounded-xl border-slate-800 bg-slate-900/80 text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        className="w-full px-3 py-2 text-sm transition border rounded-xl border-input bg-background text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40"
         value={value || ""}
         onChange={e => onFieldChange(fieldName, e.target.value)}
       >
@@ -442,9 +442,9 @@ function ProjectDetails({
   };
 
   return (
-    <div className="border shadow-lg rounded-2xl border-slate-800 bg-slate-900/60 shadow-slate-950/30">
-      <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-slate-900/70">
-        <h3 className="text-lg font-semibold text-white">Core Project Details</h3>
+    <div className="border shadow-lg rounded-2xl border-border bg-card/60 shadow-slate-950/30">
+      <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-border/70">
+        <h3 className="text-lg font-semibold text-foreground">Core Project Details</h3>
         {(onToggleLeftDrawer || onToggleRightDrawer) && (
           <div className="flex items-center gap-2 sm:hidden">
             {onToggleLeftDrawer && (
@@ -452,7 +452,7 @@ function ProjectDetails({
                 type="button"
                 onClick={onToggleLeftDrawer}
                 aria-pressed={!!isLeftDrawerOpen}
-                className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-border bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                 aria-label={isLeftDrawerOpen ? 'Collapse quote editor drawer' : 'Expand quote editor drawer'}
               >
                 {isLeftDrawerOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
@@ -463,7 +463,7 @@ function ProjectDetails({
                 type="button"
                 onClick={onToggleRightDrawer}
                 aria-pressed={!!isRightDrawerOpen}
-                className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-border bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                 aria-label={isRightDrawerOpen ? 'Collapse summary drawer' : 'Expand summary drawer'}
               >
                 {isRightDrawerOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
@@ -474,7 +474,7 @@ function ProjectDetails({
       </div>
       <div className="px-6 py-6 space-y-8">
         <section className="space-y-4">
-          <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Project Basics</p>
+          <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Project Basics</p>
           <SelectCustomer
             label="Select customer..."
             value={quote.customer}
@@ -496,7 +496,7 @@ function ProjectDetails({
         </section>
 
         <section className="space-y-4">
-          <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Project Codes</p>
+          <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Project Codes</p>
           <SelectCode
             label="Select industry..."
             fieldName="industry"
@@ -542,7 +542,7 @@ function ProjectDetails({
         </section>
 
         <section className="space-y-4">
-          <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Panel Specifications</p>
+          <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Panel Specifications</p>
           <Select 
             label="Select voltage..." 
             fieldName="voltage" 
@@ -1178,7 +1178,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
           <select
             value={value}
             onChange={e => handleFieldChange(field.fieldName, e.target.value)}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           >
             <option value="">Select {field.fieldName}...</option>
             {field.listOptions?.map((option, idx) => (
@@ -1196,7 +1196,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             value={value}
             onChange={e => handleFieldChange(field.fieldName, e.target.value)}
             placeholder={field.defaultValue !== undefined ? String(field.defaultValue) : '0'}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           />
         );
 
@@ -1207,7 +1207,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             value={value}
             onChange={e => handleFieldChange(field.fieldName, e.target.value)}
             placeholder={field.defaultValue || ''}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           />
         );
 
@@ -1220,7 +1220,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
               onChange={e => handleFieldChange(field.fieldName, e.target.checked)}
               className="w-4 h-4 mr-2"
             />
-            <span className="text-sm text-gray-300">Enabled</span>
+            <span className="text-sm text-muted-foreground">Enabled</span>
           </label>
         );
 
@@ -1230,7 +1230,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             type="text"
             value={value}
             onChange={e => handleFieldChange(field.fieldName, e.target.value)}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           />
         );
     }
@@ -1362,7 +1362,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
           <select
             value={value}
             onChange={e => handleAssemblyFieldChange(assemblyId, instanceId, field.fieldName, e.target.value)}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           >
             <option value="">Select {field.fieldName}...</option>
             {field.listOptions?.map((option, idx) => (
@@ -1380,7 +1380,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             value={value}
             onChange={e => handleAssemblyFieldChange(assemblyId, instanceId, field.fieldName, e.target.value)}
             placeholder={field.defaultValue !== undefined ? String(field.defaultValue) : '0'}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           />
         );
 
@@ -1391,7 +1391,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             value={value}
             onChange={e => handleAssemblyFieldChange(assemblyId, instanceId, field.fieldName, e.target.value)}
             placeholder={field.defaultValue || ''}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           />
         );
 
@@ -1404,7 +1404,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
               onChange={e => handleAssemblyFieldChange(assemblyId, instanceId, field.fieldName, e.target.checked)}
               className="w-4 h-4 mr-2"
             />
-            <span className="text-sm text-gray-300">Enabled</span>
+            <span className="text-sm text-muted-foreground">Enabled</span>
           </label>
         );
 
@@ -1414,7 +1414,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             type="text"
             value={value}
             onChange={e => handleAssemblyFieldChange(assemblyId, instanceId, field.fieldName, e.target.value)}
-            className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+            className="w-full p-2 text-foreground bg-background border border-border rounded-md"
           />
         );
     }
@@ -1453,21 +1453,21 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
           chip: 'bg-purple-500/10 text-purple-200'
         }
       };
-      const palette = sectionStyles[sectionKey] || { border: 'border-slate-700', chip: 'bg-slate-700/40 text-slate-200' };
+      const palette = sectionStyles[sectionKey] || { border: 'border-border', chip: 'bg-muted text-muted-foreground' };
 
       return (
         <div
           key={uniqueKey}
-          className={`p-5 space-y-4 rounded-xl border ${palette.border} bg-slate-950/70 shadow-inner`}
+          className={`p-5 space-y-4 rounded-xl border ${palette.border} bg-card shadow-inner`}
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <h4 className="text-base font-semibold text-white">{sectionTitle}</h4>
+              <h4 className="text-base font-semibold text-foreground">{sectionTitle}</h4>
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${palette.chip}`}>
                 {fields.length} {fields.length === 1 ? 'point' : 'points'}
               </span>
             </div>
-            <span className="text-xs font-medium tracking-wide uppercase text-slate-500">
+            <span className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
               I/O Definition
             </span>
           </div>
@@ -1495,8 +1495,8 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                   onDrop={() => assemblyId && instanceId && handleFieldDrop(assemblyId, instanceId, sectionKey, idx)}
                   className={`p-4 space-y-3 border rounded-lg transition-all cursor-move ${
                     isDragging 
-                      ? 'opacity-50 border-blue-400' 
-                      : 'border-slate-800/60 bg-slate-900/60 hover:border-slate-700'
+                      ? 'opacity-50 border-primary' 
+                      : 'border-border bg-card hover:border-primary'
                   }`}
                 >
                   {isEditing ? (
@@ -1506,7 +1506,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                         value={field.fieldName}
                         onChange={(e) => handleUpdateField(assemblyId, instanceId, sectionKey, idx, { fieldName: e.target.value })}
                         placeholder="Field Name"
-                        className="w-full px-2 py-1 text-sm font-semibold text-white border rounded bg-slate-800 border-slate-600 focus:border-blue-500 focus:outline-none"
+                        className="w-full px-2 py-1 text-sm font-semibold text-foreground border rounded bg-background border-border focus:border-primary focus:outline-none"
                         autoFocus
                       />
                       <input
@@ -1514,14 +1514,14 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                         value={field.description || ''}
                         onChange={(e) => handleUpdateField(assemblyId, instanceId, sectionKey, idx, { description: e.target.value })}
                         placeholder="Description (optional)"
-                        className="w-full px-2 py-1 text-xs text-white border rounded bg-slate-800 border-slate-600 focus:border-blue-500 focus:outline-none"
+                        className="w-full px-2 py-1 text-xs text-foreground border rounded bg-background border-border focus:border-primary focus:outline-none"
                       />
                       <input
                         type="text"
                         value={field.defaultValue || ''}
                         onChange={(e) => handleUpdateField(assemblyId, instanceId, sectionKey, idx, { defaultValue: e.target.value })}
                         placeholder="Default Value (optional)"
-                        className="w-full px-2 py-1 text-xs text-white border rounded bg-slate-800 border-slate-600 focus:border-blue-500 focus:outline-none"
+                        className="w-full px-2 py-1 text-xs text-foreground border rounded bg-background border-border focus:border-primary focus:outline-none"
                       />
                       <button
                         onClick={handleStopEditField}
@@ -1534,9 +1534,9 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                     <>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-100">{field.fieldName}</p>
+                          <p className="text-sm font-semibold text-foreground">{field.fieldName}</p>
                           {field.description && (
-                            <p className="mt-1 text-xs text-slate-400">{field.description}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{field.description}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-1">
@@ -1544,14 +1544,14 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                             <>
                               <button
                                 onClick={() => handleStartEditField(assemblyId, instanceId, sectionKey, idx)}
-                                className="p-1 text-slate-400 hover:text-blue-400"
+                                className="p-1 text-muted-foreground hover:text-primary"
                                 title="Edit field"
                               >
                                 <Settings className="w-3 h-3" />
                               </button>
                               <button
                                 onClick={() => handleRemoveIOField(assemblyId, instanceId, sectionKey, idx)}
-                                className="p-1 text-slate-400 hover:text-red-400"
+                                className="p-1 text-muted-foreground hover:text-destructive"
                                 title="Remove field"
                               >
                                 <X className="w-3 h-3" />
@@ -1559,7 +1559,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                             </>
                           )}
                           {field.defaultValue !== undefined && field.defaultValue !== '' && (
-                            <span className="text-[10px] font-semibold uppercase text-slate-400 ml-1">
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground ml-1">
                               Default: {field.defaultValue}
                             </span>
                           )}
@@ -1577,15 +1577,15 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
     }
 
     // Regular section rendering for non-I/O fields
-    const containerClass = (assemblyId && instanceId) ? "p-4 bg-gray-700 rounded-lg" : "p-4 mb-6 bg-gray-800 rounded-lg shadow";
+    const containerClass = (assemblyId && instanceId) ? "p-4 bg-secondary rounded-lg" : "p-4 mb-6 bg-card rounded-lg shadow";
     const uniqueKey = (assemblyId && instanceId) ? `${assemblyId}-${instanceId}-${sectionKey}` : (assemblyId ? `${assemblyId}-${sectionKey}` : sectionKey);
     return (
       <div key={uniqueKey} className={containerClass}>
-        <h3 className="mb-4 text-lg font-semibold text-white">{sectionTitle}</h3>
+        <h3 className="mb-4 text-lg font-semibold text-foreground">{sectionTitle}</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {fields.map((field, idx) => (
             <div key={idx} className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">
+              <label className="block text-sm font-medium text-muted-foreground">
                 {field.fieldName}
               </label>
               {fieldHandler(field)}
@@ -1615,7 +1615,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
   if (!currentTemplate) {
     return (
       <div className="p-8 text-center">
-        <p className="text-gray-400">Please select a product in Step 1 to configure.</p>
+        <p className="text-muted-foreground">Please select a product in Step 1 to configure.</p>
       </div>
     );
   }
@@ -1656,10 +1656,10 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-white">Assembly Configuration</h3>
-          <p className="text-sm text-slate-400">Add saved assemblies or create custom process cards when templates are missing.</p>
+          <h3 className="text-lg font-semibold text-foreground">Assembly Configuration</h3>
+          <p className="text-sm text-muted-foreground">Add saved assemblies or create custom process cards when templates are missing.</p>
         </div>
-        <button onClick={handleOpenAddAssemblyDialog} className="gap-2 text-slate-100">
+        <button onClick={handleOpenAddAssemblyDialog} className="gap-2 text-primary hover:text-primary/80">
           + Add Assembly
         </button>
       </div>
@@ -1672,7 +1672,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             return (
               <span
                 key={sectionKey}
-                className="px-3 py-1 text-xs font-semibold tracking-wide border rounded-full text-slate-200 border-slate-700 bg-slate-900/70"
+                className="px-3 py-1 text-xs font-semibold tracking-wide border rounded-full text-primary border-border bg-muted"
               >
                 {label}: {data.active}
                 {data.total > 0 ? ` / ${data.total}` : ''}
@@ -1710,7 +1710,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-semibold text-white">{assembly.displayName || assemblyId}</h2>
+                    <h2 className="text-xl font-semibold text-foreground">{assembly.displayName || assemblyId}</h2>
                     {assembly.sourceType === 'custom' && (
                       <span className="px-2 py-0.5 text-xs font-semibold text-amber-200 border border-amber-500/40 rounded-full bg-amber-500/10">
                         Custom
@@ -1723,19 +1723,19 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                     )}
                   </div>
                   {assembly.description && (
-                    <p className="text-sm text-slate-400">{assembly.description}</p>
+                    <p className="text-sm text-muted-foreground">{assembly.description}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   {assembly.allowMultiple !== false && (
-                    <button onClick={() => handleAddAssemblyInstance(assemblyId)} className="gap-2 text-slate-100">
+                    <button onClick={() => handleAddAssemblyInstance(assemblyId)} className="gap-2 text-primary hover:text-primary/80">
                       + Add Instance
                     </button>
                   )}
                   {isCustomAssembly && (
                     <button
                       onClick={() => handleRemoveCustomAssemblyDefinition(assemblyId)}
-                      className="text-red-300"
+                      className="text-destructive hover:text-destructive/80"
                     >
                       Remove Assembly
                     </button>
@@ -1744,8 +1744,8 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
               </div>
 
               {instances.length === 0 ? (
-                <div className="p-4 bg-gray-800 border border-gray-700 rounded-lg">
-                  <p className="text-sm text-center text-gray-400">
+                <div className="p-4 bg-muted border border-border rounded-lg">
+                  <p className="text-sm text-center text-muted-foreground">
                     No instances configured. {assembly.allowMultiple !== false ? 'Add an instance to start configuring.' : 'This assembly requires at least one instance.'}
                   </p>
                 </div>
@@ -1787,8 +1787,8 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                       className={cn(
                         "p-4 border rounded-2xl transition-all",
                         isDropTarget 
-                          ? "border-blue-500 bg-blue-500/5 border-dashed" 
-                          : "border-slate-800 bg-slate-900/70"
+                          ? "border-primary bg-primary/5 border-dashed" 
+                          : "border-border bg-card"
                       )}
                       onDragOver={(e) => handleDragOver(e, assemblyId, instanceId)}
                       onDragLeave={handleDragLeave}
@@ -1797,19 +1797,19 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="flex items-center justify-center w-10 h-10 text-lg font-bold text-white bg-blue-600 rounded-full">
+                            <span className="flex items-center justify-center w-10 h-10 text-lg font-bold text-primary-foreground bg-primary rounded-full">
                               {instanceIndex + 1}
                             </span>
                             <div>
-                              <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Assembly Instance</p>
-                              <h3 className="text-lg font-semibold text-white">{assembly.displayName || assemblyId}</h3>
+                              <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Assembly Instance</p>
+                              <h3 className="text-lg font-semibold text-foreground">{assembly.displayName || assemblyId}</h3>
                               {isDropTarget && (
-                                <p className="text-xs text-blue-400">Drop I/O field here</p>
+                                <p className="text-xs text-primary">Drop I/O field here</p>
                               )}
                             </div>
                           </div>
                           <div className="pt-2">
-                            <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-slate-400">
+                            <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
                               Instance Name
                             </label>
                             <input
@@ -1817,7 +1817,7 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                               value={instance.instanceLabel ?? ''}
                               onChange={e => handleInstanceLabelChange(assemblyId, instanceId, e.target.value)}
                               placeholder={instanceLabel}
-                              className="w-full px-3 py-2 text-sm text-white border rounded-md bg-slate-950 border-slate-700 focus:border-blue-500 focus:outline-none"
+                              className="w-full px-3 py-2 text-sm text-foreground border rounded-md bg-background border-border focus:border-primary focus:outline-none"
                             />
                           </div>
                         </div>
@@ -1825,14 +1825,14 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                           {assembly.allowMultiple !== false && instances.length > 1 && (
                             <button
                               onClick={() => handleRemoveAssemblyInstance(assemblyId, instanceId)}
-                              className="text-sm text-red-300 hover:text-red-200"
+                              className="text-sm text-destructive hover:text-destructive/80"
                             >
                               Remove
                             </button>
                           )}
                           <button
                             onClick={() => handleOpenInstanceModal(assemblyId, instanceId)}
-                            className="px-3 py-2 text-sm font-medium text-white border rounded-md border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/20"
+                            className="px-3 py-2 text-sm font-medium text-primary-foreground border rounded-md border-primary/50 bg-primary/10 hover:bg-primary/20"
                           >
                             View & Edit Details
                           </button>
@@ -1845,20 +1845,20 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                             {summarySections.map(section => (
                               <span
                                 key={section.key}
-                                className="px-3 py-1 text-xs font-semibold border rounded-full border-slate-700 bg-slate-950/70 text-slate-200"
+                                className="px-3 py-1 text-xs font-semibold border rounded-full border-border bg-muted text-primary"
                               >
                                 {section.label}: {section.active}
                                 {section.total > 0 ? ` / ${section.total}` : ''}
                               </span>
                             ))}
                             {nonIoCount > 0 && (
-                              <span className="px-3 py-1 text-xs font-semibold border rounded-full border-slate-700 bg-slate-950/70 text-slate-200">
+                              <span className="px-3 py-1 text-xs font-semibold border rounded-full border-border bg-muted text-primary">
                                 Additional Fields: {nonIoCount}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <div className="px-4 py-3 text-sm text-center rounded-lg text-slate-400 bg-slate-800/60">
+                          <div className="px-4 py-3 text-sm text-center rounded-lg text-muted-foreground bg-muted/60">
                             No configuration inputs added yet.
                           </div>
                         )}
@@ -1872,10 +1872,10 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
         })}
 
         {assembliesToRender.length === 0 && (
-          <div className="p-8 text-center bg-gray-800 rounded-lg">
-            <p className="text-gray-400">No assemblies configured for this product yet.</p>
-            <p className="mt-2 text-sm text-gray-500">Add a saved assembly or build a custom one to begin configuration.</p>
-            <button onClick={handleOpenAddAssemblyDialog} className="gap-2 mt-4 text-slate-100">
+          <div className="p-8 text-center bg-card rounded-lg">
+            <p className="text-muted-foreground">No assemblies configured for this product yet.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Add a saved assembly or build a custom one to begin configuration.</p>
+            <button onClick={handleOpenAddAssemblyDialog} className="gap-2 mt-4 text-primary hover:text-primary/80">
               + Add Assembly
             </button>
           </div>
@@ -1902,24 +1902,24 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 bg-black/70">
-            <div className="w-full max-w-4xl max-h-full p-6 overflow-y-auto border shadow-xl bg-slate-950 border-slate-800 rounded-2xl">
+            <div className="w-full max-w-4xl max-h-full p-6 overflow-y-auto border shadow-xl bg-card border-border rounded-2xl">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">Assembly Instance</p>
-                  <h3 className="text-xl font-semibold text-white">{assembly.displayName || assemblyId}</h3>
-                  <p className="mt-1 text-sm text-slate-400">{modalInstanceLabel}</p>
+                  <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Assembly Instance</p>
+                  <h3 className="text-xl font-semibold text-foreground">{assembly.displayName || assemblyId}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{modalInstanceLabel}</p>
                 </div>
-                <button onClick={handleCloseInstanceModal} className="text-slate-400 hover:text-white">✕</button>
+                <button onClick={handleCloseInstanceModal} className="text-muted-foreground hover:text-foreground">✕</button>
               </div>
 
               <div className="mt-4">
-                <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-slate-400">Instance Name</label>
+                <label className="block mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">Instance Name</label>
                 <input
                   type="text"
                   value={instance.instanceLabel ?? ''}
                   onChange={e => handleInstanceLabelChange(assemblyId, instanceId, e.target.value)}
                   placeholder={modalInstanceLabel}
-                  className="w-full px-3 py-2 text-sm text-white border rounded-md bg-slate-900 border-slate-700 focus:border-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm text-foreground border rounded-md bg-background border-border focus:border-primary focus:outline-none"
                 />
               </div>
 
@@ -1952,14 +1952,14 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                   const fields = instanceIoSelections[sectionKey];
                   return !Array.isArray(fields) || fields.length === 0;
                 }) && nonIoSections.length === 0 && (
-                  <div className="px-4 py-3 text-sm text-center rounded-lg text-slate-400 bg-slate-800/60">
+                  <div className="px-4 py-3 text-sm text-center rounded-lg text-muted-foreground bg-muted/60">
                     No configuration inputs defined for this assembly.
                   </div>
                 )}
               </div>
 
               <div className="flex justify-end mt-6">
-                <button onClick={handleCloseInstanceModal} className="px-4 py-2 text-sm font-medium text-white border rounded-md border-slate-600 bg-slate-800 hover:bg-slate-700">
+                <button onClick={handleCloseInstanceModal} className="px-4 py-2 text-sm font-medium text-foreground border rounded-md border-border bg-card hover:bg-muted">
                   Close
                 </button>
               </div>
@@ -1970,13 +1970,13 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
 
       {isAddAssemblyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="w-full max-w-4xl p-6 border shadow-xl bg-slate-950 border-slate-800 rounded-2xl">
+          <div className="w-full max-w-4xl p-6 border shadow-xl bg-card border-border rounded-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-white">Add Assembly</h3>
-                <p className="text-sm text-slate-400">Select a saved assembly or craft a custom process card.</p>
+                <h3 className="text-lg font-semibold text-foreground">Add Assembly</h3>
+                <p className="text-sm text-muted-foreground">Select a saved assembly or craft a custom process card.</p>
               </div>
-              <button onClick={handleCloseAddAssemblyDialog} className="text-slate-400 hover:text-white">
+              <button onClick={handleCloseAddAssemblyDialog} className="text-muted-foreground hover:text-foreground">
                 ✕
               </button>
             </div>
@@ -1984,13 +1984,13 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             <div className="flex items-center gap-2 mt-6">
               <button
                 onClick={() => setAssemblyDialogTab('library')}
-                className={`px-3 py-1 text-sm rounded-md ${assemblyDialogTab === 'library' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                className={`px-3 py-1 text-sm rounded-md ${assemblyDialogTab === 'library' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
               >
                 Saved Assemblies
               </button>
               <button
                 onClick={() => setAssemblyDialogTab('custom')}
-                className={`px-3 py-1 text-sm rounded-md ${assemblyDialogTab === 'custom' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                className={`px-3 py-1 text-sm rounded-md ${assemblyDialogTab === 'custom' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
               >
                 Custom Assembly
               </button>
@@ -2003,24 +2003,24 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
                   value={assemblySearchTerm}
                   onChange={e => setAssemblySearchTerm(e.target.value)}
                   placeholder="Search by ID, description, or category..."
-                  className="w-full px-3 py-2 text-sm text-white border rounded-md bg-slate-900 border-slate-700 focus:border-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm text-foreground border rounded-md bg-background border-border focus:border-primary focus:outline-none"
                 />
                 <div className="space-y-2 overflow-y-auto max-h-80">
                   {assemblyLibraryLoading ? (
-                    <p className="py-6 text-center text-slate-400">Loading saved assemblies…</p>
+                    <p className="py-6 text-center text-muted-foreground">Loading saved assemblies…</p>
                   ) : filteredAssemblyLibrary.length === 0 ? (
-                    <p className="py-6 text-center text-slate-400">No saved assemblies found.</p>
+                    <p className="py-6 text-center text-muted-foreground">No saved assemblies found.</p>
                   ) : (
                     filteredAssemblyLibrary.map(entry => (
                       <div
                         key={entry.subAssemblyId || entry.assemblyId}
-                        className="flex items-center justify-between p-3 border rounded-lg bg-slate-900 border-slate-800 hover:border-blue-600"
+                        className="flex items-center justify-between p-3 border rounded-lg bg-card border-border hover:border-primary"
                       >
                         <div className="min-w-0 mr-3">
-                          <p className="font-medium text-white truncate">{entry.description || entry.subAssemblyId || entry.assemblyId}</p>
-                          <p className="text-xs truncate text-slate-400">{entry.category || 'Uncategorized'}</p>
+                          <p className="font-medium text-foreground truncate">{entry.description || entry.subAssemblyId || entry.assemblyId}</p>
+                          <p className="text-xs truncate text-muted-foreground">{entry.category || 'Uncategorized'}</p>
                         </div>
-                        <button onClick={() => handleSelectSavedAssembly(entry)} className="text-sm text-slate-100">
+                        <button onClick={() => handleSelectSavedAssembly(entry)} className="text-sm text-primary hover:text-primary/80">
                           Add
                         </button>
                       </div>
@@ -2031,36 +2031,36 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
             ) : (
               <div className="mt-6 space-y-4">
                 <div>
-                  <label className="block mb-1 text-xs font-semibold tracking-wide uppercase text-slate-400">Assembly Name</label>
+                  <label className="block mb-1 text-xs font-semibold tracking-wide uppercase text-muted-foreground">Assembly Name</label>
                   <input
                     type="text"
                     value={customAssemblyName}
                     onChange={e => setCustomAssemblyName(e.target.value)}
                     placeholder="e.g., Brewhouse Custom Module"
-                    className="w-full px-3 py-2 text-sm text-white border rounded-md bg-slate-900 border-slate-700 focus:border-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm text-foreground border rounded-md bg-background border-border focus:border-primary focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 text-xs font-semibold tracking-wide uppercase text-slate-400">Description (optional)</label>
+                  <label className="block mb-1 text-xs font-semibold tracking-wide uppercase text-muted-foreground">Description (optional)</label>
                   <textarea
                     value={customAssemblyDescription}
                     onChange={e => setCustomAssemblyDescription(e.target.value)}
                     rows={3}
                     placeholder="Add context for this assembly…"
-                    className="w-full px-3 py-2 text-sm text-white border rounded-md bg-slate-900 border-slate-700 focus:border-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm text-foreground border rounded-md bg-background border-border focus:border-primary focus:outline-none"
                   />
                 </div>
-                <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={customAllowMultiple}
                     onChange={e => setCustomAllowMultiple(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 rounded border-slate-600 focus:ring-blue-500"
+                    className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
                   />
                   Allow multiple instances
                 </label>
                 <div className="flex justify-end">
-                  <button onClick={handleCreateCustomAssembly} className="gap-2 text-slate-100">
+                  <button onClick={handleCreateCustomAssembly} className="gap-2 text-primary hover:text-primary/80">
                     Save Assembly
                   </button>
                 </div>
@@ -2907,16 +2907,16 @@ function AssemblySelection({
 
   if (!currentTemplate) {
     return (
-      <div className="p-8 text-center bg-gray-800 rounded-lg">
-        <p className="text-gray-400">Please select a product in Step 1 to configure assemblies.</p>
+      <div className="p-8 text-center bg-card rounded-lg">
+        <p className="text-muted-foreground">Please select a product in Step 1 to configure assemblies.</p>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center bg-gray-800 rounded-lg">
-        <p className="text-gray-400">Loading assemblies...</p>
+      <div className="p-8 text-center bg-card rounded-lg">
+        <p className="text-muted-foreground">Loading assemblies...</p>
       </div>
     );
   }
@@ -2951,11 +2951,11 @@ function AssemblySelection({
   return (
     <div className="space-y-4">
       {/* BOM Generation Button - Full Width */}
-      <div className="p-4 bg-gray-800 rounded-lg shadow">
+      <div className="p-4 bg-card rounded-lg shadow">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="mb-2 text-lg font-semibold text-white">Assembly Selection & BOM</h3>
-            <p className="text-sm text-gray-400">
+            <h3 className="mb-2 text-lg font-semibold text-foreground">Assembly Selection & BOM</h3>
+            <p className="text-sm text-muted-foreground">
               Search and add assemblies to build your Bill of Materials
             </p>
           </div>
@@ -2992,11 +2992,11 @@ function AssemblySelection({
       </div>
 
       {processAssemblies.length > 0 && (
-        <div className="p-4 space-y-4 bg-gray-800 rounded-lg shadow">
+        <div className="p-4 space-y-4 bg-card rounded-lg shadow">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h4 className="text-lg font-semibold text-white">Process Card Overview</h4>
-              <p className="mt-1 text-sm text-gray-400">
+              <h4 className="text-lg font-semibold text-foreground">Process Card Overview</h4>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Review each assembly instance and fine-tune optional sub-assemblies that will flow into the consolidated BOM.
               </p>
             </div>
@@ -3015,11 +3015,11 @@ function AssemblySelection({
               const optionalSeed = assembly.subAssemblies?.optional || [];
 
               return (
-                <div key={assembly.assemblyId || assemblyIdx} className="p-4 border rounded-lg border-slate-700 bg-slate-900/60">
+                <div key={assembly.assemblyId || assemblyIdx} className="p-4 border rounded-lg border-border bg-card">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h5 className="text-base font-semibold text-white">{assembly.displayName || assembly.assemblyId}</h5>
-                      <p className="text-xs text-gray-400">{assembly.description || 'No description provided.'}</p>
+                      <h5 className="text-base font-semibold text-foreground">{assembly.displayName || assembly.assemblyId}</h5>
+                      <p className="text-xs text-muted-foreground">{assembly.description || 'No description provided.'}</p>
                     </div>
                     {assembly.allowMultiple && (
                       <span className="px-3 py-1 text-xs font-semibold text-blue-200 border rounded-full border-blue-500/40 bg-blue-500/10">
@@ -3029,7 +3029,7 @@ function AssemblySelection({
                   </div>
 
                   {instanceList.length === 0 ? (
-                    <div className="p-4 mt-3 text-sm text-gray-400 border border-dashed rounded-lg border-slate-700">
+                    <div className="p-4 mt-3 text-sm text-muted-foreground border border-dashed rounded-lg border-border">
                       No configuration instances found for this assembly. Configure it in Step 3 to see details here.
                     </div>
                   ) : (
@@ -3047,11 +3047,11 @@ function AssemblySelection({
                         const optionalIds = Array.from(new Set([...optionalSeed, ...recommendedOptionalIds]));
 
                         return (
-                          <div key={`${instanceId}-${instanceIndex}`} className="p-3 border rounded-lg border-slate-800 bg-slate-950/70">
+                          <div key={`${instanceId}-${instanceIndex}`} className="p-3 border rounded-lg border-border bg-secondary">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-white">{instanceDisplayLabel}</span>
-                                <span className="text-xs text-gray-500">{instanceId}</span>
+                                <span className="text-sm font-semibold text-foreground">{instanceDisplayLabel}</span>
+                                <span className="text-xs text-muted-foreground">{instanceId}</span>
                               </div>
                               {instanceRecommendations.some(rec => rec.type === 'recommended' && rec.status === 'pending') && (
                                 <span className="px-3 py-1 text-xs font-semibold text-blue-200 border rounded-full border-blue-500/40 bg-blue-500/10">
@@ -3062,10 +3062,10 @@ function AssemblySelection({
 
                             <div className="grid gap-3 mt-3 sm:grid-cols-2">
                               <div className="space-y-2">
-                                <span className="block text-xs font-semibold tracking-wide text-gray-400 uppercase">Required Sub-Assemblies</span>
+                                <span className="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">Required Sub-Assemblies</span>
                                 <div className="flex flex-wrap gap-2">
                                   {requiredList.length === 0 ? (
-                                    <span className="px-3 py-1 text-xs text-gray-500 border rounded-full border-slate-700">
+                                    <span className="px-3 py-1 text-xs text-muted-foreground border rounded-full border-border">
                                       None defined
                                     </span>
                                   ) : (
@@ -3085,9 +3085,9 @@ function AssemblySelection({
                               </div>
 
                               <div className="space-y-2">
-                                <span className="block text-xs font-semibold tracking-wide text-gray-400 uppercase">Optional Sub-Assemblies</span>
+                                <span className="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">Optional Sub-Assemblies</span>
                                 {optionalIds.length === 0 ? (
-                                  <span className="px-3 py-1 text-xs text-gray-500 border rounded-full border-slate-700">
+                                  <span className="px-3 py-1 text-xs text-muted-foreground border rounded-full border-border">
                                     No optional sub-assemblies configured
                                   </span>
                                 ) : (
@@ -3103,7 +3103,7 @@ function AssemblySelection({
                                           ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200'
                                           : isPendingRecommendation
                                             ? 'border-blue-500/60 bg-blue-500/10 text-blue-200 hover:bg-blue-500/20'
-                                            : 'border-slate-700 text-gray-300 hover:bg-slate-800'
+                                            : 'border-border text-muted-foreground hover:bg-muted'
                                       ].join(' ');
 
                                       return (
@@ -3137,11 +3137,11 @@ function AssemblySelection({
       )}
 
         {recommendationFeed.length > 0 && (
-          <div className="p-4 border rounded-lg shadow bg-slate-900 border-blue-900/40">
+          <div className="p-4 border rounded-lg shadow bg-card border-blue-900/40">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h4 className="text-sm font-semibold tracking-wide text-blue-200 uppercase">Rule Insights</h4>
-                <p className="mt-1 text-xs text-gray-400">Review required inclusions and optional recommendations detected from your configuration.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Review required inclusions and optional recommendations detected from your configuration.</p>
               </div>
             </div>
             <div className="mt-4 space-y-3">
@@ -3163,17 +3163,17 @@ function AssemblySelection({
                     : 'border-blue-500/40 bg-blue-500/10 text-blue-200';
 
                 return (
-                  <div key={entry.id} className="flex flex-col gap-3 p-3 border rounded-lg bg-slate-950/60 border-slate-800">
+                  <div key={entry.id} className="flex flex-col gap-3 p-3 border rounded-lg bg-secondary border-border">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-white">{description}</span>
-                        <span className="text-xs text-gray-400">{entry.subAssemblyId}</span>
+                        <span className="text-sm font-medium text-foreground">{description}</span>
+                        <span className="text-xs text-muted-foreground">{entry.subAssemblyId}</span>
                       </div>
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
                         {statusChip}
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-400">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
                       <span>Source: {assemblyLabel}</span>
                       {entry.sourceInstanceId && (
                         <span>Instance: {entry.sourceInstanceId}</span>
@@ -3197,8 +3197,8 @@ function AssemblySelection({
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* LEFT COLUMN: Assembly Search */}
-        <div className="p-4 bg-gray-800 rounded-lg shadow">
-          <h4 className="mb-4 text-lg font-semibold text-white">Available Sub-Assemblies</h4>
+        <div className="p-4 bg-card rounded-lg shadow">
+          <h4 className="mb-4 text-lg font-semibold text-foreground">Available Sub-Assemblies</h4>
           
           {/* Search Input */}
           <input
@@ -3206,18 +3206,18 @@ function AssemblySelection({
             placeholder="Search by Assembly ID, Description, or Category..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full p-3 mb-4 text-white bg-gray-700 border border-gray-600 rounded-md"
+            className="w-full p-3 mb-4 text-foreground bg-muted border border-border rounded-md"
           />
 
           {/* Sort Options */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm text-gray-400">Sort by:</span>
+            <span className="text-sm text-muted-foreground">Sort by:</span>
             <button
               onClick={() => setSortBy('description')}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 sortBy === 'description'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
               Description
@@ -3226,8 +3226,8 @@ function AssemblySelection({
               onClick={() => setSortBy('category')}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 sortBy === 'category'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
               Category
@@ -3237,24 +3237,24 @@ function AssemblySelection({
           {/* Assembly List */}
           <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
             {filteredAvailableAssemblies.length === 0 ? (
-              <p className="py-8 text-center text-gray-400">
+              <p className="py-8 text-center text-muted-foreground">
                 {searchTerm ? 'No assemblies match your search.' : 'No assemblies available.'}
               </p>
             ) : (
               filteredAvailableAssemblies.map(assembly => (
-                <div key={assembly.assemblyId} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                <div key={assembly.assemblyId} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-white truncate">{assembly.description}</p>
-                      <span className="px-2 py-0.5 text-xs font-medium text-blue-300 bg-blue-900/50 border border-blue-700 rounded-full whitespace-nowrap">
+                      <p className="font-medium text-foreground truncate">{assembly.description}</p>
+                      <span className="px-2 py-0.5 text-xs font-medium text-primary bg-primary/10 border border-primary/20 rounded-full whitespace-nowrap">
                         {assembly.category}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500 truncate">{assembly.assemblyId}</p>
+                    <p className="mt-1 text-xs text-muted-foreground truncate">{assembly.assemblyId}</p>
                   </div>
                   <button
                     onClick={() => handleAddAssembly(assembly.assemblyId)}
-                    className="px-3 py-1 ml-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 whitespace-nowrap"
+                    className="px-3 py-1 ml-2 text-sm text-primary-foreground bg-primary rounded-md hover:bg-primary/90 whitespace-nowrap"
                   >
                     Add
                   </button>
@@ -3265,37 +3265,37 @@ function AssemblySelection({
         </div>
 
         {/* RIGHT COLUMN: Selected Assemblies (BOM) */}
-        <div className="p-4 bg-gray-800 rounded-lg shadow">
-          <h3 className="mb-4 text-lg font-semibold text-white">
+        <div className="p-4 bg-card rounded-lg shadow">
+          <h3 className="mb-4 text-lg font-semibold text-foreground">
             Bill of Materials ({selectedAssemblyObjects.length} types, {selectedAssemblies.length} total)
           </h3>
           
           <div className="space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
             {selectedAssemblyObjects.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-gray-400">No assemblies selected yet.</p>
-                <p className="mt-2 text-sm text-gray-500">Search and add assemblies from the left</p>
+                <p className="text-muted-foreground">No assemblies selected yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground/80">Search and add assemblies from the left</p>
               </div>
             ) : (
               selectedAssemblyObjects.map(assembly => {
                 const isRequired = currentTemplate.assemblies?.required?.includes(assembly.assemblyId);
                 
                 return (
-                  <div key={assembly.assemblyId} className="p-4 bg-gray-700 border border-gray-600 rounded-lg">
+                  <div key={assembly.assemblyId} className="p-4 bg-muted border border-border rounded-lg">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-white">{assembly.description}</p>
-                          <span className="px-2 py-0.5 text-xs font-medium text-blue-300 bg-blue-900/50 border border-blue-700 rounded-full">
+                          <p className="font-medium text-foreground">{assembly.description}</p>
+                          <span className="px-2 py-0.5 text-xs font-medium text-primary bg-primary/10 border border-primary/20 rounded-full">
                             {assembly.category}
                           </span>
                           {isRequired && (
-                            <span className="px-2 py-1 text-xs font-medium text-white bg-red-600 rounded">
+                            <span className="px-2 py-1 text-xs font-medium text-destructive-foreground bg-destructive rounded">
                               Required
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">{assembly.assemblyId}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{assembly.assemblyId}</p>
                       </div>
                       
                       <button
@@ -3310,25 +3310,25 @@ function AssemblySelection({
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {/* Quantity Input */}
                       <div>
-                        <label className="block mb-1 text-sm text-gray-400">Quantity</label>
+                        <label className="block mb-1 text-sm text-muted-foreground">Quantity</label>
                         <input
                           type="number"
                           min="1"
                           value={assemblyQuantities[assembly.assemblyId] || 1}
                           onChange={e => handleQuantityChange(assembly.assemblyId, e.target.value)}
-                          className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+                          className="w-full p-2 text-foreground bg-background border border-border rounded-md"
                         />
                       </div>
 
                       {/* Notes Input */}
                       <div>
-                        <label className="block mb-1 text-sm text-gray-400">Notes</label>
+                        <label className="block mb-1 text-sm text-muted-foreground">Notes</label>
                         <input
                           type="text"
                           placeholder="Optional notes..."
                           value={assemblyNotes[assembly.assemblyId] || ''}
                           onChange={e => handleNoteChange(assembly.assemblyId, e.target.value)}
-                          className="w-full p-2 text-white bg-gray-800 border border-gray-600 rounded-md"
+                          className="w-full p-2 text-foreground bg-background border border-border rounded-md"
                         />
                       </div>
                     </div>
@@ -3337,7 +3337,7 @@ function AssemblySelection({
                     <div className="mt-3">
                       <button
                         onClick={() => toggleAssemblyExpansion(assembly.assemblyId)}
-                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+                        className="flex items-center gap-2 text-sm text-primary hover:text-primary/80"
                       >
                         <span>{expandedAssemblies[assembly.assemblyId] ? '▼' : '▶'}</span>
                         <span>
@@ -3348,7 +3348,7 @@ function AssemblySelection({
 
                       {expandedAssemblies[assembly.assemblyId] && assembly.components && assembly.components.length > 0 && (
                         <div className="mt-3 space-y-2">
-                          <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs font-semibold text-gray-400 border-b border-gray-600">
+                          <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border">
                             <div className="col-span-1">Qty</div>
                             <div className="col-span-3">SKU</div>
                             <div className="col-span-5">Description</div>
@@ -3358,9 +3358,9 @@ function AssemblySelection({
                           {assembly.components.map((comp, idx) => {
                             const component = comp.component; // Expanded component details (can be null)
                             return (
-                              <div 
+                              <div
                                 key={`${comp.sku}-${idx}`}
-                                className="grid grid-cols-12 gap-2 px-2 py-2 text-xs text-gray-300 bg-gray-800 rounded"
+                                className="grid grid-cols-12 gap-2 px-2 py-2 text-xs text-muted-foreground bg-background rounded"
                               >
                                 <div className="col-span-1 font-medium">{comp.quantity || 1}</div>
                                 <div className="col-span-3 font-mono text-blue-300">{comp.sku}</div>
@@ -3386,53 +3386,53 @@ function AssemblySelection({
       </div>
 
       {/* Consolidated Operational Items (BOM) Table */}
-      <div className="p-4 mt-6 bg-gray-800 rounded-lg shadow">
-        <h3 className="mb-4 text-lg font-semibold text-white">
+      <div className="p-4 mt-6 bg-card rounded-lg shadow">
+        <h3 className="mb-4 text-lg font-semibold text-foreground">
           Consolidated Bill of Materials
         </h3>
         
         {operationalItems.length === 0 ? (
-          <div className="py-8 text-center bg-gray-700 rounded-lg">
-            <p className="text-gray-400">No BOM Generated.</p>
-            <p className="mt-2 text-sm text-gray-500">Click 'Generate BOM' above to create the consolidated Bill of Materials.</p>
+          <div className="py-8 text-center bg-muted rounded-lg">
+            <p className="text-muted-foreground">No BOM Generated.</p>
+            <p className="mt-2 text-sm text-muted-foreground/80">Click 'Generate BOM' above to create the consolidated Bill of Materials.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="px-4 py-3 text-sm font-semibold text-left text-gray-300">SKU</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-left text-gray-300">Description</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-300">Qty</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-300">Unit Price</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-300">Total Price</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-left text-gray-300">Section</th>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3 text-sm font-semibold text-left text-muted-foreground">SKU</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-left text-muted-foreground">Description</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-muted-foreground">Qty</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-muted-foreground">Unit Price</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-muted-foreground">Total Price</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-left text-muted-foreground">Section</th>
                 </tr>
               </thead>
               <tbody>
                 {operationalItems.map((item, index) => (
-                  <tr 
-                    key={`${item.sku}-${index}`} 
-                    className="border-b border-gray-700 hover:bg-gray-700/50"
+                  <tr
+                    key={`${item.sku}-${index}`}
+                    className="border-b border-border hover:bg-muted/50"
                   >
-                    <td className="px-4 py-3 font-mono text-sm text-blue-300">{item.sku}</td>
-                    <td className="px-4 py-3 text-sm text-gray-300">
+                    <td className="px-4 py-3 font-mono text-sm text-primary">{item.sku}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
                       <div>
-                        <div className="font-medium text-white">{item.displayName || item.description}</div>
+                        <div className="font-medium text-foreground">{item.displayName || item.description}</div>
                         {item.description && item.description !== item.displayName && (
-                          <div className="mt-1 text-xs text-gray-500">{item.description}</div>
+                          <div className="mt-1 text-xs text-muted-foreground/80">{item.description}</div>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-300">{item.quantity}</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-300">
+                    <td className="px-4 py-3 text-sm text-right text-muted-foreground">{item.quantity}</td>
+                    <td className="px-4 py-3 text-sm text-right text-muted-foreground">
                       ${(item.unitPrice || 0).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-right text-white">
+                    <td className="px-4 py-3 text-sm font-semibold text-right text-foreground">
                       ${(item.totalPrice || 0).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
-                      <span className="px-2 py-1 text-xs bg-gray-700 rounded">
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      <span className="px-2 py-1 text-xs bg-muted rounded">
                         {item.sectionGroup || 'Other'}
                       </span>
                     </td>
@@ -3440,11 +3440,11 @@ function AssemblySelection({
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-600 bg-gray-700/50">
-                  <td colSpan="4" className="px-4 py-3 text-sm font-semibold text-right text-gray-300">
+                <tr className="border-t-2 border-border bg-muted/50">
+                  <td colSpan="4" className="px-4 py-3 text-sm font-semibold text-right text-muted-foreground">
                     Total Material Cost:
                   </td>
-                  <td className="px-4 py-3 text-lg font-bold text-right text-white">
+                  <td className="px-4 py-3 text-lg font-bold text-right text-foreground">
                     ${operationalItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0).toFixed(2)}
                   </td>
                   <td></td>
@@ -3455,57 +3455,57 @@ function AssemblySelection({
         )}
       </div>
 
-      <div className="p-6 mt-6 border shadow rounded-2xl border-slate-800 bg-slate-900/60">
+      <div className="p-6 mt-6 border shadow rounded-2xl border-border bg-card">
         <div className="flex flex-col gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">Labour Hours</h3>
-            <p className="text-sm text-slate-400">
+            <h3 className="text-lg font-semibold text-foreground">Labour Hours</h3>
+            <p className="text-sm text-muted-foreground">
               Adjust the labour allowances for this quote. These values roll into pricing alongside the generated BOM.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <label className="space-y-2">
-              <span className="block text-sm font-medium text-slate-200">Engineering Hours</span>
+              <span className="block text-sm font-medium text-foreground">Engineering Hours</span>
               <input
                 type="number"
                 min="0"
                 step="0.5"
                 value={currentEngineeringHours}
                 onChange={e => handleLabourFieldChange('engineeringHours', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 text-sm text-white transition border rounded-lg border-slate-700 bg-slate-900/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                className="w-full px-3 py-2 text-sm text-foreground transition border rounded-lg border-border bg-background focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               />
-              <span className="block text-xs text-slate-500">Template baseline: {engineeringDefault.toFixed(1)} hrs</span>
+              <span className="block text-xs text-muted-foreground">Template baseline: {engineeringDefault.toFixed(1)} hrs</span>
             </label>
 
             <label className="space-y-2">
-              <span className="block text-sm font-medium text-slate-200">Programming Hours</span>
+              <span className="block text-sm font-medium text-foreground">Programming Hours</span>
               <input
                 type="number"
                 min="0"
                 step="0.5"
                 value={currentProgrammingHours}
                 onChange={e => handleLabourFieldChange('programmingHours', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 text-sm text-white transition border rounded-lg border-slate-700 bg-slate-900/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                className="w-full px-3 py-2 text-sm text-foreground transition border rounded-lg border-border bg-background focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               />
             </label>
 
             <label className="space-y-2">
-              <span className="block text-sm font-medium text-slate-200">Production Hours</span>
+              <span className="block text-sm font-medium text-foreground">Production Hours</span>
               <input
                 type="number"
                 min="0"
                 step="0.5"
                 value={currentProductionHours}
                 onChange={e => handleLabourFieldChange('productionHours', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 text-sm text-white transition border rounded-lg border-slate-700 bg-slate-900/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                className="w-full px-3 py-2 text-sm text-foreground transition border rounded-lg border-border bg-background focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               />
             </label>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg border-slate-800 bg-slate-950/70">
-            <span className="text-sm font-medium text-slate-300">Total Labour Hours</span>
-            <span className="text-xl font-semibold text-white">{totalLabourHours} hrs</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg border-border bg-secondary">
+            <span className="text-sm font-medium text-muted-foreground">Total Labour Hours</span>
+            <span className="text-xl font-semibold text-foreground">{totalLabourHours} hrs</span>
           </div>
         </div>
       </div>
@@ -3552,7 +3552,7 @@ function SummaryPanel({ quote, schemas, customers, generatedNumber, operationalI
       case 'lost':
         return 'border border-rose-500/40 bg-rose-500/10 text-rose-200';
       default:
-        return 'border border-slate-800 bg-slate-900 text-slate-200';
+        return 'border border-border bg-secondary text-muted-foreground';
     }
   })();
 
@@ -3565,65 +3565,65 @@ function SummaryPanel({ quote, schemas, customers, generatedNumber, operationalI
 
   return (
     <aside className={cn('flex w-full flex-col gap-4', className)}>
-      <div className="p-6 border shadow-sm rounded-2xl border-slate-800 bg-slate-900/60">
+      <div className="p-6 border shadow-sm rounded-2xl border-border bg-card">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs tracking-wide uppercase text-slate-400">Quote Snapshot</p>
-            <h3 className="mt-2 text-lg font-semibold text-slate-100">{quote.projectName || 'Untitled Quote'}</h3>
-            <p className="mt-1 text-sm text-slate-400">{customerName}</p>
+            <p className="text-xs tracking-wide uppercase text-muted-foreground">Quote Snapshot</p>
+            <h3 className="mt-2 text-lg font-semibold text-foreground">{quote.projectName || 'Untitled Quote'}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{customerName}</p>
           </div>
           <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
             {normalizedStatus}
           </span>
         </div>
 
-        <dl className="mt-6 space-y-3 text-sm text-slate-300">
+        <dl className="mt-6 space-y-3 text-sm text-muted-foreground">
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Quote #</dt>
-            <dd className="font-medium text-slate-100">{quote.quoteId || generatedNumber || 'Not generated'}</dd>
+            <dt className="text-muted-foreground">Quote #</dt>
+            <dd className="font-medium text-foreground">{quote.quoteId || generatedNumber || 'Not generated'}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Sales Rep</dt>
-            <dd className="font-medium text-slate-100">{quote.salesRep || 'Unassigned'}</dd>
+            <dt className="text-muted-foreground">Sales Rep</dt>
+            <dd className="font-medium text-foreground">{quote.salesRep || 'Unassigned'}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Material Cost</dt>
-            <dd className="font-medium text-slate-100">{formatCurrency(pricing.materialCost)}</dd>
+            <dt className="text-muted-foreground">Material Cost</dt>
+            <dd className="font-medium text-foreground">{formatCurrency(pricing.materialCost)}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Labor Cost</dt>
-            <dd className="font-medium text-slate-100">{formatCurrency(pricing.laborCost)}</dd>
+            <dt className="text-muted-foreground">Labor Cost</dt>
+            <dd className="font-medium text-foreground">{formatCurrency(pricing.laborCost)}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Margin %</dt>
-            <dd className="font-medium text-slate-100">{pricing.marginPercent ?? '—'}</dd>
+            <dt className="text-muted-foreground">Margin %</dt>
+            <dd className="font-medium text-foreground">{pricing.marginPercent ?? '—'}</dd>
           </div>
         </dl>
 
         <div className="mt-6">
-          <p className="text-xs tracking-wide uppercase text-slate-400">Project Codes</p>
+          <p className="text-xs tracking-wide uppercase text-muted-foreground">Project Codes</p>
           <div className="mt-2 space-y-2 text-sm">
-            <div className="p-3 border rounded-xl border-slate-800/70 bg-slate-900/40">
-              <p className="text-xs tracking-wide uppercase text-slate-500">Industry</p>
-              <p className="mt-1 font-medium text-slate-100">
+            <div className="p-3 border rounded-xl border-border bg-secondary">
+              <p className="text-xs tracking-wide uppercase text-muted-foreground">Industry</p>
+              <p className="mt-1 font-medium text-foreground">
                 {resolveCodeDescription(schemas.industry, projectCodes.industry)}
               </p>
             </div>
-            <div className="p-3 border rounded-xl border-slate-800/70 bg-slate-900/40">
-              <p className="text-xs tracking-wide uppercase text-slate-500">Product</p>
-              <p className="mt-1 font-medium text-slate-100">
+            <div className="p-3 border rounded-xl border-border bg-secondary">
+              <p className="text-xs tracking-wide uppercase text-muted-foreground">Product</p>
+              <p className="mt-1 font-medium text-foreground">
                 {resolveCodeDescription(schemas.product, projectCodes.product)}
               </p>
             </div>
-            <div className="p-3 border rounded-xl border-slate-800/70 bg-slate-900/40">
-              <p className="text-xs tracking-wide uppercase text-slate-500">Control</p>
-              <p className="mt-1 font-medium text-slate-100">
+            <div className="p-3 border rounded-xl border-border bg-secondary">
+              <p className="text-xs tracking-wide uppercase text-muted-foreground">Control</p>
+              <p className="mt-1 font-medium text-foreground">
                 {resolveCodeDescription(schemas.control, projectCodes.control)}
               </p>
             </div>
-            <div className="p-3 border rounded-xl border-slate-800/70 bg-slate-900/40">
-              <p className="text-xs tracking-wide uppercase text-slate-500">Scope</p>
-              <p className="mt-1 font-medium text-slate-100">
+            <div className="p-3 border rounded-xl border-border bg-secondary">
+              <p className="text-xs tracking-wide uppercase text-muted-foreground">Scope</p>
+              <p className="mt-1 font-medium text-foreground">
                 {resolveCodeDescription(schemas.scope, projectCodes.scope)}
               </p>
             </div>
@@ -3631,28 +3631,28 @@ function SummaryPanel({ quote, schemas, customers, generatedNumber, operationalI
         </div>
       </div>
 
-      <div className="p-6 border shadow-sm rounded-2xl border-slate-800 bg-slate-900/60">
-        <h3 className="text-sm font-semibold text-slate-200">Configuration Status</h3>
+      <div className="p-6 border shadow-sm rounded-2xl border-border bg-card">
+        <h3 className="text-sm font-semibold text-foreground">Configuration Status</h3>
         <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
           {configStats.map(stat => (
-            <div key={stat.label} className="p-3 border rounded-xl border-slate-800/80 bg-slate-900/40">
-              <p className="text-xs tracking-wide uppercase text-slate-500">{stat.label}</p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">{stat.value}</p>
+            <div key={stat.label} className="p-3 border rounded-xl border-border bg-secondary">
+              <p className="text-xs tracking-wide uppercase text-muted-foreground">{stat.label}</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stat.value}</p>
             </div>
           ))}
-          <div className="p-3 border rounded-xl border-slate-800/80 bg-slate-900/40">
-            <p className="text-xs tracking-wide uppercase text-slate-500">BOM Items</p>
-            <p className="mt-1 text-lg font-semibold text-slate-100">{bomCount}</p>
+          <div className="p-3 border rounded-xl border-border bg-secondary">
+            <p className="text-xs tracking-wide uppercase text-muted-foreground">BOM Items</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">{bomCount}</p>
           </div>
         </div>
-        <div className="mt-5 space-y-2 text-sm text-slate-300">
+        <div className="mt-5 space-y-2 text-sm text-muted-foreground">
           <div className="flex justify-between gap-3">
-            <span className="text-slate-400">Total COGS</span>
-            <span className="font-medium text-slate-100">{formatCurrency(pricing.totalCOGS)}</span>
+            <span className="text-muted-foreground">Total COGS</span>
+            <span className="font-medium text-foreground">{formatCurrency(pricing.totalCOGS)}</span>
           </div>
           <div className="flex justify-between gap-3">
-            <span className="text-slate-400">Sell Price</span>
-            <span className="font-medium text-slate-100">{formatCurrency(pricing.finalPrice)}</span>
+            <span className="text-muted-foreground">Sell Price</span>
+            <span className="font-medium text-foreground">{formatCurrency(pricing.finalPrice)}</span>
           </div>
         </div>
       </div>
@@ -4260,11 +4260,11 @@ export default function QuoteConfigurator({ context }) {
   }, [isDesktop]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-slate-950 text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       {!isDesktop && (
         <div
           className={cn(
-            'fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden',
+            'fixed inset-0 z-30 bg-background/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden',
             isLeftDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           )}
           onClick={() => setIsLeftDrawerOpen(false)}
@@ -4273,7 +4273,7 @@ export default function QuoteConfigurator({ context }) {
       {!isDesktop && (
         <div
           className={cn(
-            'fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-300 xl:hidden',
+            'fixed inset-0 z-30 bg-background/70 backdrop-blur-sm transition-opacity duration-300 xl:hidden',
             isRightDrawerOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           )}
           onClick={() => setIsRightDrawerOpen(false)}
@@ -4281,7 +4281,7 @@ export default function QuoteConfigurator({ context }) {
       )}
       <aside
         className={cn(
-          'fixed z-20 flex flex-col overflow-hidden border border-slate-900/80 bg-slate-950/95 shadow-2xl transition-transform duration-300'
+          'fixed z-20 flex flex-col overflow-hidden border border-border bg-secondary/95 shadow-2xl transition-transform duration-300'
         )}
         style={leftDrawerStyles}
         aria-hidden={!isLeftDrawerOpen && isDesktop}
@@ -4291,8 +4291,8 @@ export default function QuoteConfigurator({ context }) {
             type="button"
             onClick={() => setIsLeftDrawerOpen(prev => !prev)}
             className={cn(
-              'absolute inset-y-0 right-0 flex items-center justify-center border-l border-slate-900/70 bg-slate-950/95 text-slate-300 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40',
-              isLeftDrawerOpen ? 'border-slate-800' : 'border-slate-900/70'
+              'absolute inset-y-0 right-0 flex items-center justify-center border-l border-border bg-secondary/95 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40',
+              isLeftDrawerOpen ? 'border-border' : 'border-border'
             )}
             style={{ width: `${LEFT_DRAWER_HANDLE_WIDTH}px` }}
             aria-label={isLeftDrawerOpen ? 'Collapse quote editor drawer' : 'Expand quote editor drawer'}
@@ -4373,7 +4373,7 @@ export default function QuoteConfigurator({ context }) {
 
       <aside
         className={cn(
-          'fixed z-20 flex flex-col overflow-hidden border border-slate-900/80 bg-slate-950/95 shadow-2xl transition-transform duration-300'
+          'fixed z-20 flex flex-col overflow-hidden border border-border bg-secondary/95 shadow-2xl transition-transform duration-300'
         )}
         style={rightDrawerStyles}
         aria-hidden={!isRightDrawerOpen && isDesktop}
@@ -4383,8 +4383,8 @@ export default function QuoteConfigurator({ context }) {
             type="button"
             onClick={() => setIsRightDrawerOpen(prev => !prev)}
             className={cn(
-              'absolute inset-y-0 left-0 flex items-center justify-center border-r border-slate-900/70 bg-slate-950/95 text-slate-300 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40',
-              isRightDrawerOpen ? 'border-slate-800' : 'border-slate-900/70'
+              'absolute inset-y-0 left-0 flex items-center justify-center border-r border-border bg-secondary/95 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40',
+              isRightDrawerOpen ? 'border-border' : 'border-border'
             )}
             style={{ width: `${RIGHT_DRAWER_HANDLE_WIDTH}px` }}
             aria-label={isRightDrawerOpen ? 'Collapse summary drawer' : 'Expand summary drawer'}
@@ -4398,15 +4398,15 @@ export default function QuoteConfigurator({ context }) {
         >
           {(!isDesktop || isRightDrawerOpen) && (
             <>
-              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-900/70">
+              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
                 <div>
                   <p className="text-xs font-semibold tracking-wide text-blue-200 uppercase">Live BOM</p>
-                  <p className="mt-1 text-xs text-slate-400">Real-time bill of materials with totals</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Real-time bill of materials with totals</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsRightDrawerOpen(false)}
-                  className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-slate-800 bg-slate-900/80 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  className="inline-flex items-center justify-center border rounded-lg h-9 w-9 border-border bg-secondary text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                   aria-label="Close BOM drawer"
                 >
                   <PanelRightClose className="w-4 h-4" />
@@ -4415,9 +4415,9 @@ export default function QuoteConfigurator({ context }) {
               <div className="flex-1 overflow-y-auto no-scrollbar">
                 <div className="px-4 py-4 space-y-3">
                   {operationalItems.length === 0 ? (
-                    <div className="px-4 py-8 text-center border rounded-lg border-slate-800/60 bg-slate-900/40">
-                      <p className="text-sm text-slate-400">No BOM items yet</p>
-                      <p className="mt-1 text-xs text-slate-500">Complete configuration steps to generate BOM</p>
+                    <div className="px-4 py-8 text-center border rounded-lg border-border bg-secondary">
+                      <p className="text-sm text-muted-foreground">No BOM items yet</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Complete configuration steps to generate BOM</p>
                     </div>
                   ) : (
                     <>
@@ -4425,25 +4425,25 @@ export default function QuoteConfigurator({ context }) {
                         {operationalItems.map((item, index) => (
                           <div
                             key={`${item.sku}-${index}`}
-                            className="p-3 space-y-2 border rounded-lg border-slate-800/60 bg-slate-900/60 hover:border-slate-700/80"
+                            className="p-3 space-y-2 border rounded-lg border-border bg-card hover:border-border/80"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <p className="font-mono text-xs text-blue-300 truncate">{item.sku}</p>
-                                <p className="mt-1 text-sm font-medium leading-tight text-white line-clamp-2">
+                                <p className="mt-1 text-sm font-medium leading-tight text-foreground line-clamp-2">
                                   {item.displayName || item.description}
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-xs font-medium text-slate-400">Qty: {item.quantity}</p>
-                                <p className="mt-1 text-sm font-semibold text-white">
+                                <p className="text-xs font-medium text-muted-foreground">Qty: {item.quantity}</p>
+                                <p className="mt-1 text-sm font-semibold text-foreground">
                                   ${(item.totalPrice || 0).toFixed(2)}
                                 </p>
                               </div>
                             </div>
                             {item.sectionGroup && (
                               <div className="flex items-center gap-2">
-                                <span className="inline-block px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-slate-800/80 text-slate-400">
+                                <span className="inline-block px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-secondary text-muted-foreground">
                                   {item.sectionGroup}
                                 </span>
                               </div>
@@ -4452,22 +4452,22 @@ export default function QuoteConfigurator({ context }) {
                         ))}
                       </div>
                       
-                      <div className="sticky bottom-0 pt-3 mt-3 border-t border-slate-800 bg-slate-950/95">
-                        <div className="p-4 border rounded-lg border-slate-700 bg-slate-900/80">
+                      <div className="sticky bottom-0 pt-3 mt-3 border-t border-border bg-background/95">
+                        <div className="p-4 border rounded-lg border-border bg-secondary">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm font-medium text-slate-300">Total Items:</span>
-                            <span className="text-sm font-semibold text-white">{operationalItems.length}</span>
+                            <span className="text-sm font-medium text-muted-foreground">Total Items:</span>
+                            <span className="text-sm font-semibold text-foreground">{operationalItems.length}</span>
                           </div>
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm font-medium text-slate-300">Total Qty:</span>
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-medium text-muted-foreground">Total Qty:</span>
+                            <span className="text-sm font-semibold text-foreground">
                               {operationalItems.reduce((sum, item) => sum + (item.quantity || 0), 0)}
                             </span>
                           </div>
-                          <div className="pt-3 border-t border-slate-700">
+                          <div className="pt-3 border-t border-border">
                             <div className="flex items-center justify-between">
                               <span className="text-base font-semibold text-blue-200">Material Cost:</span>
-                              <span className="text-lg font-bold text-white">
+                              <span className="text-lg font-bold text-foreground">
                                 ${operationalItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0).toFixed(2)}
                               </span>
                             </div>
@@ -4517,15 +4517,15 @@ export default function QuoteConfigurator({ context }) {
                 </aside>
 
                 <section className="space-y-6">
-                  <div className="border shadow-xl rounded-2xl border-slate-800 bg-slate-900/60 shadow-slate-950/40">
-                    <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5 border-b border-slate-800/70">
+                  <div className="border shadow-xl rounded-2xl border-border bg-card shadow-background/40">
+                    <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5 border-b border-border">
                       <div>
-                        <p className="text-xs font-semibold tracking-wide uppercase text-slate-500">
+                        <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
                           Current Step
                         </p>
-                        <h2 className="mt-1 text-2xl font-semibold text-slate-100">{activeStep.title}</h2>
+                        <h2 className="mt-1 text-2xl font-semibold text-foreground">{activeStep.title}</h2>
                         {activeStep.description && (
-                          <p className="mt-2 text-sm text-slate-400">{activeStep.description}</p>
+                          <p className="mt-2 text-sm text-muted-foreground">{activeStep.description}</p>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
@@ -4533,7 +4533,7 @@ export default function QuoteConfigurator({ context }) {
                           type="button"
                           onClick={handlePrev}
                           disabled={currentStep === 1 || isLoading}
-                          className="gap-2 text-slate-300 hover:text-white disabled:opacity-40"
+                          className="gap-2 text-muted-foreground hover:text-foreground disabled:opacity-40"
                         >
                           Back
                         </button>
@@ -4541,15 +4541,15 @@ export default function QuoteConfigurator({ context }) {
                           type="button"
                           onClick={handleNext}
                           disabled={isLoading}
-                          className="gap-2 font-semibold text-slate-100 hover:text-white disabled:opacity-60"
+                          className="gap-2 font-semibold text-foreground hover:text-foreground disabled:opacity-60"
                         >
                           {nextLabel}
                         </button>
-                        <span className="hidden w-px h-5 bg-slate-800 md:inline-block" aria-hidden="true" />
+                        <span className="hidden w-px h-5 bg-border md:inline-block" aria-hidden="true" />
                         <button
                           type="button"
                           onClick={handleLoadQuote}
-                          className="gap-2 text-slate-300 hover:text-white"
+                          className="gap-2 text-muted-foreground hover:text-foreground"
                         >
                           Load Quote
                         </button>
@@ -4557,7 +4557,7 @@ export default function QuoteConfigurator({ context }) {
                           type="button"
                           onClick={handleSave}
                           disabled={isLoading}
-                          className="gap-2 font-semibold text-slate-100 hover:text-white disabled:opacity-70"
+                          className="gap-2 font-semibold text-foreground hover:text-foreground disabled:opacity-70"
                         >
                           {isLoading ? 'Saving…' : 'Save Quote'}
                         </button>
@@ -4565,7 +4565,7 @@ export default function QuoteConfigurator({ context }) {
                     </div>
                     <div className="px-6 py-6">
                       {stepContent || (
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                           Select a step to begin configuring the quote.
                         </p>
                       )}

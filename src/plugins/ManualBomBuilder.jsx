@@ -656,37 +656,28 @@ export default function ManualBomBuilder() {
 
     setIsSaving(true);
     try {
-      const bomData = {
-        bom: bom,
-        bomId: bomId,
-        version: version,
-        parentId: parentId,
-        costData: costData,
-        timestamp: new Date().toISOString()
-      };
-
-      const manualQuote = {
+      const bomDataToSave = {
         quoteNumber: quoteNumber.trim(),
-        type: 'bom_data',
-        data: bomData,
         projectName: projectName.trim() || null,
-        customer: customer.trim() || null
+        customer: customer.trim() || null,
+        bom: bom,
+        costData: costData
       };
 
-      if (window.electronAPI && window.electronAPI.db && window.electronAPI.db.manualQuotes) {
-        const result = await window.electronAPI.db.manualQuotes.save(manualQuote);
-        if (result.success) {
-          setSavedQuote(manualQuote);
-          setSuccess('BOM saved to quote successfully!');
-        } else {
-          setError('Error saving to quote: ' + (result.error || 'Unknown error'));
-        }
+      const result = await window.manualBom.save(bomDataToSave);
+      
+      if (result.success) {
+        setSavedQuote({ quoteNumber: quoteNumber.trim(), projectName, customer });
+        setSuccess('BOM saved to database successfully!');
+        setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError('Manual quotes API not available');
+        setError('Error saving to database: ' + (result.message || 'Unknown error'));
+        setTimeout(() => setError(null), 5000);
       }
     } catch (error) {
-      console.error('Error saving to quote:', error);
-      setError('Error saving to quote: ' + error.message);
+      console.error('Error saving to database:', error);
+      setError('Error saving to database: ' + error.message);
+      setTimeout(() => setError(null), 5000);
     } finally {
       setIsSaving(false);
     }
@@ -699,40 +690,43 @@ export default function ManualBomBuilder() {
     }
 
     try {
-      if (window.electronAPI && window.electronAPI.db && window.electronAPI.db.manualQuotes) {
-        const result = await window.electronAPI.db.manualQuotes.getByQuoteNumber(quoteNumber.trim());
-        if (result && result.type === 'bom_data') {
-          const data = result.data;
-          setBom(data.bom || {
-            name: "",
-            description: "",
-            tags: [],
-            subAssemblies: [],
-            components: [],
-          });
-          setBomId(data.bomId || null);
-          setVersion(data.version || 1);
-          setParentId(data.parentId || null);
-          setCostData(data.costData || {
-            totalMaterialCost: 0,
-            marginPercent: 40.0,
-            finalPrice: 0
-          });
-          setProjectName(result.projectName || '');
-          setCustomer(result.customer || '');
-          setSavedQuote(result);
-          setSuccess('BOM loaded from quote successfully!');
-        } else {
-          setError('No BOM data found for this quote number');
-        }
+      const result = await window.manualBom.get(quoteNumber.trim());
+      
+      if (result.success && result.data) {
+        const { bom: loadedBom, costData: loadedCostData } = result.data;
+        
+        setBom(loadedBom || {
+          name: "",
+          description: "",
+          tags: [],
+          subAssemblies: [],
+          components: [],
+        });
+        
+        setCostData(loadedCostData || {
+          totalMaterialCost: 0,
+          marginPercent: 40.0,
+          finalPrice: 0
+        });
+        
+        setProjectName(result.projectName || '');
+        setCustomer(result.customer || '');
+        
+        setSavedQuote({ quoteNumber: quoteNumber.trim(), projectName: result.projectName, customer: result.customer });
+        setSuccess('BOM loaded from database successfully!');
+        setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError('Manual quotes API not available');
+        setError('No BOM found for this quote number');
+        setTimeout(() => setError(null), 3000);
       }
     } catch (error) {
-      console.error('Error loading from quote:', error);
-      setError('Error loading from quote: ' + error.message);
+      console.error('Error loading from database:', error);
+      setError('Error loading from database: ' + error.message);
+      setTimeout(() => setError(null), 5000);
     }
   };
+
+  // Calculate total material cost from components and subAssemblies
 
   return (
     <div className="flex h-full max-h-screen overflow-hidden bg-background text-foreground p-4 gap-4">
@@ -747,7 +741,7 @@ export default function ManualBomBuilder() {
             <TabsContent value="subAssemblies">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Sub-Assemblies</h3>
-                <Button onClick={() => openSubAssemblyDialog()} className="bg-success hover:bg-success/80">
+                <Button onClick={() => openSubAssemblyDialog()} className="btn bg-success hover:bg-success/80">
                   <Plus size={16} className="mr-2" />
                   Create Sub-Assembly
                 </Button>
@@ -819,7 +813,7 @@ export default function ManualBomBuilder() {
                     onClick={generateQuoteNumber}
                     size="sm"
                     variant="outline"
-                    className="px-3"
+                    className="btn px-3"
                     title="Generate new quote number"
                   >
                     Generate
@@ -849,7 +843,7 @@ export default function ManualBomBuilder() {
                   onClick={saveToQuote}
                   disabled={isSaving || !quoteNumber.trim()}
                   size="sm"
-                  className="bg-success hover:bg-success/80"
+                  className="btn bg-success hover:bg-success/80"
                 >
                   {isSaving ? 'Saving...' : 'Save to Quote'}
                 </Button>
@@ -858,6 +852,7 @@ export default function ManualBomBuilder() {
                   disabled={!quoteNumber.trim()}
                   size="sm"
                   variant="outline"
+                  className="btn"
                 >
                   Load from Quote
                 </Button>
@@ -875,14 +870,14 @@ export default function ManualBomBuilder() {
           {/* Tags */}
           <div>
             <label className="text-sm font-medium">Tags</label>
-            <div className="flex space-x-2">
+              <div className="flex space-x-2">
               <Input 
                 placeholder="e.g., 'Service'" 
                 value={currentTag}
                 onChange={e => setCurrentTag(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddTag()}
               />
-              <Button onClick={handleAddTag} variant="outline" size="icon"><Plus size={16} /></Button>
+              <Button onClick={handleAddTag} variant="outline" size="icon" className="btn"><Plus size={16} /></Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
               {bom.tags.map(tag => (
@@ -932,22 +927,22 @@ export default function ManualBomBuilder() {
             {success && <div className="text-success text-sm">{success}</div>}
             
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={handleExportBomToCsv} className="w-full bg-info hover:bg-info/80">
+              <Button onClick={handleExportBomToCsv} className="btn w-full bg-info hover:bg-info/80">
                 <Download size={16} className="mr-2" />
                 Export CSV
               </Button>
-              <Button onClick={handleImportBomFromCsv} variant="outline" className="w-full">
+              <Button onClick={handleImportBomFromCsv} variant="outline" className="btn w-full">
                 <Upload size={16} className="mr-2" />
                 Import CSV
               </Button>
             </div>
             
-            <Button onClick={() => handleSave(false)} disabled={isLoading} className="w-full">
+            <Button onClick={() => handleSave(false)} disabled={isLoading} className="btn w-full">
               <Save size={16} className="mr-2" />
               {isLoading ? "Saving..." : (bomId ? "Save Changes" : "Save BOM")}
             </Button>
             {bomId && (
-              <Button onClick={() => handleSave(true)} disabled={isLoading} variant="outline" className="w-full">
+              <Button onClick={() => handleSave(true)} disabled={isLoading} variant="outline" className="btn w-full">
                 {isLoading ? "Saving..." : `Save as v${version + 1}`}
               </Button>
             )}
@@ -965,7 +960,7 @@ export default function ManualBomBuilder() {
                 <Info size={18} className="text-accent" />
                 <h3 className="text-lg font-semibold">{detailType === 'component' ? 'Component Details' : 'Sub-Assembly Details'}</h3>
               </div>
-              <button className="ca-btn-secondary px-2 py-1 rounded" onClick={closeDetail}>
+              <button className="btn ca-btn-secondary px-2 py-1 rounded" onClick={closeDetail}>
                 <X size={16} />
               </button>
             </div>
@@ -1019,7 +1014,7 @@ export default function ManualBomBuilder() {
                   {/* Actions */}
                   <div className="flex flex-wrap gap-2 pt-2">
                     <button
-                      className="ca-btn-primary px-3 py-1.5 rounded"
+                      className="btn ca-btn-primary px-3 py-1.5 rounded"
                       onClick={() => {
                         const item = detailType === 'component' ? {
                           sku: detailData?.sku || detailItem?.sku || detailItem?.partNumber,
@@ -1037,7 +1032,7 @@ export default function ManualBomBuilder() {
                       <Plus size={16} className="inline mr-1" /> Add to BOM
                     </button>
                     <button
-                      className="ca-btn-secondary px-3 py-1.5 rounded"
+                      className="btn ca-btn-secondary px-3 py-1.5 rounded"
                       onClick={() => {
                         const text = detailType === 'component'
                           ? (detailData?.sku || detailItem?.sku || detailItem?.partNumber)
@@ -1048,7 +1043,7 @@ export default function ManualBomBuilder() {
                       <Copy size={16} className="inline mr-1" /> Copy {detailType === 'component' ? 'SKU' : 'ID'}
                     </button>
                     <button
-                      className="ca-btn-secondary px-3 py-1.5 rounded"
+                      className="btn ca-btn-secondary px-3 py-1.5 rounded"
                       onClick={() => {
                         const prefill = detailType === 'component'
                           ? (detailData?.sku || detailItem?.sku || detailItem?.description)
@@ -1070,7 +1065,7 @@ export default function ManualBomBuilder() {
                     </button>
                     {detailType === 'component' && (
                       <button
-                        className="ca-btn-secondary px-3 py-1.5 rounded"
+                        className="btn ca-btn-secondary px-3 py-1.5 rounded"
                         onClick={async () => {
                           try {
                             // Try local/manual system
@@ -1242,7 +1237,7 @@ function SubAssemblyCrudDialog({
                         size="sm"
                         variant="ghost"
                         onClick={() => onRemoveComponent(component.sku)}
-                        className="text-danger hover:text-danger/80"
+                        className="btn text-danger hover:text-danger/80"
                       >
                         <X size={16} />
                       </Button>
@@ -1290,13 +1285,13 @@ function SubAssemblyCrudDialog({
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={onCancel}>
+            <Button variant="outline" onClick={onCancel} className="btn">
               Cancel
             </Button>
             <Button
               onClick={onSave}
               disabled={loading}
-              className="bg-accent hover:bg-accent/80"
+              className="btn bg-accent hover:bg-accent/80"
             >
               {loading ? 'Saving...' : (editingSubAssembly ? 'Update' : 'Create')}
             </Button>
@@ -1433,7 +1428,7 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail, o
                     {itemKey === 'sku' && <td className="px-2 py-1.5 text-right font-medium">{item.price ? `$${item.price.toFixed(2)}` : '-'}</td>}
                     {itemKey !== 'sku' && <td className="px-2 py-1.5 text-xs text-muted-foreground">{item.category || '-'}</td>}
                     <td className="px-2 py-1.5 text-center">
-                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onAdd(item); }} className="h-6 w-6 p-0">
+                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onAdd(item); }} className="btn h-6 w-6 p-0">
                         <Plus size={14} />
                       </Button>
                     </td>
@@ -1444,7 +1439,7 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail, o
                             size="sm" 
                             variant="ghost" 
                             onClick={(e) => { e.stopPropagation(); onEdit(item); }} 
-                            className="h-6 w-6 p-0 text-accent hover:text-accent/80"
+                            className="btn h-6 w-6 p-0 text-accent hover:text-accent/80"
                             title="Edit"
                           >
                             <Edit size={12} />
@@ -1453,7 +1448,7 @@ function SearchableList({ searchFn, itemKey, itemDisplay, onAdd, onShowDetail, o
                             size="sm" 
                             variant="ghost" 
                             onClick={(e) => { e.stopPropagation(); onDelete(item[itemKey]); }} 
-                            className="h-6 w-6 p-0 text-danger hover:text-danger/80"
+                            className="btn h-6 w-6 p-0 text-danger hover:text-danger/80"
                             title="Delete"
                           >
                             <Trash2 size={12} />
@@ -1490,7 +1485,7 @@ function BomSection({ title, items, itemKey, type, updateQuantity, removeItem, o
               <div className="text-sm font-medium">{item.description || item[itemKey]}</div>
               <div className="text-xs text-muted-foreground">{item[itemKey]}</div>
             </div>
-            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeItem(item[itemKey], type); }}>
+            <Button size="sm" variant="ghost" className="btn" onClick={(e) => { e.stopPropagation(); removeItem(item[itemKey], type); }}>
               <X size={16} className="text-danger" />
             </Button>
           </div>

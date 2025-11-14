@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loadGlobalSettings, writeGlobalSettings } from './plugins/global-settings';
 import loggingService from './services/LoggingService';
+import ThemeToggle from './components/ThemeToggle';
+import RuntimeStatus from './components/RuntimeStatus';
 
 // Unused for now - may be used in future theme customization
 // const THEMES = [
@@ -28,6 +30,10 @@ import loggingService from './services/LoggingService';
 // ];
 
 export default function Settings() {
+  console.log('🔧 Settings component loaded');
+  console.log('🔧 Available tabs:', ['appearance', 'layout', 'runtime', 'customers', 'links', 'docs', 'global']);
+  console.log('🎨 Settings component loaded - checking for theme tabs...');
+  console.log('Available tabs should include: appearance, layout, runtime, customers, links, docs, global');
   const [settings, setSettings] = useState(null);
   const [globalSettings, setGlobalSettings] = useState({});
   const [gsLoading, setGsLoading] = useState(true);
@@ -260,6 +266,10 @@ export default function Settings() {
 
       <Tabs defaultValue="layout" className="space-y-6">
         <TabsList className="bg-gray-800 border border-gray-700">
+          <TabsTrigger value="appearance" className="data-[state=active]:bg-gray-700">
+            <Palette className="h-4 w-4 mr-2" />
+            Appearance
+          </TabsTrigger>
           <TabsTrigger value="layout" className="data-[state=active]:bg-gray-700">
             <Layout className="h-4 w-4 mr-2" />
             Layout
@@ -286,6 +296,35 @@ export default function Settings() {
             </TabsTrigger>
         </TabsList>
 
+        {/* Appearance Tab */}
+        <TabsContent value="appearance" className="space-y-6">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">Theme Preferences</CardTitle>
+              <CardDescription>Customize the look and feel of your application</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <Label className="text-gray-300 mb-3 block text-base">Color Theme</Label>
+                <p className="text-sm text-gray-400 mb-4">
+                  Choose between light and dark mode. Your preference will be saved automatically.
+                </p>
+                <ThemeToggle />
+              </div>
+
+              <div className="border-t border-gray-700 pt-6">
+                <Label className="text-gray-300 mb-3 block text-base">Theme Information</Label>
+                <div className="space-y-2 text-sm text-gray-400">
+                  <p>• Light mode uses warm earth tones with high contrast for readability</p>
+                  <p>• Dark mode features a muted color palette optimized for low-light environments</p>
+                  <p>• All UI components automatically adapt to your chosen theme</p>
+                  <p>• Custom shadows and borders adjust for each theme</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Runtime Tab */}
         <TabsContent value="runtime" className="space-y-6">
           <Card className="bg-gray-800 border-gray-700">
@@ -307,6 +346,10 @@ export default function Settings() {
                 <p className="text-xs text-gray-400">
                   For more information, see <strong>MULTI_USER_SYNC.md</strong> or <strong>SYNC_QUICK_START.md</strong>.
                 </p>
+              </div>
+
+              <div className="mt-4">
+                <RuntimeStatus />
               </div>
             </CardContent>
           </Card>

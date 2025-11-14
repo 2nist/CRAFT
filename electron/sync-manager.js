@@ -74,7 +74,7 @@ class SyncManager {
    * Add sync tracking columns to all tables
    */
   async addSyncColumns(db) {
-    const tables = ['components', 'sub_assemblies', 'quotes', 'projects', 'customers', 'manual_quotes']
+    const tables = ['components', 'sub_assemblies', 'quotes', 'projects', 'customers', 'manual_quotes', 'generated_numbers']
     
     for (const table of tables) {
       try {
@@ -123,8 +123,8 @@ class SyncManager {
 
     // Reset stats
     this.syncStats = {
-      pulled: { quotes: 0, components: 0, projects: 0, subAssemblies: 0, customers: 0, manualQuotes: 0 },
-      pushed: { quotes: 0, components: 0, projects: 0, subAssemblies: 0, customers: 0, manualQuotes: 0 },
+      pulled: { quotes: 0, components: 0, projects: 0, subAssemblies: 0, customers: 0, manualQuotes: 0, generatedNumbers: 0 },
+      pushed: { quotes: 0, components: 0, projects: 0, subAssemblies: 0, customers: 0, manualQuotes: 0, generatedNumbers: 0 },
       conflicts: 0
     }
 
@@ -288,7 +288,8 @@ class SyncManager {
       { name: 'sub_assemblies', key: 'subAssemblyId' },
       { name: 'quotes', key: 'quoteId' },
       { name: 'projects', key: 'projectId' },
-      { name: 'manual_quotes', key: 'id' }
+      { name: 'manual_quotes', key: 'id' },
+      { name: 'generated_numbers', key: 'id' }
     ]
 
     for (const table of tables) {
@@ -366,7 +367,8 @@ class SyncManager {
     if (pulled > 0 || conflicts > 0) {
       console.log(`   ✓ ${tableName}: pulled ${pulled}, conflicts ${conflicts}`)
       const statsKey = tableName === 'sub_assemblies' ? 'subAssemblies' : 
-                      tableName === 'manual_quotes' ? 'manualQuotes' : tableName
+                      tableName === 'manual_quotes' ? 'manualQuotes' : 
+                      tableName === 'generated_numbers' ? 'generatedNumbers' : tableName
       this.syncStats.pulled[statsKey] = pulled
       this.syncStats.conflicts += conflicts
     }
@@ -382,7 +384,8 @@ class SyncManager {
       { name: 'sub_assemblies', key: 'subAssemblyId' },
       { name: 'quotes', key: 'quoteId' },
       { name: 'projects', key: 'projectId' },
-      { name: 'manual_quotes', key: 'id' }
+      { name: 'manual_quotes', key: 'id' },
+      { name: 'generated_numbers', key: 'id' }
     ]
 
     for (const table of tables) {
@@ -441,7 +444,8 @@ class SyncManager {
     if (pushed > 0) {
       console.log(`   ✓ ${tableName}: pushed ${pushed}`)
       const statsKey = tableName === 'sub_assemblies' ? 'subAssemblies' : 
-                      tableName === 'manual_quotes' ? 'manualQuotes' : tableName
+                      tableName === 'manual_quotes' ? 'manualQuotes' : 
+                      tableName === 'generated_numbers' ? 'generatedNumbers' : tableName
       this.syncStats.pushed[statsKey] = pushed
     }
   }

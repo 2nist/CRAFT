@@ -4,13 +4,13 @@ import { Zap, Flame, ChevronsRight } from 'lucide-react';
 // Re-usable Input
 const TextInput = ({ label, value, onChange, placeholder, type = 'number' }) => (
   <div className="w-full">
-    <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{label}</label>
+    <label className="block text-sm font-medium text-muted-foreground mb-1">{label}</label>
     <input
       type={type}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      className="w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
     />
   </div>
 );
@@ -18,11 +18,11 @@ const TextInput = ({ label, value, onChange, placeholder, type = 'number' }) => 
 // Re-usable Select
 const Select = ({ label, value, onChange, options }) => (
   <div className="w-full">
-    <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{label}</label>
+    <label className="block text-sm font-medium text-muted-foreground mb-1">{label}</label>
     <select
       value={value}
       onChange={onChange}
-      className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      className="w-full p-2 border border-input bg-background rounded-md shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
     >
       {options.map(opt => (
         <option key={opt.value} value={opt.value}>
@@ -36,12 +36,12 @@ const Select = ({ label, value, onChange, options }) => (
 // Re-usable Result Display
 const ResultDisplay = ({ fla }) => (
   <div className="mt-4">
-    <label className="block text-sm font-medium text-slate-500 dark:text-slate-400">Calculated FLA</label>
-    <div className="mt-1 p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
-      <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+    <label className="block text-sm font-medium text-muted-foreground">Calculated FLA</label>
+    <div className="mt-1 p-4 bg-muted rounded-lg text-center">
+      <span className="text-3xl font-bold text-primary">
         {fla !== null ? fla.toFixed(2) : '0.00'}
       </span>
-      <span className="ml-2 text-lg text-slate-600 dark:text-slate-300">Amps</span>
+      <span className="ml-2 text-lg text-muted-foreground">Amps</span>
     </div>
   </div>
 );
@@ -225,18 +225,18 @@ export default function FlaCalculator() {
 
   return (
     <div className="max-w-md mx-auto p-4">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">FLA Calculator</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-4">FLA Calculator</h1>
       
       {/* Tabs */}
       <div className="mb-4">
-        <div className="border-b border-slate-200 dark:border-slate-700">
+        <div className="border-b border-border">
           <nav className="-mb-px flex space-x-4" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('motor')}
               className={`flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'motor'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               }`}
             >
               <Zap className="w-5 h-5 mr-2" /> Motor FLA
@@ -245,8 +245,8 @@ export default function FlaCalculator() {
               onClick={() => setActiveTab('heater')}
               className={`flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'heater'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               }`}
             >
               <Flame className="w-5 h-5 mr-2" /> Heater FLA
@@ -256,7 +256,7 @@ export default function FlaCalculator() {
       </div>
 
       {/* Content */}
-      <div className="p-4 bg-white dark:bg-slate-800 rounded-lg shadow">
+      <div className="p-4 bg-card rounded-lg shadow">
         <div className={activeTab === 'motor' ? '' : 'hidden'}>
           <MotorCalculator />
         </div>
@@ -265,7 +265,7 @@ export default function FlaCalculator() {
         </div>
       </div>
 
-      <div className="mt-4 text-xs text-slate-400 dark:text-slate-500 text-center">
+      <div className="mt-4 text-xs text-muted-foreground text-center">
         Motor calculations based on NEC® Tables 430.248 & 430.250.
         <br />
         Always consult official NEC® guidelines and local codes.

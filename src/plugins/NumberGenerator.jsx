@@ -4,11 +4,11 @@ import loggingService from '../services/LoggingService';
 
 const SelectCode = ({ label, code, options, onCodeChange }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-400">{label}</label>
+    <label className="block text-sm font-medium text-muted-foreground">{label}</label>
     <select 
       value={code} 
       onChange={e => onCodeChange(e.target.value)}
-      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+      className="mt-1 block w-full bg-muted border border-border rounded-md p-2 text-foreground"
     >
       <option value="">Select...</option>
       {options.map(opt => <option key={opt.const} value={opt.const}>{opt.const} - {opt.description}</option>)}
@@ -29,11 +29,11 @@ const SelectCustomer = ({ value, onChange }) => {
   
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-400">Customer (3-digit ID number)</label>
+      <label className="block text-sm font-medium text-muted-foreground">Customer (3-digit ID number)</label>
       <select 
         value={value} 
         onChange={onChange}
-        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+        className="mt-1 block w-full bg-muted border border-border rounded-md p-2 text-foreground"
       >
         <option value="">Select Customer...</option>
         {customers.map(c => {
@@ -158,7 +158,7 @@ export default function NumberGenerator({ context }) {
 
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-6">Number Generator</h1>
+      <h1 className="text-3xl font-bold text-foreground mb-6">Number Generator</h1>
       
       {/* Mode Selector */}
       <div className="mb-6 flex gap-2">
@@ -166,8 +166,8 @@ export default function NumberGenerator({ context }) {
           onClick={() => setMode('quote')}
           className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
             mode === 'quote' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
           Quote Number
@@ -176,21 +176,21 @@ export default function NumberGenerator({ context }) {
           onClick={() => setMode('project')}
           className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
             mode === 'project' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
           Project Number
         </button>
       </div>
 
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-4">
+      <div className="bg-card rounded-lg shadow-lg p-6 space-y-4">
         <SelectCustomer value={customer} onChange={e => setCustomer(e.target.value)} />
         
         {mode === 'project' && (
           <div>
-            <label className="block text-sm font-medium text-gray-400">
-              PO Number (4 digits) <span className="text-red-400">*</span>
+            <label className="block text-sm font-medium text-muted-foreground">
+              PO Number (4 digits) <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
@@ -198,7 +198,7 @@ export default function NumberGenerator({ context }) {
               onChange={e => setPoNumber(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="e.g., 1234"
               maxLength="4"
-              className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+              className="mt-1 block w-full bg-muted border border-border rounded-md p-2 text-foreground"
             />
             {poNumber && poNumber.length !== 4 && (
               <p className="text-xs text-orange-400 mt-1">PO number must be exactly 4 digits</p>
@@ -217,8 +217,8 @@ export default function NumberGenerator({ context }) {
           disabled={!isFormValid()}
           className={`w-full font-bold py-3 px-4 rounded-lg transition-colors ${
             isFormValid()
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
           }`}
         >
           Generate {mode === 'quote' ? 'Quote' : 'Project'} Number
@@ -226,7 +226,7 @@ export default function NumberGenerator({ context }) {
 
         {generatedNumber && (
           <div className="pt-4">
-            <label className="block text-sm font-medium text-slateish/60">
+            <label className="block text-sm font-medium text-muted-foreground">
               Generated {mode === 'quote' ? 'Quote' : 'Project'} Number:
             </label>
             <div className="flex items-center gap-2 mt-1">
@@ -234,13 +234,13 @@ export default function NumberGenerator({ context }) {
                 type="text" 
                 readOnly 
                 value={generatedNumber} 
-                className={`w-full bg-slateish/5 border border-slateish/30 rounded-md p-3 text-lg font-mono ${
+                className={`w-full bg-muted/50 border border-border rounded-md p-3 text-lg font-mono ${
                   mode === 'quote' ? 'text-accent' : 'text-success'
                 }`}
               />
               <button
                 onClick={handleCopy}
-                className={`flex-shrink-0 px-4 py-3 rounded-md ${hasCopied ? 'ca-btn-success' : 'ca-btn-secondary'} text-white`}
+                className={`flex-shrink-0 px-4 py-3 rounded-md ${hasCopied ? 'bg-success text-success-foreground' : 'bg-secondary text-secondary-foreground'} hover:bg-secondary/80`}
               >
                 {hasCopied ? <Check size={20} /> : <Copy size={20} />}
               </button>

@@ -4,10 +4,10 @@ import { DollarSign, Percent, ArrowRight, Clock, Wrench, Code, Package, Copy, Ch
 // Re-usable Input with Icon
 const IconInput = ({ label, value, onValueChange, placeholder, icon: Icon, type = 'number', step = 'any' }) => (
   <div className="w-full">
-    <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{label}</label>
+    <label className="block text-sm font-medium text-muted-foreground mb-1">{label}</label>
     <div className="relative">
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-        <Icon className="w-5 h-5 text-slate-400" />
+        <Icon className="w-5 h-5 text-muted-foreground" />
       </div>
       <input
         type={type}
@@ -15,17 +15,17 @@ const IconInput = ({ label, value, onValueChange, placeholder, icon: Icon, type 
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full p-2 pl-10 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full p-2 pl-10 border border-input bg-background rounded-md shadow-sm focus:ring-2 focus:ring-primary focus:border-primary"
       />
     </div>
   </div>
 );
 
 const ResultCard = ({ label, value, icon: Icon, isPrice = false }) => (
-  <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+  <div className="p-4 bg-muted rounded-lg">
     <div className="flex items-center mb-1">
-      <Icon className="w-4 h-4 text-slate-500 dark:text-slate-400 mr-2" />
-      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+      <Icon className="w-4 h-4 text-muted-foreground mr-2" />
+      <p className="text-sm text-muted-foreground">{label}</p>
     </div>
     <p className={`text-2xl font-bold ${isPrice ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}>
       {value}
@@ -55,6 +55,14 @@ export default function MarginCalculator() {
   
   // Copy state
   const [hasCopied, setHasCopied] = useState(false);
+  
+  // Database save/load state
+  const [quoteNumber, setQuoteNumber] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [customer, setCustomer] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
     // Parse all inputs
@@ -111,6 +119,100 @@ export default function MarginCalculator() {
     return (num * 100).toFixed(2) + '%';
   };
 
+  const handleSaveToDatabase = async () => {
+    if (!quoteNumber.trim()) {
+      setSaveMessage('Please enter a quote number');
+      setTimeout(() => setSaveMessage(''), 3000);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage('');
+
+    try {
+      const marginData = {
+        quoteNumber: quoteNumber.trim(),
+        projectName: projectName.trim(),
+        customer: customer.trim(),
+        mode,
+        inputs: {
+          estimatedBOM: parseFloat(estimatedBOM) || 0,
+          engineeringHours: parseFloat(engineeringHours) || 0,
+          productionHours: parseFloat(productionHours) || 0,
+          programmingHours: parseFloat(programmingHours) || 0,
+          otherCosts: parseFloat(otherCosts) || 0,
+          overheadPercent: parseFloat(overheadPercent) || 0,
+          purchasePrice: parseFloat(purchasePrice) || 0,
+          targetMargin: parseFloat(targetMargin) || 0
+        },
+        results: {
+          laborCost,
+          totalCOGS,
+          profit,
+          marginPercent,
+          priceForTargetMargin
+        }
+      };
+
+      const result = await window.marginCalc.save(marginData);
+      
+      if (result.success) {
+        setSaveMessage('✓ Saved to database');
+        setTimeout(() => setSaveMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving to database:', error);
+      setSaveMessage('✗ Error saving: ' + error.message);
+      setTimeout(() => setSaveMessage(''), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLoadFromDatabase = async () => {
+    if (!quoteNumber.trim()) {
+      setSaveMessage('Please enter a quote number to load');
+      setTimeout(() => setSaveMessage(''), 3000);
+      return;
+    }
+
+    setIsLoading(true);
+    setSaveMessage('');
+
+    try {
+      const result = await window.marginCalc.get(quoteNumber.trim());
+      
+      if (result.success && result.data) {
+        const { mode: savedMode, inputs, results } = result.data;
+        
+        setMode(savedMode);
+        setEstimatedBOM(inputs.estimatedBOM.toString());
+        setEngineeringHours(inputs.engineeringHours.toString());
+        setProductionHours(inputs.productionHours.toString());
+        setProgrammingHours(inputs.programmingHours.toString());
+        setOtherCosts(inputs.otherCosts.toString());
+        setOverheadPercent(inputs.overheadPercent.toString());
+        setPurchasePrice(inputs.purchasePrice.toString());
+        setTargetMargin(inputs.targetMargin.toString());
+        
+        setProjectName(result.projectName || '');
+        setCustomer(result.customer || '');
+        
+        setSaveMessage('✓ Loaded from database');
+        setTimeout(() => setSaveMessage(''), 3000);
+      } else {
+        setSaveMessage('No calculation found for this quote number');
+        setTimeout(() => setSaveMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error loading from database:', error);
+      setSaveMessage('✗ Error loading: ' + error.message);
+      setTimeout(() => setSaveMessage(''), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCopyResults = () => {
     const results = [];
     results.push('=== MARGIN CALCULATOR RESULTS ===\n');
@@ -147,7 +249,64 @@ export default function MarginCalculator() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Margin Calculator</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-4">Margin Calculator</h1>
+      
+      {/* Database Save/Load Section */}
+      <div className="mb-6 p-4 bg-muted rounded-lg border border-border">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Quote Number *</label>
+            <input
+              type="text"
+              value={quoteNumber}
+              onChange={(e) => setQuoteNumber(e.target.value)}
+              placeholder="e.g., CA251114001-XX..."
+              className="w-full p-2 border border-input bg-background rounded-md text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Project Name</label>
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="Optional"
+              className="w-full p-2 border border-input bg-background rounded-md text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Customer</label>
+            <input
+              type="text"
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
+              placeholder="Optional"
+              className="w-full p-2 border border-input bg-background rounded-md text-sm"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveToDatabase}
+            disabled={isSaving}
+            className="px-4 py-2 bg-success text-white rounded-md hover:bg-success/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            {isSaving ? 'Saving...' : 'Save to Database'}
+          </button>
+          <button
+            onClick={handleLoadFromDatabase}
+            disabled={isLoading}
+            className="px-4 py-2 bg-info text-white rounded-md hover:bg-info/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            {isLoading ? 'Loading...' : 'Load from Database'}
+          </button>
+          {saveMessage && (
+            <span className={`text-sm ${saveMessage.startsWith('✓') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {saveMessage}
+            </span>
+          )}
+        </div>
+      </div>
       
       {/* Mode Toggle */}
       <div className="mb-6 flex gap-2">
@@ -155,8 +314,8 @@ export default function MarginCalculator() {
           onClick={() => setMode('FORWARD')}
           className={`px-4 py-2 rounded-md font-medium transition-colors ${
             mode === 'FORWARD'
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}
         >
           Forward (Price → Margin)
@@ -165,8 +324,8 @@ export default function MarginCalculator() {
           onClick={() => setMode('REVERSE')}
           className={`px-4 py-2 rounded-md font-medium transition-colors ${
             mode === 'REVERSE'
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}
         >
           Reverse (Margin → Price)
@@ -176,8 +335,8 @@ export default function MarginCalculator() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Inputs */}
         <div className="space-y-4">
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Cost Inputs</h2>
+          <div className="p-6 bg-card rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Cost Inputs</h2>
             
             <IconInput
               label="Estimated BOM"
@@ -220,8 +379,8 @@ export default function MarginCalculator() {
             />
           </div>
 
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Parameters</h2>
+          <div className="p-6 bg-card rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Parameters</h2>
             
             <IconInput
               label="Overhead % (decimal)"
@@ -255,15 +414,15 @@ export default function MarginCalculator() {
 
         {/* Right Column - Results */}
         <div className="space-y-4">
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow space-y-4">
+          <div className="p-6 bg-card rounded-lg shadow space-y-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Calculated Results</h2>
+              <h2 className="text-lg font-semibold text-foreground">Calculated Results</h2>
               <button
                 onClick={handleCopyResults}
                 className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded transition-colors ${
                   hasCopied 
-                    ? 'bg-success text-white' 
-                    : 'bg-transparent border border-slateish/30 text-slateish dark:text-slate-300 hover:border-accent hover:text-accent'
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-transparent border border-border text-foreground hover:border-accent hover:text-accent'
                 }`}
                 title="Copy results to clipboard"
               >
@@ -318,7 +477,7 @@ export default function MarginCalculator() {
         </div>
       </div>
 
-      <div className="mt-6 text-xs text-slate-400 dark:text-slate-500 text-center">
+      <div className="mt-6 text-xs text-muted-foreground text-center">
         <strong>Forward Mode:</strong> Enter costs and purchase price to calculate margin.
         <br />
         <strong>Reverse Mode:</strong> Enter costs and target margin to calculate required price.

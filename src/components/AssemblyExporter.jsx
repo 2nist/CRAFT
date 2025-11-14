@@ -234,13 +234,13 @@ const AssemblyExporter = () => {
       <div className="flex space-x-4 mb-4">
         <button
           onClick={handleExportAssemblies}
-          className="ca-btn-primary px-6 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+          className="btn ca-btn-primary px-6 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
         >
           Export Selected Assemblies
         </button>
         <button
           onClick={loadAssemblyData}
-          className="ca-btn-secondary px-6 py-2 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+          className="btn ca-btn-secondary px-6 py-2 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
         >
           Refresh Data
         </button>

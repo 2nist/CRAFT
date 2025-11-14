@@ -1,0 +1,45 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.electron.app
+productName: Craft Automation CPQ
+files:
+  - filter:
+      - dist/**/*
+      - dist-electron/**/*
+      - src/data/**/*
+      - '!node_modules/sqlite3/build-tmp-napi-*/**/*'
+asarUnpack:
+  - node_modules/sqlite3/**/*
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: dir
+      arch:
+        - x64
+  sign: false
+  certificateFile: null
+  certificatePassword: <stripped sensitive data>
+  verifyUpdateCodeSignature: false
+  signDlls: false
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Craft Automation CPQ
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  license: LICENSE
+  deleteAppDataOnUninstall: false
+extraMetadata:
+  main: dist-electron/main.cjs
+npmRebuild: false
+buildDependenciesFromSource: false
+nodeGypRebuild: false
+afterPack: scripts/after-pack.cjs
+electronVersion: 28.3.3

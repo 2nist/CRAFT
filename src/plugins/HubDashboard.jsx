@@ -88,8 +88,8 @@ export default function HubDashboard({ context }) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-gray-400">Loading dashboard...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -101,16 +101,16 @@ export default function HubDashboard({ context }) {
   return (
     <div className="container mx-auto max-w-7xl">
       {settings.layout.showWelcomeMessage && settings.welcomeMessage.enabled && (
-        <div className="mb-8 p-8 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-2xl border border-blue-700/50 backdrop-blur-sm">
+        <div className="mb-8 p-8 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl border border-primary/30 backdrop-blur-sm">
           {settings.welcomeMessage.showLogo && (
             <div className="mb-4">
               <img src={logoUrl} alt="Craft Automation" className="h-16" />
             </div>
           )}
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
             {settings.welcomeMessage.title}
           </h1>
-          <p className="text-lg text-gray-300">
+          <p className="text-lg text-muted-foreground">
             {settings.welcomeMessage.subtitle}
           </p>
         </div>
@@ -124,7 +124,7 @@ export default function HubDashboard({ context }) {
               actions={
                 <button
                   onClick={() => { setDraftTools(toolboxItems); setIsEditingToolbox(true); }}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md border border-slate-700 bg-slate-800/60 hover:bg-slate-800"
+                  className="px-3 py-1.5 text-sm font-medium rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 >
                   Edit Toolbox
                 </button>
@@ -138,8 +138,8 @@ export default function HubDashboard({ context }) {
                       onClick={() => setActiveTool(tool)}
                       className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
                         activeTool?.title === tool.title
-                          ? 'border-blue-500/40 bg-blue-500/10 text-blue-100'
-                          : 'border-slate-700 bg-slate-800/60 hover:bg-slate-800'
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'border-border bg-card hover:bg-muted'
                       }`}
                     >
                       <span className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function HubDashboard({ context }) {
                   {activeTool ? (
                     <ToolIframe tool={activeTool} />
                   ) : (
-                    <div className="p-6 text-sm text-slate-400">Select a tool to preview.</div>
+                    <div className="p-6 text-sm text-muted-foreground">Select a tool to preview.</div>
                   )}
                 </div>
               </div>
@@ -162,19 +162,19 @@ export default function HubDashboard({ context }) {
           {settings.layout.showRecentQuotes && (
             <Widget title="Recent Quotes">
               {recentQuotes.length > 0 ? (
-                <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+                <ul className="divide-y divide-border">
                   {recentQuotes.map((quote) => (
-                    <li key={quote.quoteId} className="p-3 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg">
+                    <li key={quote.quoteId} className="p-3 flex justify-between items-center hover:bg-muted rounded-lg">
                       <div>
-                        <div className="font-semibold text-blue-600 dark:text-blue-400">{quote.projectName || 'Untitled Project'}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">{quote.quoteId}</div>
+                        <div className="font-semibold text-primary">{quote.projectName || 'Untitled Project'}</div>
+                        <div className="text-sm text-muted-foreground">{quote.quoteId}</div>
                       </div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">{quote.customer || 'No Customer'}</div>
+                      <div className="text-sm text-muted-foreground">{quote.customer || 'No Customer'}</div>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-slate-500 dark:text-slate-400 p-3">No recent quotes found.</p>
+                <p className="text-muted-foreground p-3">No recent quotes found.</p>
               )}
             </Widget>
           )}
@@ -188,9 +188,9 @@ export default function HubDashboard({ context }) {
                     href={item.path} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    className="flex flex-col items-center p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                   >
-                    <DynamicIcon name={item.icon} className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-2" />
+                    <DynamicIcon name={item.icon} className="h-8 w-8 text-primary mb-2" />
                     <span className="text-sm font-medium text-center">{item.title}</span>
                   </a>
                 ))}
@@ -209,9 +209,9 @@ export default function HubDashboard({ context }) {
                     href={link.link} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="flex items-center p-3 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    className="flex items-center p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                   >
-                    <DynamicIcon name={link.icon} className="h-5 w-5 text-slate-600 dark:text-slate-300 mr-3" />
+                    <DynamicIcon name={link.icon} className="h-5 w-5 text-muted-foreground mr-3" />
                     <span className="font-medium">{link.title}</span>
                   </a>
                 ))}
@@ -223,22 +223,22 @@ export default function HubDashboard({ context }) {
 
       {isEditingToolbox && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-          <div className="w-full max-w-3xl max-h-full overflow-y-auto bg-slate-950 border border-slate-800 rounded-2xl shadow-xl">
-            <div className="flex items-center justify-between p-5 border-b border-slate-800">
+          <div className="w-full max-w-3xl max-h-full overflow-y-auto bg-background border border-border rounded-2xl shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b border-border">
               <h3 className="text-lg font-semibold">Edit Toolbox</h3>
-              <button onClick={() => setIsEditingToolbox(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setIsEditingToolbox(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
             <div className="p-5 space-y-4">
               {draftTools.length === 0 && (
-                <div className="text-sm text-slate-400">No tools added yet.</div>
+                <div className="text-sm text-muted-foreground">No tools added yet.</div>
               )}
 
               {draftTools.map((tool, idx) => (
-                <div key={idx} className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <div key={idx} className="p-4 rounded-xl border border-border bg-card">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                     <div className="md:col-span-4">
-                      <label className="text-xs text-slate-400">Title</label>
+                      <label className="text-xs text-muted-foreground">Title</label>
                       <input 
                         type="text" 
                         value={tool.title || ''}
@@ -246,11 +246,11 @@ export default function HubDashboard({ context }) {
                           const v = e.target.value;
                           setDraftTools(prev => prev.map((t,i) => i===idx ? { ...t, title: v } : t));
                         }}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-slate-700 bg-slate-950"
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
                       />
                     </div>
                     <div className="md:col-span-6">
-                      <label className="text-xs text-slate-400">Path</label>
+                      <label className="text-xs text-muted-foreground">Path</label>
                       <input 
                         type="text" 
                         value={tool.path || ''}
@@ -259,11 +259,11 @@ export default function HubDashboard({ context }) {
                           setDraftTools(prev => prev.map((t,i) => i===idx ? { ...t, path: v } : t));
                         }}
                         placeholder="/toolbox/your-file.html"
-                        className="w-full px-3 py-2 text-sm rounded-md border border-slate-700 bg-slate-950 font-mono"
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background font-mono"
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-xs text-slate-400">Icon</label>
+                      <label className="text-xs text-muted-foreground">Icon</label>
                       <input 
                         type="text" 
                         value={tool.icon || ''}
@@ -272,22 +272,22 @@ export default function HubDashboard({ context }) {
                           setDraftTools(prev => prev.map((t,i) => i===idx ? { ...t, icon: v } : t));
                         }}
                         placeholder="Wrench"
-                        className="w-full px-3 py-2 text-sm rounded-md border border-slate-700 bg-slate-950"
+                        className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
                       />
                     </div>
                     <div className="md:col-span-12 flex items-center gap-2">
                       <button
-                        className="px-2 py-1 text-xs rounded-md border border-slate-700 bg-slate-800"
+                        className="px-2 py-1 text-xs rounded-md border border-border bg-secondary text-secondary-foreground"
                         onClick={() => setDraftTools(prev => idx>0 ? (()=>{ const c=[...prev]; [c[idx-1],c[idx]]=[c[idx],c[idx-1]]; return c; })() : prev)}
                         title="Move up"
                       >↑</button>
                       <button
-                        className="px-2 py-1 text-xs rounded-md border border-slate-700 bg-slate-800"
+                        className="px-2 py-1 text-xs rounded-md border border-border bg-secondary text-secondary-foreground"
                         onClick={() => setDraftTools(prev => idx<prev.length-1 ? (()=>{ const c=[...prev]; [c[idx+1],c[idx]]=[c[idx],c[idx+1]]; return c; })() : prev)}
                         title="Move down"
                       >↓</button>
                       <button
-                        className="px-2 py-1 text-xs rounded-md border border-red-700 bg-red-900/40 text-red-200"
+                        className="px-2 py-1 text-xs rounded-md border border-destructive bg-destructive/10 text-destructive"
                         onClick={() => setDraftTools(prev => prev.filter((_,i)=>i!==idx))}
                       >Remove</button>
                     </div>
@@ -297,7 +297,7 @@ export default function HubDashboard({ context }) {
 
               <div>
                 <button
-                  className="px-3 py-2 text-sm rounded-md border border-slate-700 bg-slate-800"
+                  className="px-3 py-2 text-sm rounded-md border border-border bg-secondary text-secondary-foreground"
                   onClick={() => setDraftTools(prev => [...prev, { title: 'New Tool', path: '/toolbox/your-file.html', icon: 'Wrench' }])}
                 >
                   + Add Tool
@@ -305,10 +305,10 @@ export default function HubDashboard({ context }) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 p-5 border-t border-slate-800">
+            <div className="flex justify-end gap-2 p-5 border-t border-border">
               <button
                 onClick={() => setIsEditingToolbox(false)}
-                className="px-4 py-2 text-sm rounded-md border border-slate-700 bg-slate-800"
+                className="px-4 py-2 text-sm rounded-md border border-border bg-secondary text-secondary-foreground"
               >Cancel</button>
               <button
                 onClick={async () => {
@@ -326,7 +326,7 @@ export default function HubDashboard({ context }) {
                     setIsEditingToolbox(false);
                   }
                 }}
-                className="px-4 py-2 text-sm font-medium rounded-md border border-blue-600 bg-blue-600/20 text-blue-100 hover:bg-blue-600/30"
+                className="px-4 py-2 text-sm font-medium rounded-md border border-primary bg-primary/10 text-primary hover:bg-primary/20"
               >Save</button>
             </div>
           </div>
@@ -337,8 +337,8 @@ export default function HubDashboard({ context }) {
 }
 
 const Widget = ({ title, children, actions = null }) => (
-  <section className="bg-white dark:bg-slate-800/50 shadow-sm rounded-xl border border-slate-200 dark:border-slate-700">
-    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+  <section className="bg-card shadow-sm rounded-xl border border-border">
+    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
       <h2 className="text-lg font-semibold">{title}</h2>
       {actions}
     </div>
@@ -375,14 +375,14 @@ const ToolIframe = ({ tool }) => {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-900/60 flex items-center justify-center" style={{ height: 420 }}>
-        <div className="text-sm text-slate-400">Loading tool...</div>
+      <div className="rounded-xl border border-border overflow-hidden bg-card flex items-center justify-center" style={{ height: 420 }}>
+        <div className="text-sm text-muted-foreground">Loading tool...</div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-700 overflow-hidden bg-slate-900/60">
+    <div className="rounded-xl border border-border overflow-hidden bg-card">
       <iframe
         key={tool.path}
         src={iframeSrc}

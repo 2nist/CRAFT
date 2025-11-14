@@ -10,7 +10,6 @@ import loggingService from './services/LoggingService';
 export default function App() {
   const [plugins, setPlugins] = useState([]);
   const [activeTab, setActiveTab] = useState('TOOLS');
-  const [themeSettings, setThemeSettings] = useState(null);
   const { openSearchModal } = useAppContext();
 
   // Plugin categories
@@ -18,59 +17,6 @@ export default function App() {
     'TOOLS': ['fla-calc', 'margin-calc', 'manual-bom-builder', 'number-generator'],
     'PRODUCTS': ['sub-assembly-manager', 'product-template-manager', 'component-manager', 'bom-importer'],
     'QUOTING': ['quote-configurator', 'number-generator', 'margin-calc']
-  };
-
-  // Load and apply theme settings
-  useEffect(() => {
-    async function loadThemeSettings() {
-      try {
-        const settings = await window.api.getDashboardSettings();
-        setThemeSettings(settings);
-        applyTheme(settings);
-      } catch (error) {
-        console.error('Failed to load theme settings:', error);
-        // Apply defaults if loading fails
-        applyTheme({ theme: 'slate', customization: { accentColor: 'blue' } });
-      }
-    }
-    loadThemeSettings();
-  }, []);
-
-  // Reapply theme when settings change
-  useEffect(() => {
-    if (themeSettings) {
-      applyTheme(themeSettings);
-    }
-  }, [themeSettings]);
-
-  // Apply theme to document
-  const applyTheme = (settings) => {
-    const root = document.documentElement;
-    
-    // Enable dark mode
-    root.classList.add('dark');
-    
-    // Remove all theme classes first
-    root.classList.remove('theme-slate', 'theme-zinc', 'theme-stone', 'theme-gray', 'theme-neutral');
-    
-    // Add selected theme class
-    if (settings?.theme) {
-      root.classList.add(`theme-${settings.theme}`);
-    }
-    
-    // Apply accent color via CSS custom property
-    const accentColors = {
-      blue: '217 91% 60%',
-      purple: '271 91% 65%',
-      green: '142 71% 45%',
-      orange: '25 95% 53%',
-      red: '0 84% 60%'
-    };
-    
-    const accentColor = settings?.customization?.accentColor || 'blue';
-    if (accentColors[accentColor]) {
-      root.style.setProperty('--accent-hsl', accentColors[accentColor]);
-    }
   };
 
   useEffect(() => {
@@ -145,7 +91,7 @@ export default function App() {
 
   return (
     <HashRouter>
-      <div className="flex flex-col h-screen antialiased text-slateish dark:text-slate-200 bg-sand dark:bg-slate-900">
+      <div className="flex flex-col h-screen antialiased text-foreground bg-background">
         <TopTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
         <div className="flex flex-1 overflow-hidden">
           <LeftSidebar plugins={visiblePlugins} />

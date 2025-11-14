@@ -877,6 +877,27 @@ async function initializeDatabaseTables(db) {
     console.log('manual_quotes table created successfully')
 
     // Generated numbers table (for tracking quote and project number generation)
+    console.log('Creating generated_numbers table...')
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS generated_numbers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL, -- 'quote' or 'project'
+        mainId TEXT NOT NULL,
+        fullId TEXT NOT NULL,
+        customerCode TEXT,
+        customerName TEXT,
+        industry TEXT,
+        product TEXT,
+        control TEXT,
+        scope TEXT,
+        poNumber TEXT,
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_by TEXT,
+        synced_at DATETIME
+      )
+    `)
+    console.log('generated_numbers table created successfully')
 
     console.log('Database tables initialized successfully')
 
@@ -1136,6 +1157,7 @@ async function initializeGeneratedNumbersDatabase() {
     console.log('Generated numbers database connected successfully')
 
     // Create generated numbers table
+    console.log('Creating generated numbers table in separate database...')
     await generatedNumbersDb.exec(`
       CREATE TABLE IF NOT EXISTS generated_numbers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1149,9 +1171,13 @@ async function initializeGeneratedNumbersDatabase() {
         control TEXT,
         scope TEXT,
         poNumber TEXT,
-        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_by TEXT,
+        synced_at DATETIME
       )
     `)
+    console.log('Generated numbers table created in separate database successfully')
 
     console.log('Generated numbers database initialized successfully')
   } catch (error) {
@@ -1221,6 +1247,7 @@ async function initializeSyncManager() {
     if (error.stack) console.error('   Stack:', error.stack)
     // Don't throw - allow app to continue without sync capability
     syncManager = null
+    console.log('⚠️  App will continue without sync functionality')
   }
 }
 
@@ -1894,7 +1921,7 @@ ipcMain.handle('sync:getStatus', async () => {
         message: 'Sync manager not initialized'
       }
     }
-    return await syncManager.getStatus()
+    return syncManager.getStatus()
   } catch (error) {
     console.error('Error getting sync status:', error)
     throw error
@@ -1957,6 +1984,77 @@ ipcMain.handle('plugins:getHTML', async (event, pluginId) => {
   } catch (err) {
     console.error(`Error loading plugin HTML for ${pluginId}:`, err)
     throw err
+  }
+})
+
+// Runtime and NAS diagnostic IPC handlers
+ipcMain.handle('runtime:getStatus', async () => {
+  try {
+    const status = await getRuntimeStatus()
+    return status
+  } catch (err) {
+    console.error('Error getting runtime status via IPC:', err)
+    return { ok: false, error: String(err.message || err) }
+  }
+})
+
+ipcMain.handle('runtime:runDiagnostics', async (event, options = {}) => {
+  try {
+    // Run the repository diagnostics script in non-destructive mode and return JSON output
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'nas-diagnostics.js')
+    const { execFileSync } = await import('child_process')
+    const args = []
+    // Prefer resolved runtime root when available
+    if (resolvedRuntimeRoot) {
+      args.push('--root', resolvedRuntimeRoot)
+    }
+    // Respect options
+    if (options.skipPing) args.push('--skip-ping')
+    if (options.skipWrite !== false) args.push('--skip-write')
+    args.push('--json')
+
+    try {
+      // Use `node` executable; assume node is available in PATH in dev/test environments
+      const stdout = execFileSync('node', [scriptPath, ...args], { encoding: 'utf8', timeout: 60000 })
+      try {
+        return JSON.parse(stdout)
+      } catch (parseErr) {
+        return { ok: false, error: 'Diagnostics produced non-JSON output', raw: stdout }
+      }
+    } catch (execErr) {
+      console.error('Diagnostics script failed:', execErr)
+      return { ok: false, error: String(execErr.message || execErr) }
+    }
+  } catch (err) {
+    console.error('Error running diagnostics via IPC:', err)
+    return { ok: false, error: String(err.message || err) }
+  }
+})
+
+// Backwards-compatible handler (`runtime:run-diagnostics`)
+ipcMain.handle('runtime:run-diagnostics', async (event, options = {}) => {
+  return ipcMain.invoke ? ipcMain.invoke('runtime:runDiagnostics', options) : await (async () => {
+    try {
+      return await (async () => {
+        const status = await getRuntimeStatus()
+        return { ok: true, status }
+      })()
+    } catch (err) {
+      return { ok: false, error: String(err.message || err) }
+    }
+  })()
+})
+
+// Network credential IPC handlers moved to avoid duplicates (see line ~5147)
+
+ipcMain.on('credentials:save', async (event, creds) => {
+  try {
+    if (creds && creds.username && creds.password) {
+      const saved = await saveNetworkCredentials(creds.username, creds.password)
+      if (saved) networkCredentials = { username: creds.username }
+    }
+  } catch (err) {
+    console.error('Error saving credentials via IPC:', err)
   }
 })
 
@@ -4714,6 +4812,11 @@ async function logMarginCalculation(marginData) {
 
 // Quote Number Generator IPC handler
 ipcMain.handle('calc:get-quote-number', async (event, data) => {
+  console.log('🔢 [Quote Number Generator] Starting quote number generation...');
+  console.log('   Input data:', JSON.stringify(data, null, 2));
+  console.log('   serverDb available:', !!serverDb);
+  console.log('   generatedNumbersDb available:', !!generatedNumbersDb);
+  
   const now = new Date();
   const yy = now.getFullYear().toString().slice(-2);
   const mm = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -4724,6 +4827,8 @@ ipcMain.handle('calc:get-quote-number', async (event, data) => {
   const mainId = `CA${yy}${mm}${dd}${cust}`;
   const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}-${seq}`;
   
+  console.log('   Generated IDs: mainId="' + mainId + '", fullId="' + fullId + '"');
+  
   // Get customer name from DEFAULT_CUSTOMER_DATA or custom customers
   let customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
   if (!customerName) {
@@ -4734,62 +4839,91 @@ ipcMain.handle('calc:get-quote-number', async (event, data) => {
       const customer = customCustomers.find(c => c.id === cust);
       customerName = customer ? customer.name : 'Unknown';
     } catch (error) {
+      console.warn('   Could not load custom customers:', error.message);
       customerName = 'Unknown';
     }
   }
   
+  console.log('   Customer: "' + customerName + '" (' + cust + ')');
+  
   // Log to CSV with full details
-  await logNumberGeneration('Quote', { 
-    mainId, 
-    fullId, 
-    customerCode: cust, 
-    customerName,
-    industry: data.industry,
-    product: data.product,
-    control: data.control,
-    scope: data.scope
-  });
+  console.log('   Logging to CSV...');
+  try {
+    await logNumberGeneration('Quote', { 
+      mainId, 
+      fullId, 
+      customerCode: cust, 
+      customerName,
+      industry: data.industry,
+      product: data.product,
+      control: data.control,
+      scope: data.scope
+    });
+    console.log('   ✅ CSV logging completed');
+  } catch (error) {
+    console.error('   ❌ CSV logging failed:', error);
+  }
 
   // Store in main database
+  console.log('   Storing in main database...');
   try {
     if (serverDb) {
+      const now = new Date().toISOString();
       await serverDb.run(`
         INSERT INTO generated_numbers (
           type, mainId, fullId, customerCode, customerName,
-          industry, product, control, scope, generated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          industry, product, control, scope, generated_at, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         'quote', mainId, fullId, cust, customerName,
         data.industry || null, data.product || null, data.control || null, data.scope || null,
-        new Date().toISOString()
+        now, now, 'system'
       ]);
+      console.log('   ✅ Stored in main database (serverDb)');
+    } else {
+      console.warn('   ⚠️ serverDb not available, skipping main database storage');
     }
   } catch (error) {
-    console.error('Error storing quote number in main database:', error);
+    console.error('   ❌ Error storing quote number in main database:', error);
+    console.error('      Error code:', error.code);
+    console.error('      Error message:', error.message);
   }
 
   // Store in generated numbers database
+  console.log('   Storing in generated numbers database...');
   try {
     if (generatedNumbersDb) {
+      const now = new Date().toISOString();
       await generatedNumbersDb.run(`
         INSERT INTO generated_numbers (
           type, mainId, fullId, customerCode, customerName,
-          industry, product, control, scope, generated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          industry, product, control, scope, generated_at, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         'quote', mainId, fullId, cust, customerName,
         data.industry || null, data.product || null, data.control || null, data.scope || null,
-        new Date().toISOString()
+        now, now, 'system'
       ]);
+      console.log('   ✅ Stored in generated numbers database (generatedNumbersDb)');
+    } else {
+      console.warn('   ⚠️ generatedNumbersDb not available, skipping separate database storage');
     }
   } catch (error) {
-    console.error('Error storing quote number in generated numbers database:', error);
+    console.error('   ❌ Error storing quote number in generated numbers database:', error);
+    console.error('      Error code:', error.code);
+    console.error('      Error message:', error.message);
   }
 
+  console.log('🔢 [Quote Number Generator] Completed successfully');
   return { mainId, fullId, customerName };
 });
 
 ipcMain.handle('calc:get-project-number', async (event, data) => {
+  console.log('🔢 [Project Number Generator] Starting project number generation...');
+  console.log('   Input data:', JSON.stringify(data, null, 2));
+  console.log('   serverDb available:', !!serverDb);
+  console.log('   generatedNumbersDb available:', !!generatedNumbersDb);
+  
   const now = new Date();
   const yy = now.getFullYear().toString().slice(-2);
   const cust = data.customerCode ? data.customerCode.toString().padStart(3, '0') : "000";
@@ -4798,6 +4932,8 @@ ipcMain.handle('calc:get-project-number', async (event, data) => {
   const mainId = `CA${yy}${po}${cust}`;
   const fullId = `${mainId}-${data.industry || 'XX'}${data.product || 'XXX'}${data.control || 'X'}${data.scope || 'XX'}`;
   
+  console.log('   Generated IDs: mainId="' + mainId + '", fullId="' + fullId + '"');
+  
   // Get customer name from DEFAULT_CUSTOMER_DATA or custom customers
   let customerName = DEFAULT_CUSTOMER_DATA[cust] || '';
   if (!customerName) {
@@ -4808,60 +4944,346 @@ ipcMain.handle('calc:get-project-number', async (event, data) => {
       const customer = customCustomers.find(c => c.id === cust);
       customerName = customer ? customer.name : 'Unknown';
     } catch (error) {
+      console.warn('   Could not load custom customers:', error.message);
       customerName = 'Unknown';
     }
   }
   
+  console.log('   Customer: "' + customerName + '" (' + cust + ')');
+  
   // Log to CSV with full details
-  await logNumberGeneration('Project', { 
-    mainId, 
-    fullId, 
-    customerCode: cust, 
-    customerName,
-    industry: data.industry,
-    product: data.product,
-    control: data.control,
-    scope: data.scope,
-    poNumber: po
-  });
+  console.log('   Logging to CSV...');
+  try {
+    await logNumberGeneration('Project', { 
+      mainId, 
+      fullId, 
+      customerCode: cust, 
+      customerName,
+      industry: data.industry,
+      product: data.product,
+      control: data.control,
+      scope: data.scope,
+      poNumber: po
+    });
+    console.log('   ✅ CSV logging completed');
+  } catch (error) {
+    console.error('   ❌ CSV logging failed:', error);
+  }
 
   // Store in main database
+  console.log('   Storing in main database...');
   try {
     if (serverDb) {
+      const now = new Date().toISOString();
       await serverDb.run(`
         INSERT INTO generated_numbers (
           type, mainId, fullId, customerCode, customerName,
-          industry, product, control, scope, poNumber, generated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          industry, product, control, scope, poNumber, generated_at, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         'project', mainId, fullId, cust, customerName,
         data.industry || null, data.product || null, data.control || null, data.scope || null,
-        po, new Date().toISOString()
+        po, now, now, 'system'
       ]);
+      console.log('   ✅ Stored in main database (serverDb)');
+    } else {
+      console.warn('   ⚠️ serverDb not available, skipping main database storage');
     }
   } catch (error) {
-    console.error('Error storing project number in main database:', error);
+    console.error('   ❌ Error storing project number in main database:', error);
+    console.error('      Error code:', error.code);
+    console.error('      Error message:', error.message);
   }
 
   // Store in generated numbers database
+  console.log('   Storing in generated numbers database...');
   try {
     if (generatedNumbersDb) {
+      const now = new Date().toISOString();
       await generatedNumbersDb.run(`
         INSERT INTO generated_numbers (
           type, mainId, fullId, customerCode, customerName,
-          industry, product, control, scope, poNumber, generated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          industry, product, control, scope, poNumber, generated_at, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         'project', mainId, fullId, cust, customerName,
         data.industry || null, data.product || null, data.control || null, data.scope || null,
-        po, new Date().toISOString()
+        po, now, now, 'system'
       ]);
+      console.log('   ✅ Stored in generated numbers database (generatedNumbersDb)');
+    } else {
+      console.warn('   ⚠️ generatedNumbersDb not available, skipping separate database storage');
     }
   } catch (error) {
-    console.error('Error storing project number in generated numbers database:', error);
+    console.error('   ❌ Error storing project number in generated numbers database:', error);
+    console.error('      Error code:', error.code);
+    console.error('      Error message:', error.message);
   }
 
+  console.log('🔢 [Project Number Generator] Completed successfully');
   return { mainId, fullId };
+});
+
+// Generated Numbers Query IPC handlers
+ipcMain.handle('calc:get-all-generated-numbers', async (event, options = {}) => {
+  try {
+    const { type, limit = 100, offset = 0 } = options;
+    
+    let query = 'SELECT * FROM generated_numbers';
+    const params = [];
+    
+    if (type) {
+      query += ' WHERE type = ?';
+      params.push(type);
+    }
+    
+    query += ' ORDER BY generated_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+    
+    if (generatedNumbersDb) {
+      const results = await generatedNumbersDb.all(query, params);
+      return results;
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching generated numbers:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('calc:search-generated-numbers', async (event, searchTerm) => {
+  try {
+    if (!generatedNumbersDb) return [];
+    
+    const results = await generatedNumbersDb.all(`
+      SELECT * FROM generated_numbers
+      WHERE mainId LIKE ? OR fullId LIKE ? OR customerName LIKE ?
+      ORDER BY generated_at DESC
+      LIMIT 50
+    `, [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
+    
+    return results;
+  } catch (error) {
+    console.error('Error searching generated numbers:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('calc:get-stats', async () => {
+  try {
+    if (!generatedNumbersDb) return null;
+    
+    const stats = await generatedNumbersDb.get(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN type = 'quote' THEN 1 ELSE 0 END) as totalQuotes,
+        SUM(CASE WHEN type = 'project' THEN 1 ELSE 0 END) as totalProjects,
+        MAX(generated_at) as lastGenerated
+      FROM generated_numbers
+    `);
+    
+    return stats;
+  } catch (error) {
+    console.error('Error getting stats:', error);
+    throw error;
+  }
+});
+
+// Margin Calculator IPC handler - save to database
+ipcMain.handle('margin-calc:save', async (event, marginData) => {
+  console.log('💰 [Margin Calculator] Saving margin calculation to database...');
+  console.log('   Data:', JSON.stringify(marginData, null, 2));
+  
+  try {
+    if (!serverDb) {
+      throw new Error('Database not available');
+    }
+
+    const now = new Date().toISOString();
+    
+    // Save to manual_quotes table
+    await serverDb.run(`
+      INSERT INTO manual_quotes (
+        quoteNumber, type, data, projectName, customer, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(quoteNumber) DO UPDATE SET
+        type = excluded.type,
+        data = excluded.data,
+        projectName = excluded.projectName,
+        customer = excluded.customer,
+        updated_at = excluded.updated_at
+    `, [
+      marginData.quoteNumber || null,
+      'margin_calculation',
+      JSON.stringify({
+        mode: marginData.mode,
+        inputs: marginData.inputs,
+        results: marginData.results,
+        timestamp: now
+      }),
+      marginData.projectName || null,
+      marginData.customer || null,
+      now,
+      now
+    ]);
+
+    console.log('   ✅ Margin calculation saved to database');
+    return { success: true, message: 'Calculation saved successfully' };
+  } catch (error) {
+    console.error('   ❌ Error saving margin calculation:', error);
+    throw error;
+  }
+});
+
+// Margin Calculator IPC handler - retrieve by quote number
+ipcMain.handle('margin-calc:get', async (event, quoteNumber) => {
+  console.log('💰 [Margin Calculator] Retrieving calculation for quote:', quoteNumber);
+  
+  try {
+    if (!serverDb) {
+      throw new Error('Database not available');
+    }
+
+    const result = await serverDb.get(`
+      SELECT * FROM manual_quotes
+      WHERE quoteNumber = ? AND type = 'margin_calculation'
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `, [quoteNumber]);
+
+    if (result) {
+      console.log('   ✅ Found saved calculation');
+      return {
+        success: true,
+        data: JSON.parse(result.data),
+        projectName: result.projectName,
+        customer: result.customer,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at
+      };
+    } else {
+      console.log('   ℹ️ No calculation found for this quote number');
+      return { success: false, message: 'No calculation found' };
+    }
+  } catch (error) {
+    console.error('   ❌ Error retrieving margin calculation:', error);
+    throw error;
+  }
+});
+
+// Manual BOM Builder IPC handler - save to database
+ipcMain.handle('manual-bom:save', async (event, bomData) => {
+  console.log('📦 [Manual BOM] Saving BOM to database...');
+  console.log('   Quote Number:', bomData.quoteNumber);
+  
+  try {
+    if (!serverDb) {
+      throw new Error('Database not available');
+    }
+
+    const now = new Date().toISOString();
+    
+    // Save to manual_quotes table
+    await serverDb.run(`
+      INSERT INTO manual_quotes (
+        quoteNumber, type, data, projectName, customer, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(quoteNumber) DO UPDATE SET
+        type = excluded.type,
+        data = excluded.data,
+        projectName = excluded.projectName,
+        customer = excluded.customer,
+        updated_at = excluded.updated_at
+    `, [
+      bomData.quoteNumber || null,
+      'bom',
+      JSON.stringify({
+        bom: bomData.bom,
+        costData: bomData.costData,
+        timestamp: now
+      }),
+      bomData.projectName || null,
+      bomData.customer || null,
+      now,
+      now
+    ]);
+
+    console.log('   ✅ Manual BOM saved to database');
+    return { success: true, message: 'BOM saved successfully' };
+  } catch (error) {
+    console.error('   ❌ Error saving manual BOM:', error);
+    throw error;
+  }
+});
+
+// Manual BOM Builder IPC handler - retrieve by quote number
+ipcMain.handle('manual-bom:get', async (event, quoteNumber) => {
+  console.log('📦 [Manual BOM] Retrieving BOM for quote:', quoteNumber);
+  
+  try {
+    if (!serverDb) {
+      throw new Error('Database not available');
+    }
+
+    const result = await serverDb.get(`
+      SELECT * FROM manual_quotes
+      WHERE quoteNumber = ? AND type = 'bom'
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `, [quoteNumber]);
+
+    if (result) {
+      console.log('   ✅ Found saved BOM');
+      return {
+        success: true,
+        data: JSON.parse(result.data),
+        projectName: result.projectName,
+        customer: result.customer,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at
+      };
+    } else {
+      console.log('   ℹ️ No BOM found for this quote number');
+      return { success: false, message: 'No BOM found' };
+    }
+  } catch (error) {
+    console.error('   ❌ Error retrieving manual BOM:', error);
+    throw error;
+  }
+});
+
+// Separate database save handler for generated numbers
+ipcMain.handle('db:generated-numbers-separate:save', async (event, numberData) => {
+  try {
+    if (!generatedNumbersDb) {
+      throw new Error('Generated numbers database not available');
+    }
+
+    await generatedNumbersDb.run(`
+      INSERT INTO generated_numbers (
+        type, mainId, fullId, customerCode, customerName,
+        industry, product, control, scope, poNumber, generated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      numberData.type || 'quote',
+      numberData.mainId,
+      numberData.fullId,
+      numberData.customerCode,
+      numberData.customerName || null,
+      numberData.industry || null,
+      numberData.product || null,
+      numberData.control || null,
+      numberData.scope || null,
+      numberData.poNumber || null,
+      new Date().toISOString()
+    ]);
+
+    console.log(`✓ Saved ${numberData.type} number to separate database: ${numberData.fullId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving to generated numbers separate database:', error);
+    throw error;
+  }
 });
 
 // Network credential IPC handlers

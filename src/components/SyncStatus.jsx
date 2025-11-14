@@ -54,18 +54,18 @@ export default function SyncStatus() {
 
   if (!syncStatus) {
     return (
-      <div className="sync-status-loading">
-        <Clock className="w-4 h-4 animate-spin" />
-        <span className="text-xs text-gray-500">Loading sync status...</span>
+      <div className="flex items-center gap-1.5 px-2 py-1 bg-eggshell rounded-xs2 border border-tea">
+        <Clock className="w-3.5 h-3.5 animate-spin text-slateish" />
+        <span className="text-xs2 text-slateish">Loading...</span>
       </div>
     )
   }
 
   if (!syncStatus.enabled) {
     return (
-      <div className="sync-status-disabled">
-        <AlertCircle className="w-4 h-4 text-yellow-500" />
-        <span className="text-xs text-gray-500">Sync not available</span>
+      <div className="flex items-center gap-1.5 px-2 py-1 bg-eggshell rounded-xs2 border border-tea">
+        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+        <span className="text-xs2 text-slateish">Sync unavailable</span>
       </div>
     )
   }
@@ -83,23 +83,23 @@ export default function SyncStatus() {
   }
 
   return (
-    <div className="sync-status-container">
-      <div className="sync-status-info">
+    <div className="relative flex items-center gap-2 px-2 py-1 bg-eggshell rounded-xs2 border border-tea">
+      <div className="flex items-center gap-1.5">
         {syncStatus.isSyncing || isSyncing ? (
           <>
-            <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
-            <span className="text-xs text-blue-600">Syncing...</span>
+            <RefreshCw className="w-3.5 h-3.5 text-accent animate-spin" />
+            <span className="text-xs2 font-medium text-accent">Syncing...</span>
           </>
         ) : lastError ? (
           <>
-            <AlertCircle className="w-4 h-4 text-red-500" />
-            <span className="text-xs text-red-600">Sync error</span>
+            <AlertCircle className="w-3.5 h-3.5 text-danger" />
+            <span className="text-xs2 font-medium text-danger">Error</span>
           </>
         ) : (
           <>
-            <Check className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-gray-600">
-              Last sync: {formatLastSync(syncStatus.lastSyncTime)}
+            <Check className="w-3.5 h-3.5 text-success" />
+            <span className="text-xs2 text-slateish">
+              {formatLastSync(syncStatus.lastSyncTime)}
             </span>
           </>
         )}
@@ -108,76 +108,18 @@ export default function SyncStatus() {
       <button
         onClick={handleManualSync}
         disabled={isSyncing || syncStatus.isSyncing}
-        className="sync-button"
+        className="btn ca-btn-primary flex items-center gap-1 text-xs2 px-1.5 py-0.5"
         title="Manually sync with NAS database"
       >
         <RefreshCw className={`w-3 h-3 ${isSyncing || syncStatus.isSyncing ? 'animate-spin' : ''}`} />
-        Sync Now
+        <span>Sync</span>
       </button>
 
       {lastError && (
-        <div className="sync-error-message">
+        <div className="absolute top-full right-0 mt-1 px-2 py-1.5 bg-white border border-danger rounded-xs2 shadow-panel text-xs2 text-danger max-w-xs z-50">
           {lastError}
         </div>
       )}
-
-      <style jsx>{`
-        .sync-status-container {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 8px 16px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #e5e7eb;
-        }
-
-        .sync-status-loading,
-        .sync-status-disabled,
-        .sync-status-info {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .sync-button {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 12px;
-          background: #3b82f6;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          font-size: 12px;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .sync-button:hover:not(:disabled) {
-          background: #2563eb;
-        }
-
-        .sync-button:disabled {
-          background: #9ca3af;
-          cursor: not-allowed;
-        }
-
-        .sync-error-message {
-          position: absolute;
-          top: 100%;
-          right: 0;
-          margin-top: 4px;
-          padding: 8px 12px;
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          border-radius: 4px;
-          font-size: 12px;
-          color: #991b1b;
-          max-width: 300px;
-          z-index: 1000;
-        }
-      `}</style>
     </div>
   )
 }

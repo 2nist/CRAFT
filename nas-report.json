@@ -1,0 +1,94 @@
+
+> electron-vite-react-app@1.0.0 check:nas
+> node ./scripts/nas-diagnostics.js --json
+
+{
+  "summary": {
+    "passed": 3,
+    "failed": 8
+  },
+  "diagnostics": [
+    {
+      "label": "Environment",
+      "status": "pass",
+      "result": {
+        "platform": "win32",
+        "node": "v22.21.0",
+        "user": "CraftAuto-Sales",
+        "envKey": "CTH_RUNTIME_ROOT",
+        "runtimeRoot": "\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB"
+      }
+    },
+    {
+      "label": "Ping 192.168.1.99",
+      "status": "fail",
+      "result": null,
+      "error": "Ping failed: Command failed: ping -n 1 192.168.1.99"
+    },
+    {
+      "label": "Directory access",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, access '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB'"
+    },
+    {
+      "label": "Check database",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, stat '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB\\database'"
+    },
+    {
+      "label": "Check OUTPUT",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, stat '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB\\OUTPUT'"
+    },
+    {
+      "label": "Check Settings",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, stat '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB\\Settings'"
+    },
+    {
+      "label": "Inspect server.db",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, stat '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB\\database\\server.db'"
+    },
+    {
+      "label": "Inspect generated_numbers.db",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, stat '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB\\database\\generated_numbers.db'"
+    },
+    {
+      "label": "Read/Write test",
+      "status": "fail",
+      "result": null,
+      "error": "UNKNOWN: unknown error, mkdir '\\\\192.168.1.99\\CraftAuto-Sales\\CACPQDB\\.cth_diag'"
+    },
+    {
+      "label": "Stored credentials",
+      "status": "pass",
+      "result": {
+        "hasCraftAutoEntry": false,
+        "raw": "\r\nCurrently stored credentials:\r\n\r\n    Target: MicrosoftAccount:target=SSO_POP_User:user=Cricketbreath@outlook.com\n    Type: Generic \r\n    User: Cricketbreath@outlook.com\r\n    Saved for this logon only\r\n    \r\n    Target: MicrosoftAccount:target=SSO_POP_Device\n    Type: Generic \r\n    User: 02rpnueqhjqlqujz\r\n    Saved for this logon only\r\n    \r\n    Target: LegacyGeneric:target=Olk/PushNotificationsBackupKey\n    Type: Generic \r\n    User: Olk/PushNotificationsBackupKey\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=git:https://github.com\n    Type: Generic \r\n    User: 2nist\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=git:https://github.com/matthewp-craft/Craft_tool_Hub.git\n    Type: Generic \r\n    User: matthewp-craft\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=azureAccountProviderCredentials|accessTokenCache-key\n    Type: Generic \r\n    User: *\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=gh:github.com:matthewp-craft\n    Type: Generic \r\n    User: matthewp-craft\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=azureAccountProviderCredentials|accessTokenCache-iv\n    Type: Generic \r\n    User: *\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=gh:github.com:\n    Type: Generic \r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=MicrosoftAccount:user=cricketbreath@outlook.com\n    Type: Generic \r\n    User: Cricketbreath@outlook.com\r\n    Local machine persistence\r\n    \r\n    Target: WindowsLive:target=virtualapp/didlogical\n    Type: Generic \r\n    User: 02rpnueqhjqlqujz\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=git:https://github.com/2nist/craft_tools_hub.git\n    Type: Generic \r\n    User: 2nist\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=Microsoft OneDrive Generic Data - Personal Vault VHD Info\n    Type: Generic \r\n    User: ae521f6b66242c36\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=gh:github.com:2nist\n    Type: Generic \r\n    User: 2nist\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=Olk/PushNotificationsKey\n    Type: Generic \r\n    User: Olk/PushNotificationsKey\r\n    Local machine persistence\r\n    \r\n    Target: LegacyGeneric:target=DriveFS_112574193661110722342\n    Type: Generic \r\n    \r\n    Target: Domain:target=192.168.1.99\n    Type: Domain Password\r\n    User: CraftAutoNAS-MatthewP\r\n    \r\n    Target: LegacyGeneric:target=GitHub - https://api.github.com/matthewp-craft\n    Type: Generic \r\n    User: matthewp-craft\r\n    \r\n    Target: LegacyGeneric:target=DriveFS_116498200424715078516\n    Type: Generic \r\n    \r\n    Target: LegacyGeneric:target=vscode-cli-0.vscode-cli\n    Type: Generic \r\n    User: vscode-cli-0\r\n    \r\n    Target: LegacyGeneric:target=org.openvpn.client./1728861040809\n    Type: Generic \r\n    User: 1728861040809\r\n    \r\n"
+      }
+    },
+    {
+      "label": "Active mappings",
+      "status": "pass",
+      "result": {
+        "entries": [
+          "New connections will be remembered.",
+          "Status       Local     Remote                    Network",
+          "-------------------------------------------------------------------------------",
+          "Unavailable  Z:        \\\\192.168.1.99\\CraftAuto-Sales",
+          "Microsoft Windows Network",
+          "Disconnected           \\\\192.168.1.99\\IPC$       Microsoft Windows Network",
+          "The command completed successfully."
+        ]
+      }
+    }
+  ]
+}

@@ -12,12 +12,15 @@
     "electron:build": "npm run build:electron && npm run build:renderer",
     "build:electron": "vite build --config vite.config.electron.js",
     "build:renderer": "vite build",
+    "dist": "npm run electron:build && electron-builder --win --publish=never",
+    "dist:dir": "npm run electron:build && electron-builder --win --dir",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "prepare": "husky",
     "lint": "eslint .",
-    "manual:build": "node scripts/build-manual.mjs"
+    "manual:build": "node scripts/build-manual.mjs",
+    "check:nas": "node ./scripts/nas-diagnostics.js"
   },
   "keywords": [
     "electron",
@@ -130,17 +133,14 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Craft Automation CPQ",
-      "installerIcon": "build/installerIcon.ico",
-      "uninstallerIcon": "build/uninstallerIcon.ico",
-      "installerHeaderIcon": "build/installerHeaderIcon.ico",
       "license": "LICENSE",
       "deleteAppDataOnUninstall": false
     },
     "extraMetadata": {
       "main": "dist-electron/main.cjs"
     },
-    "npmRebuild": true,
-    "buildDependenciesFromSource": true,
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
     "nodeGypRebuild": false,
     "afterPack": "scripts/after-pack.cjs"
   }

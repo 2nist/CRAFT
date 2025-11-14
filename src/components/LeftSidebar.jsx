@@ -33,7 +33,7 @@ export default function LeftSidebar({ plugins }) {
   };
 
   return (
-    <aside className="flex-shrink-0 w-[150px] bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+    <aside className="flex-shrink-0 w-[150px] bg-card border-r border-border shadow-sm flex flex-col">
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">{plugins && plugins.length > 0 ? plugins.map((plugin) => (
           <NavLink
@@ -41,8 +41,8 @@ export default function LeftSidebar({ plugins }) {
             to={plugin.path}
             className={({ isActive }) =>
               `flex flex-col items-center justify-center px-2 py-4 mb-2 transition-colors ${isActive
-                ? 'bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 dark:border-blue-400'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                ? 'bg-accent/10 text-primary border-l-4 border-primary'
+                : 'text-muted-foreground hover:bg-muted/50'
               }`
             }
             title={plugin.title}
@@ -51,19 +51,19 @@ export default function LeftSidebar({ plugins }) {
             <span className="text-xs mt-2 text-center leading-tight">{plugin.title}</span>
           </NavLink>
         )) : (
-          <div className="text-slate-400 text-xs text-center px-2">No plugins</div>
+          <div className="text-muted-foreground text-xs text-center px-2">No plugins</div>
         )}
       </nav>
 
       {/* Settings at bottom */}
-      <div className="border-t border-slate-200 dark:border-slate-700 p-2">
+      <div className="border-t border-border p-2">
         <NavLink
           to="/settings"
           className={({ isActive }) =>
             `w-full flex flex-col items-center justify-center py-3 rounded-lg transition-colors ${
               isActive
-                ? 'bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                ? 'bg-accent/10 text-primary'
+                : 'text-muted-foreground hover:bg-muted'
             }`
           }
         >

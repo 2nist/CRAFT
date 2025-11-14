@@ -94,7 +94,22 @@ contextBridge.exposeInMainWorld('customers', {
 // Expose calculator API
 contextBridge.exposeInMainWorld('calc', {
   getQuoteNumber: (data) => ipcRenderer.invoke('calc:get-quote-number', data),
-  getProjectNumber: (data) => ipcRenderer.invoke('calc:get-project-number', data)
+  getProjectNumber: (data) => ipcRenderer.invoke('calc:get-project-number', data),
+  getAllGeneratedNumbers: (options) => ipcRenderer.invoke('calc:get-all-generated-numbers', options),
+  searchGeneratedNumbers: (searchTerm) => ipcRenderer.invoke('calc:search-generated-numbers', searchTerm),
+  getStats: () => ipcRenderer.invoke('calc:get-stats')
+})
+
+// Expose margin calculator API
+contextBridge.exposeInMainWorld('marginCalc', {
+  save: (marginData) => ipcRenderer.invoke('margin-calc:save', marginData),
+  get: (quoteNumber) => ipcRenderer.invoke('margin-calc:get', quoteNumber)
+})
+
+// Expose manual BOM API
+contextBridge.exposeInMainWorld('manualBom', {
+  save: (bomData) => ipcRenderer.invoke('manual-bom:save', bomData),
+  get: (quoteNumber) => ipcRenderer.invoke('manual-bom:get', quoteNumber)
 })
 
 // Expose product templates API
@@ -136,6 +151,9 @@ contextBridge.exposeInMainWorld('electron', {
   },
   on: (event, callback) => {
     ipcRenderer.on(event, callback);
+  },
+  ipcRenderer: {
+    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
   }
 })
 

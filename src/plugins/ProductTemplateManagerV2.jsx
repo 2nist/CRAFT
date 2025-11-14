@@ -667,7 +667,7 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
                   </button>
                   <button
                     onClick={() => setShowNewProductModal(true)}
-                    className="ca-btn-primary flex items-center gap-2 px-3 py-1.5 text-sm rounded"
+                    className="btn ca-btn-primary flex items-center gap-2 px-3 py-1.5 text-sm rounded"
                   >
                     <Plus size={16} />
                     Create New Product
@@ -1583,7 +1583,7 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
               <button
                 onClick={handleCreateNewProduct}
                 disabled={isCreatingProduct || !newProductData.code || !newProductData.description}
-                className="ca-btn-primary flex-1 px-4 py-2 rounded disabled:opacity-50"
+                className="btn ca-btn-primary flex-1 px-4 py-2 rounded disabled:opacity-50"
               >
                 {isCreatingProduct ? (
                   <span className="flex items-center justify-center gap-2">
@@ -1601,7 +1601,7 @@ export default function ProductTemplateManagerV2({ context, onNavigate }) {
                   setError(null);
                 }}
                 disabled={isCreatingProduct}
-                className="ca-btn-secondary px-4 py-2 rounded"
+                className="btn ca-btn-secondary px-4 py-2 rounded"
               >
                 Cancel
               </button>

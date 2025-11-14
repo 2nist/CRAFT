@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop, feature/** ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Build renderer
+        run: npm run build:renderer
+
+      - name: Run NAS diagnostics (non-destructive)
+        run: |
+          mkdir -p ./tmp-local-root
+          node ./scripts/nas-diagnostics.js --skip-ping --skip-write --root ./tmp-local-root --json > nas-report.json || true
+
+      - name: Upload NAS diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: nas-report
+          path: nas-report.json
+
+  windows-installer-smoke:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer
+        run: npm run build:renderer
+
+      - name: Build Electron (Windows installer)
+        run: npm run electron:build
+
+      - name: Collect installer
+        run: |
+          mkdir artifacts || exit 0
+          powershell -Command "Get-ChildItem -Path . -Filter *.exe -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | ForEach-Object { Copy-Item $_.FullName -Destination artifacts -Force }"
+
+      - name: Run installer smoke test
+        shell: powershell
+        run: |
+          Write-Host "Running installer smoke test"
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          .\scripts\validate-windows-installer.ps1
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: artifacts/*.exe
