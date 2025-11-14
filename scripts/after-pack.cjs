@@ -23,9 +23,10 @@ exports.default = async function(context) {
     console.error('Failed to create .env file:', error);
   }
 
-  // Create runtime config file with NAS path
-  const configPath = path.join(appDir, 'runtime-config.json');
-  const nasPath = process.env.BUILD_NAS_PATH || '\\\\192.168.1.99\\CraftAuto-Sales\\Temp_Craft_Tools_Runtime\\updates\\latest';
+  // Create runtime config file with NAS path in the resources directory
+  const resourcesDir = path.join(appDir, 'resources');
+  const configPath = path.join(resourcesDir, 'runtime-config.json');
+  const nasPath = process.env.BUILD_NAS_PATH || '\\\\192.168.1.99\\CraftAuto-Sales';
 
   const configContent = JSON.stringify({
     runtimeRoot: nasPath,
@@ -35,6 +36,10 @@ exports.default = async function(context) {
   }, null, 2);
 
   try {
+    // Ensure resources directory exists
+    if (!fs.existsSync(resourcesDir)) {
+      fs.mkdirSync(resourcesDir, { recursive: true });
+    }
     fs.writeFileSync(configPath, configContent);
     console.log(`Created runtime config with NAS path: ${nasPath}`);
   } catch (error) {
