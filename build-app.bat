@@ -4,17 +4,33 @@ echo Craft Tools Hub - Production Build
 echo ========================================
 echo.
 
-REM Check if node_modules exists
-if not exist "node_modules" (
-    echo Installing dependencies...
-    call npm install
-    if errorlevel 1 (
-        echo.
-        echo ERROR: Failed to install dependencies
-        pause
-        exit /b 1
-    )
+REM Check if Node.js is installed
+where node >nul 2>nul
+if errorlevel 1 (
+    echo ERROR: Node.js is not installed or not in PATH
+    echo Please install Node.js from https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
 )
+
+REM Check Node.js version
+for /f "tokens=*" %%v in ('node -v') do set NODE_VERSION=%%v
+echo Node.js version: %NODE_VERSION%
+echo.
+
+REM Always install/update dependencies to ensure latest versions
+echo Installing dependencies...
+call npm install
+if errorlevel 1 (
+    echo.
+    echo ERROR: Failed to install dependencies
+    echo Please check your internet connection and try again
+    pause
+    exit /b 1
+)
+echo Dependencies installed successfully!
+echo.
 
 echo Building Electron app...
 call npm run build:electron
@@ -53,10 +69,13 @@ echo ========================================
 echo Build and installer creation completed successfully!
 echo ========================================
 echo.
-echo Installer created in the 'release' folder:
-echo - Craft Automation CPQ Setup 1.0.0.exe (installer)
-echo - win-unpacked\ (portable version)
+echo Build output location:
+dir /b release 2>nul
 echo.
-echo Run the .exe file to install the app with shortcuts and uninstaller.
+echo Portable app: release\win-unpacked\Craft Automation CPQ.exe
+echo.
+echo The portable version can be copied to any Windows PC and run directly.
+echo No installation required - just copy the entire 'win-unpacked' folder.
+echo.
 
 pause

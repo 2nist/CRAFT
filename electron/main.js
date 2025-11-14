@@ -1210,7 +1210,9 @@ async function initializeSyncManager() {
     let nasServerDbPath = null
     let nasGeneratedNumbersDbPath = null
     
-    if (resolvedRuntimeRoot) {
+    // Check both environment variables and packaged config
+    const runtimeRoot = resolvedRuntimeRoot || await initializeRuntimeConfig()
+    if (runtimeRoot) {
       const nasDbDir = await resolveRuntimePath('database')
       nasServerDbPath = path.join(nasDbDir, 'server.db')
       nasGeneratedNumbersDbPath = path.join(nasDbDir, 'generated_numbers.db')
