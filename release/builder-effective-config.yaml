@@ -13,9 +13,6 @@ asarUnpack:
   - node_modules/sqlite3/**/*
 win:
   target:
-    - target: nsis
-      arch:
-        - x64
     - target: dir
       arch:
         - x64
@@ -24,6 +21,8 @@ win:
   certificatePassword: <stripped sensitive data>
   verifyUpdateCodeSignature: false
   signDlls: false
+  rfc3161TimeStampServer: null
+  timeStampServer: null
 nsis:
   oneClick: false
   perMachine: true
@@ -31,9 +30,6 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Craft Automation CPQ
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
-  installerHeaderIcon: build/icon.ico
   license: LICENSE
   deleteAppDataOnUninstall: false
 extraMetadata:

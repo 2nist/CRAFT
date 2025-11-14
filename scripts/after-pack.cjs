@@ -26,7 +26,22 @@ exports.default = async function(context) {
   // Create runtime config file with NAS path in the resources directory
   const resourcesDir = path.join(appDir, 'resources');
   const configPath = path.join(resourcesDir, 'runtime-config.json');
-  const nasPath = process.env.BUILD_NAS_PATH || '\\\\192.168.1.99\\CraftAuto-Sales';
+  
+  // Read the runtime config from the source file
+  const sourceConfigPath = path.join(__dirname, '..', 'src', 'data', 'runtime-config.json');
+  let nasPath = '\\\\192.168.1.99\\CraftAuto-Sales'; // fallback
+  
+  try {
+    if (fs.existsSync(sourceConfigPath)) {
+      const sourceConfig = JSON.parse(fs.readFileSync(sourceConfigPath, 'utf-8'));
+      nasPath = sourceConfig.runtimeRoot || nasPath;
+    }
+  } catch (error) {
+    console.warn('Could not read source runtime config, using default path:', error.message);
+  }
+  
+  // Override with environment variable if set
+  nasPath = process.env.BUILD_NAS_PATH || nasPath;
 
   const configContent = JSON.stringify({
     runtimeRoot: nasPath,
