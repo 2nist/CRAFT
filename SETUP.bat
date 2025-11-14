@@ -1,10 +1,10 @@
 @echo off
-title Craft Automation CPQ - Setup & Build
+title Craft Automation CPQ - Setup and Build
 color 0B
 
 echo.
 echo  ========================================================
-echo         CRAFT AUTOMATION CPQ - SETUP ^& BUILD
+echo         CRAFT AUTOMATION CPQ - SETUP AND BUILD
 echo  ========================================================
 echo.
 echo  This script will:
@@ -23,8 +23,8 @@ REM Check if Node.js is installed
 echo [Step 1/5] Checking for Node.js...
 echo.
 
-where node >nul 2>nul
-if errorlevel 1 (
+where node >nul 2>&1
+if %errorlevel% neq 0 (
     color 0E
     echo  WARNING: Node.js is not installed!
     echo.
@@ -96,7 +96,7 @@ echo  This may take 1-2 minutes on first run...
 echo.
 
 call npm install
-if errorlevel 1 (
+if %errorlevel% neq 0 (
     color 0C
     echo.
     echo  ERROR: Failed to install dependencies
@@ -122,7 +122,7 @@ echo.
 
 REM Build Electron
 call npm run build:electron
-if errorlevel 1 (
+if %errorlevel% neq 0 (
     color 0C
     echo.
     echo  ERROR: Electron build failed
@@ -147,7 +147,7 @@ echo.
 
 REM Build Renderer
 call npm run build:renderer
-if errorlevel 1 (
+if %errorlevel% neq 0 (
     color 0C
     echo.
     echo  ERROR: Renderer build failed
@@ -173,7 +173,7 @@ echo.
 
 REM Package with electron-builder
 call npx electron-builder --win --dir
-if errorlevel 1 (
+if %errorlevel% neq 0 (
     color 0E
     echo.
     echo  Note: Packaging completed with code signing warnings

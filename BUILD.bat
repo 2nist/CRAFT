@@ -27,8 +27,8 @@ cls
 
 REM Check if Node.js is installed
 echo [1/4] Checking Node.js installation...
-where node >nul 2>nul
-if errorlevel 1 (
+where node >nul 2>&1
+if %errorlevel% neq 0 (
     color 0C
     echo.
     echo  ERROR: Node.js is not installed!
