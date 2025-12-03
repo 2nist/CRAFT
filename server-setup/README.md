@@ -188,6 +188,33 @@ Verify in the app via the Sync Settings Panel and Test Connection.
 
 ---
 
+## 7.1) API Authentication
+If `API_KEY` is set in the server `.env`, every request must include the header:
+
+```http
+X-API-Key: <your_api_key>
+```
+
+Quick tests:
+
+```powershell
+# Health without key (will be 401 if API_KEY is set)
+curl http://localhost:3000/health
+
+# Health with key
+curl -H "x-api-key: ChangeMeStrong!" http://localhost:3000/health
+
+# Get customers with key
+curl -H "x-api-key: ChangeMeStrong!" http://localhost:3000/customers
+
+# Upsert a customer with key
+curl -H "x-api-key: ChangeMeStrong!" -H "Content-Type: application/json" -d '{"id":"C-1001","name":"Acme","email":"team@acme.com"}' http://localhost:3000/customers
+```
+
+In the Electron app, set `REMOTE_API_KEY` so requests automatically include this header.
+
+---
+
 ## 8) Backups to NAS (Nightly)
 Use Task Scheduler with a PowerShell script (`Backup-CraftAutomation.ps1`):
 ```powershell
