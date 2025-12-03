@@ -100,6 +100,22 @@ contextBridge.exposeInMainWorld('calc', {
   getStats: () => ipcRenderer.invoke('calc:get-stats')
 })
 
+// Expose sync API for database synchronization
+contextBridge.exposeInMainWorld('sync', {
+  testConnection: () => ipcRenderer.invoke('sync:test-connection'),
+  syncEntity: (options) => ipcRenderer.invoke('sync:sync-entity', options),
+  getPendingConflicts: () => ipcRenderer.invoke('sync:get-pending-conflicts'),
+  resolveConflict: (data) => ipcRenderer.invoke('sync:resolve-conflict', data),
+  getSettings: () => ipcRenderer.invoke('sync:get-settings'),
+  saveSettings: (settings) => ipcRenderer.invoke('sync:save-settings', settings),
+  getCustomers: () => ipcRenderer.invoke('sync:get-customers'),
+  getQuotes: () => ipcRenderer.invoke('sync:get-quotes'),
+  getOrders: () => ipcRenderer.invoke('sync:get-orders'),
+  saveCustomer: (customer) => ipcRenderer.invoke('sync:save-customer', customer),
+  saveQuote: (quote) => ipcRenderer.invoke('sync:save-quote', quote),
+  saveOrder: (order) => ipcRenderer.invoke('sync:save-order', order)
+})
+
 // Expose margin calculator API
 contextBridge.exposeInMainWorld('marginCalc', {
   save: (marginData) => ipcRenderer.invoke('margin-calc:save', marginData),

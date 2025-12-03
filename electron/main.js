@@ -16,6 +16,9 @@ import { open } from 'sqlite'
 // Sync Manager
 import SyncManager from './sync-manager.js'
 
+// Database Sync System
+import { initializeSyncService, registerSyncHandlers, cleanupSyncService } from './sync-ipc-handlers.js'
+
 // Note: Services are imported dynamically in IPC handlers to handle ES module resolution
 // This avoids import errors in development mode when Electron may not resolve paths correctly
 
@@ -1827,6 +1830,13 @@ app.whenReady().then(async () => {
   // Initialize Sync Manager
   await initializeSyncManager()
   
+  // Initialize Database Sync Service
+  initializeSyncService({
+    remoteApiUrl: process.env.REMOTE_API_URL || 'https://your-api.com/api',
+    remoteApiKey: process.env.REMOTE_API_KEY || 'your-key'
+  })
+  registerSyncHandlers()
+  
   createMenu();
   createWindow()
   
@@ -1843,6 +1853,10 @@ app.whenReady().then(async () => {
       if (serverInstance) {
         serverInstance.close(async () => {
           console.log('Embedded server closed')
+          
+          // Cleanup Database Sync Service
+          cleanupSyncService()
+          
           if (syncManager) {
             await syncManager.cleanup()
             console.log('Sync manager cleaned up')

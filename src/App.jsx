@@ -6,6 +6,7 @@ import PluginRenderer from './PluginRenderer';
 import GlobalComponentSearch from './components/GlobalComponentSearch';
 import { useAppContext } from './context/AppContext';
 import loggingService from './services/LoggingService';
+import { syncService } from './services/SyncService';
 
 export default function App() {
   const [plugins, setPlugins] = useState([]);
@@ -29,6 +30,17 @@ export default function App() {
       }
     }
     fetchPluginRegistry();
+  }, []);
+
+  // Initialize Sync Service
+  useEffect(() => {
+    syncService.initialize().catch(err => {
+      console.error('[App] Failed to initialize sync service:', err);
+    });
+    
+    return () => {
+      syncService.destroy();
+    };
   }, []);
 
   // Filter plugins based on active tab

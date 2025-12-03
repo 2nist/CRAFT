@@ -1,580 +1,451 @@
-# Craft CPQ
+# Craft Tools Hub - API Data Sync Feature
 
+## Complete Implementation Package
 
-
-
-**Configure Price and Quote System for AutomationProcess'
-
-
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-
-
-[![Electron](https://img.shields.io/badge/Electron-Latest-brightgreen.svg)](https://www.electronjs.org/)
-
-
-
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
-
-
-
-
+This package contains everything you need to implement two-way synchronization between your Craft Tools Hub Electron app and your external SQL database for customers, quotes, and order numbers.
 
 ---
 
-## Overview
+## 📦 Package Contents
 
+### Backend Files (Electron Main Process)
+1. **DatabaseSyncService.js** - Core sync logic that handles SQLite ↔ SQL database synchronization
+2. **sync-ipc-handlers.js** - IPC handlers that connect renderer to main process
+3. **sync-preload-api.mjs** - Preload API definitions to expose sync to frontend
 
+### Frontend Files (React Components)
+4. **SyncService.js** - Frontend service that orchestrates sync operations
+5. **SyncStatusIndicator.jsx** - UI component showing real-time sync status
+6. **SyncSettingsPanel.jsx** - Full settings UI for configuring sync
+7. **ConflictResolutionDialog.jsx** - UI for resolving sync conflicts
 
-Craft Tools Hub is a desktop application designed for managing quotes, BOMs, components, and projects in the automation industry. Built with Electron, Vite, Tailwind ShadCN on VScode and packaged as a native desktop app.
+### Server Template
+8. **sample-api-server.js** - Complete Express.js REST API template for your SQL database
 
-
-
-
-
-### Key Features
-
-
-
-- **Quote Configurator** - 6-step system for building detailed quotes
-
-
-
-- **Product Template Manager** - 10 product categories with 36+ templates
-
-
-
-- **Global Component Search** - Instant search across 1000+ components (Ctrl+K)
-
-
-
-- **BOM Management** - Manual builder and CSV import tools
-
-
-
-- **FLA Calculator** - Electrical load calculations with NEC references
-
-
-
-- **Margin Calculator** - Instant profit margin and markup calculations
-
-
-
-- **Customizable Dashboard** - Personalized workflow and quick access
-
-
-
-- **Assembly Manager** - Organize components by assembly categories
-
-
-
-- **Smart Manual System** - Lazy-loading component manuals with caching
-
-
-
-
+### Documentation
+9. **SYNC_IMPLEMENTATION_GUIDE.md** - Comprehensive implementation guide
+10. **QUICK_START_CHECKLIST.md** - Step-by-step checklist
 
 ---
 
-## Quick Start
+## 🎯 What This System Does
 
+### Core Features
+✅ **Two-way sync** - Push local changes to server, pull remote changes to app
+✅ **Multiple sync modes** - Manual, scheduled auto-sync, or on-demand
+✅ **Three entity types** - Customers, Quotes, and Orders
+✅ **Conflict detection** - Automatic detection when both local and remote change
+✅ **Conflict resolution** - Visual UI to choose local, remote, or manual merge
+✅ **Sync statistics** - Track successful syncs, failures, records transferred
+✅ **Connection monitoring** - Real-time status of database connection
+✅ **Offline-first** - Work offline, sync when connection available
 
+### Sync Modes
+1. **Manual Sync** - Click button to sync on demand
+2. **Auto-Sync** - Automatic sync every N minutes (configurable)
+3. **Launch Sync** - Sync immediately when app starts
+4. **Entity-Specific** - Sync only customers, quotes, or orders individually
 
-### Option 1: Run from NAS (Recommended for Teams)
+### Sync Directions
+- **Push** - Local → Remote (send changes to server)
+- **Pull** - Remote → Local (get changes from server)
+- **Both** - Two-way synchronization (recommended)
 
+### Conflict Resolution Strategies
+- **Remote Wins** - Keep server version
+- **Local Wins** - Keep app version
+- **Manual** - Show UI dialog to let user decide
 
+---
 
-Once deployed to NAS:
+## 🚀 Quick Start (30-60 minutes)
 
-
-
-```powershell
-
-
-
-# One-time setup: Set environment variable
-
-
-
-\\92.168.1.99\\CraftAuto-Sales\\Temp_Craft_Tools_Runtime\\Set-CTHRuntimeRoot.ps1
-
-
-
-# Launch app
-
-
-
-\\92.168.1.99\\CraftAuto-Sales\\Temp_Craft_Tools_Runtime\\updates\\latest\\run-app.bat
-
-
-
+### 1. Install Dependencies
+```bash
+npm install better-sqlite3 axios electron-store --save
 ```
 
-
-
-**Advantages:**
-
-
-
-- No local installation needed
-
-
-
-- Always get latest version
-
-
-
-- IT manages updates
-
-
-
-- Shared component database
-
-
-
-
-
-### Option 2: Local Development
-
-
-
-1. **Clone the repository**
-
-
-
-   ```ash
-
-
-
-   # Clone the repository
-
-
-
-   git clone https://github.com/matthewp-craft/Craft_Tool_Hub.git
-
-
-
-   cd craft_tools_hub
-
-
-
-2. **Install dependencies**
-
-
-
-npm install  
-
-
-
-3. **Run the application**
-
-
-
-# Double-click run-app.bat  
-
-
-
-# OR  
-
-
-
-npm run electron:dev  
-
-
-
-### Option 3: Build Windows Installer
-
-
-
-For production deployment or local installation:
-
-
-
-1. **Build and create installer**
-
-
-
-   ```bash
-
-
-
-   # Double-click build-app.bat (recommended - does everything)
-
-
-
-   # OR run manually:
-
-
-
-   npm run build
-
-
-
-   npx electron-builder --win --publish=never
-
-
-
-   ```
-
-
-
-2. **Install the application**
-
-
-
-   - Navigate to the `release` folder
-
-
-
-   - Run `Craft Automation CPQ Setup 1.0.0.exe`
-
-
-
-   - Follow the installer wizard
-
-
-
-   - Choose installation directory (or use default)
-
-
-
-3. **Launch the installed app**
-
-
-
-   - Desktop shortcut: "Craft Automation CPQ"
-
-
-
-   - Start Menu: Search for "Craft Automation CPQ"
-
-
-
-   - The app will automatically connect to NAS if configured
-
-
-
-**Installer Features:**
-
-
-
-- Professional Windows installer with uninstaller
-
-
-
-- Desktop and Start Menu shortcuts
-
-
-
-- Automatic uninstaller in Add/Remove Programs
-
-
-
-- Configurable installation directory
-
-
-
-- Build-time NAS configuration (no manual setup needed)
-
-
-
-**Portable Option:**
-
-
-
-The `release\win-unpacked` folder contains a portable version that can be run without installation.
-
-
+### 2. Copy Files to Your Project
+
+**Backend files → `electron/`**
+- DatabaseSyncService.js
+- sync-ipc-handlers.js
+
+**Frontend files → `src/services/` and `src/components/`**
+- SyncService.js → src/services/
+- SyncStatusIndicator.jsx → src/components/
+- SyncSettingsPanel.jsx → src/components/
+- ConflictResolutionDialog.jsx → src/components/
+
+### 3. Update electron/main.js
+
+Add imports:
+```javascript
+import { initializeSyncService, registerSyncHandlers, cleanupSyncService } from './sync-ipc-handlers.js';
+```
+
+In app.whenReady():
+```javascript
+initializeSyncService({
+  remoteApiUrl: process.env.REMOTE_API_URL || 'https://your-api.com/api',
+  remoteApiKey: process.env.REMOTE_API_KEY || 'your-key'
+});
+registerSyncHandlers();
+```
+
+### 4. Update electron/preload.mjs
+
+Add the sync API from `sync-preload-api.mjs` to your contextBridge.
+
+### 5. Create Configuration
+
+Create `.env` file:
+```env
+REMOTE_API_URL=https://your-database-api.com/api
+REMOTE_API_KEY=your-secret-api-key
+```
+
+### 6. Initialize in React App
+
+```javascript
+import { syncService } from './services/SyncService';
+
+function App() {
+  useEffect(() => {
+    syncService.initialize().catch(console.error);
+    return () => syncService.destroy();
+  }, []);
+}
+```
+
+### 7. Add UI Components
+
+```javascript
+import { SyncStatusIndicator } from './components/SyncStatusIndicator';
+import { SyncSettingsPanel } from './components/SyncSettingsPanel';
+
+// Add to your dashboard/header:
+<SyncStatusIndicator />
+
+// Add to settings page:
+<SyncSettingsPanel />
+```
 
 ---
 
-
-
-## NAS Deployment (For IT/Admins)
-
-Automate deployment to network share:
-
-```powershell
-
-# Deploy to NAS with version tracking
-
-.\scripts\publish-to-nas.ps1 -Version "v1.0rc"
-
-# Quick deploy (use defaults)
-
-.\scripts\publish-to-nas.ps1
-
-# Skip build (use existing artifacts)
-
-.\scripts\publish-to-nas.ps1 -SkipBuild
+## 📊 Architecture Overview
 
 ```
-
-**What this does:**
-Builds the app (renderer + electron)
-Deploys to `\\92.168.1.99\\CraftAuto-Sales\\Temp_Craft_Tools_Runtime\\updates\[version]`
-Updates `latest` folder automatically
-Generates build metadata with Git info
-Creates workstation setup scripts
-Preserves previous versions for rollback
-**Documentation:**
-See [ADMIN_GUIDE_DEPLOYMENT.md](docs/user/ADMIN_GUIDE_DEPLOYMENT.md) for full NAS deployment guide
-See [DEPLOYMENT_GUIDE.md](docs/user/DEPLOYMENT_GUIDE.md) for all deployment options
------## Documentation
-
-All user-facing documents have been consolidated under `docs/user/` for a cleaner repository root.
-**[User Guide](docs/user/USER_GUIDE.md)** – Comprehensive guide for all features
-**[Quick Start](docs/user/QUICK_START.md)** – Get up and running quickly
-**[BOM Importer Guide](docs/user/BOM_IMPORTER_GUIDE.md)** – Import BOMs from spreadsheets
-**[Global Search](docs/user/GLOBAL_COMPONENT_SEARCH.md)** – Using the component search system
-**[Manual System](docs/user/MANUAL_SYSTEM.md)** – Smart manual lookup & caching
-**[Troubleshoot UI](docs/user/TROUBLESHOOT_UI.md)** – Common interface issues & fixes
-**[Implementation Summary](docs/user/IMPLEMENTATION_SUMMARY.md)** – High-level architecture recap
-**[Assembly Category Mapping](docs/user/BOM_ASSEMBLY_CATEGORY_MAPPING.md)** – Assembly → category reference
------## Project Structure
-
-
-
-Craft_Tools_Hub/
-
-
-
-├── electron/              # Electron main process
-
-
-
-│   ├── main.js           # Main process entry point
-
-
-
-│   └── preload.mjs       # Preload scripts
-
-
-
-├── src/
-
-
-
-│   ├── components/       # React components
-
-
-
-│   ├── context/          # React context providers
-
-
-
-│   ├── data/            # Application data
-
-
-
-│   │   ├── quotes/      # Quote storage
-
-
-
-│   │   └── assemblies.json
-
-
-
-│   ├── plugins/         # Plugin modules
-
-
-
-│   │   ├── QuoteConfigurator.jsx
-
-
-
-│   │   ├── ProductTemplateManager.jsx
-
-
-
-│   │   ├── ComponentManager.jsx
-
-
-
-│   │   └── ...
-
-
-
-│   ├── services/        # Business logic
-
-
-
-│   │   ├── SearchService.js
-
-
-
-│   │   └── EventBus.js
-
-
-
-│   └── App.jsx          # Root component
-
-
-
-├── public/              # Static assets
-
-
-
-│   └── COMPONENT PRICE LIST [MASTER].csv
-
-
-
-├── ARCHIVE/             # Archived development files
-
-
-
-├── build-app.bat        # Build script
-
-
-
-├── run-app.bat          # Launch script
-
-
-
-└── package.json
-
-
-
------## Product Categories
-
-The system organizes products into 10 specialized categories:
-
-| Category | Range | Icon | Products |
-
-|----------|-------|------|----------|
-
-| **Brewery** | 100-149 |  | Brewhouse, Brite Tanks, Unitanks |
-
-| **Distillery** | 150-199 || Stills, Spirit Vessels, Columns |
-
-| **Fermentation** | 200-249 |  | Fermenters, Glycol, Valves |
-
-| **Grain** | 250-299 | | Milling, Handling, Storage |
-
-| **Motor Control** | 300-349 | | VFDs, Soft Starters, Motors |
-
-| **Pneumatics** | 400-449 |  | Valves, Actuators, Regulators |
-
-| **Sanitary** | 450-499 || CIP, Pumps, Fittings |
-
-| **Remote** | 500-549 |  | HMI, SCADA, PLCs |
-
-| **Heating** | 550-599 |  | Heat Exchangers, Boilers |
-
-| **General** | 990-999 |  | Miscellaneous |-----## Technology StackFrontend
-**React 18** - UI framework
-**React Router** - Navigation
-**Tailwind CSS** - Styling
-**Lucide React** - Icons
-Backend
-**Electron** - Desktop app framework
-**Node.js** - Runtime
-**Vite** - Build tool & dev server
-Data Management
-**JSON** - Data storage
-**CSV** - Component database & exports
-**Local File System** - Quote persistence
------## Keyboard Shortcuts
-
-| Shortcut | Action |
-
-|----------|--------|
-
-| \Ctrl+K\ | Open Global Component Search |
-
-| \Esc\ | Close modals/dialogs |
-
-| \Tab\ | Navigate form fields |
-
-| \Enter\ | Submit forms/search |-----## CustomizationSettings Location
-
-
-
-User settings are stored in:
-
-
-
-%APPDATA%\electron-vite-react-app\data\
-
-
-
-├── dashboard_settings.json
-
-
-
-├── useful_links.json
-
-
-
-└── doc_hub_items.json
-
-
-
-Customizable Elements
-Dashboard layout and widgets
-Useful links sidebar
-Document hub items
-Export preferences
-Display style (compact/expanded)
------## Data FilesComponent Database
-
-
-
-public/COMPONENT PRICE LIST [MASTER].csv
-
-
-
-Contains 1000+ components with:
-SKU
-Description
-Category
-Manufacturer
-Price
-Quantity
-Quote Schema
-
-
-
-src/data/quotes/project_quote_schema.json
-
-
-
-Defines all 36 product templates across 10 categories.-----## Contributing
-
-This is a private repository for Craft Automation. For internal contributions:
-
-1. Create a feature branch
-
-2. Make your changes
-
-3. Test thoroughly
-
-4. Submit for review-----## Version Historyv1.0.0 - November 2025
-Enhanced Product Template Manager with categories
-Global Component Search (Ctrl+K)
-Custom category icons
-Settings persistence improvements
-Splash screen on startup
-Simplified settings interface
-Quote Configurator reset to clean state
------## License
-
+┌─────────────────────────────────────────┐
+│         Craft Tools Hub App             │
+├─────────────────────────────────────────┤
+│  React UI Components                    │
+│  • SyncStatusIndicator                  │
+│  • SyncSettingsPanel                    │
+│  • ConflictResolutionDialog             │
+├─────────────────────────────────────────┤
+│  Frontend Service Layer                 │
+│  • SyncService.js (orchestration)       │
+├─────────────────────────────────────────┤
+│  Electron IPC Bridge                    │
+│  • window.sync.* (preload API)          │
+│  • IPC Handlers (sync-ipc-handlers)     │
+├─────────────────────────────────────────┤
+│  Backend Service Layer                  │
+│  • DatabaseSyncService.js               │
+├─────────────────────────────────────────┤
+│  Local SQLite Database                  │
+│  • customers                            │
+│  • quotes                               │
+│  • orders                               │
+│  • sync_metadata                        │
+│  • sync_conflicts                       │
+└─────────────────────────────────────────┘
+                ↕ HTTPS/REST
+┌─────────────────────────────────────────┐
+│      Remote SQL Database API            │
+│  • GET/POST /api/customers              │
+│  • GET/POST /api/quotes                 │
+│  • GET/POST /api/orders                 │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Local SQLite Tables
+
+**customers**
+- id, name, company, email, phone
+- address, city, state, zip, country
+- notes, created_at, updated_at, deleted_at
+
+**quotes**
+- id, quote_number, customer_id
+- project_name, status, total_amount
+- discount_percent, tax_percent
+- notes, valid_until, created_by
+- created_at, updated_at, deleted_at
+
+**orders**
+- id, order_number, quote_id, customer_id
+- status, order_date, delivery_date
+- total_amount, payment_status
+- notes, created_at, updated_at, deleted_at
+
+**sync_metadata**
+- Tracks sync state per record
+- local_version, remote_version
+- last_synced_at, sync_status
+
+**sync_conflicts**
+- Records detected conflicts
+- local_data, remote_data (JSON)
+- resolved, resolution
+
+---
+
+## 🔧 Configuration Options
+
+### Environment Variables
+```env
+REMOTE_API_URL=https://your-api.com/api
+REMOTE_API_KEY=your-secret-key
+```
+
+### Auto-Sync Settings
+- Interval: 5 minutes to 24 hours
+- Default: 30 minutes
+- Configurable in UI
+
+### Conflict Resolution
+- Remote (server wins) - Default
+- Local (app wins)
+- Manual (user decides)
+
+---
+
+## 🎛️ API Requirements
+
+Your SQL database needs a REST API with these endpoints:
+
+### Health Check
+```
+GET /api/health
+→ { "status": "ok", "message": "Connected" }
+```
+
+### Get Records (with optional filter)
+```
+GET /api/customers?updatedSince=2024-01-01T00:00:00Z
+GET /api/quotes?updatedSince=2024-01-01T00:00:00Z
+GET /api/orders?updatedSince=2024-01-01T00:00:00Z
+```
+
+### Create/Update Records
+```
+POST /api/customers
+POST /api/quotes
+POST /api/orders
+```
+
+### Authentication
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+**See `sample-api-server.js` for a complete implementation example!**
+
+---
+
+## 📈 Usage Examples
+
+### Manual Sync
+```javascript
+// Sync everything
+await syncService.syncAll({ 
+  direction: 'both',
+  conflictResolution: 'remote' 
+});
+
+// Sync just customers
+await syncService.syncEntity('customers', {
+  direction: 'push'
+});
+```
+
+### Auto-Sync
+```javascript
+// Enable with 30-minute interval
+syncService.startAutoSync();
+syncService.setAutoSyncInterval(30);
+
+// Disable
+syncService.stopAutoSync();
+```
+
+### Listen to Events
+```javascript
+syncService.on('sync:complete', (result) => {
+  console.log('Sync finished:', result);
+});
+
+syncService.on('sync:error', (error) => {
+  console.error('Sync failed:', error);
+});
+```
+
+---
+
+## ✅ Testing Checklist
+
+- [ ] Install dependencies successfully
+- [ ] Copy all files to correct locations
+- [ ] Update main.js and preload.mjs
+- [ ] Create .env configuration
+- [ ] Build app without errors
+- [ ] Test connection to remote database
+- [ ] Run manual sync successfully
+- [ ] Verify data appears in local database
+- [ ] Test auto-sync functionality
+- [ ] Create and resolve a conflict
+- [ ] Production deployment ready
+
+---
+
+## 🐛 Troubleshooting
+
+### Connection Failed
+1. Check REMOTE_API_URL is correct
+2. Verify API server is running
+3. Test API endpoint in browser/Postman
+4. Check firewall settings
+
+### Sync Failed
+1. Check API key is valid
+2. Verify database permissions
+3. Review console error messages
+4. Test endpoints independently
+
+### Module Not Found
+1. Run `npm install` again
+2. Check file paths match imports
+3. Rebuild with `npm run build`
+
+---
+
+## 📚 Documentation Files
+
+1. **QUICK_START_CHECKLIST.md** - Step-by-step implementation guide
+2. **SYNC_IMPLEMENTATION_GUIDE.md** - Comprehensive technical documentation
+3. **sample-api-server.js** - Complete API server template
+
+---
+
+## 🔒 Security Best Practices
+
+✅ Never commit API keys to version control
+✅ Use environment variables for credentials
+✅ Enable HTTPS for API communications
+✅ Implement rate limiting on API
+✅ Validate all data before syncing
+✅ Use proper authentication/authorization
+✅ Consider encrypting sensitive local data
+
+---
+
+## 📊 What Gets Synced
+
+### Customers
+- Contact information
+- Company details
+- Address information
+- Notes and metadata
+
+### Quotes
+- Quote numbers (unique identifiers)
+- Customer associations
+- Project details
+- Pricing information
+- Status and validity dates
+
+### Orders
+- Order numbers (unique identifiers)
+- Quote and customer links
+- Order and delivery dates
+- Payment information
+- Status tracking
+
+---
+
+## 🎯 Success Criteria
+
+Your implementation is complete when:
+
+✅ App connects to remote database
+✅ Manual sync works (push & pull)
+✅ Auto-sync runs on schedule
+✅ Conflicts are detected
+✅ Conflict resolution UI works
+✅ Sync status visible in UI
+✅ Error handling functional
+✅ Data integrity maintained
+✅ Production ready
+
+---
+
+## ⏱️ Time Estimate
+
+- **Basic Implementation**: 30-60 minutes
+- **Testing & Debugging**: 30-60 minutes  
+- **Production Deployment**: 1-2 hours
+- **Total**: 2-4 hours
+
+---
+
+## 🆘 Support
+
+If you encounter issues:
+1. Check QUICK_START_CHECKLIST.md
+2. Review SYNC_IMPLEMENTATION_GUIDE.md
+3. Check console logs for errors
+4. Verify all dependencies installed
+5. Test API endpoints independently
+6. Check database permissions
+
+---
+
+## 📝 File Descriptions
+
+| File | Purpose | Location |
+|------|---------|----------|
+| DatabaseSyncService.js | Core sync logic | electron/ |
+| sync-ipc-handlers.js | IPC communication | electron/ |
+| sync-preload-api.mjs | Renderer API | electron/ |
+| SyncService.js | Frontend orchestration | src/services/ |
+| SyncStatusIndicator.jsx | Status badge UI | src/components/ |
+| SyncSettingsPanel.jsx | Settings interface | src/components/ |
+| ConflictResolutionDialog.jsx | Conflict UI | src/components/ |
+| sample-api-server.js | API template | (reference) |
+
+---
+
+## 🚀 Next Steps
+
+1. **Read** QUICK_START_CHECKLIST.md
+2. **Copy** files to your project
+3. **Configure** environment variables
+4. **Test** connection to remote database
+5. **Deploy** to production
+
+---
+
+## 📄 License
+
+This sync implementation is part of Craft Tools Hub.
 Copyright © 2025 Craft Automation. All rights reserved.
 
-This software is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.-----## Support
+---
 
-For questions or support:
-**Internal Wiki**: [Link to internal documentation]
-**Repository**: https://github.com/2nist/craft_tools_hub
-**Contact**: Craft Automation Sales Team
------## Acknowledgments
-
-Built by the Craft Automation team for standardization, organization and streamlining automation project data.
-
-**Tech Stack Credits**:
-Electron - Desktop app framework
-React - UI library
-Tailwind CSS - Styling
-Lucide - Icon library
-Vite - Build tooling
+**Ready to get started? Open QUICK_START_CHECKLIST.md!**
