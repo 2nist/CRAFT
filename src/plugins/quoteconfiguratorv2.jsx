@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, Plus, Save, Upload, X, Settings, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import AssemblyIOBuilder from '@/components/AssemblyIOBuilder';
+
+import React from 'react';
+
+// Quote Configurator V2 removed from Electron build (placeholder)
+export default function QuoteConfiguratorV2() {
+  return (
+    <div className="min-h-screen p-6 text-center text-gray-400">
+      <p className="text-lg">Quote Configurator (V2) removed from build.</p>
+    </div>
+  );
+}
 
 // ============================================================================
 // CONSTANTS & UTILITY FUNCTIONS
@@ -111,7 +118,7 @@ const countActiveIoPoints = (fields = [], instanceFields = {}) => {
 // P&ID ICON COMPONENTS
 // ============================================================================
 
-const PIDIcons = {
+// End placeholder
   DigitalInput: ({ className = "w-5 h-5" }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="4" y="8" width="16" height="8" rx="1" />

@@ -16,7 +16,7 @@ export default function App() {
   const pluginCategories = {
     'TOOLS': ['fla-calc', 'margin-calc', 'manual-bom-builder', 'number-generator'],
     'PRODUCTS': ['sub-assembly-manager', 'product-template-manager', 'component-manager', 'bom-importer'],
-    'QUOTING': ['quote-configurator', 'number-generator', 'margin-calc']
+    'QUOTING': ['number-generator', 'margin-calc']
   };
 
   useEffect(() => {

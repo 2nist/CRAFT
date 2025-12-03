@@ -4,7 +4,6 @@ import React, { Suspense, lazy } from 'react';
 const pluginMap = {
   'hub-dashboard': lazy(() => import('./plugins/HubDashboard.jsx')),
   'project-manager': lazy(() => import('./plugins/ProjectManager.jsx')),
-  'quote-configurator': lazy(() => import('./plugins/QuoteConfigurator.jsx')),
   'sub-assembly-manager': lazy(() => import('./plugins/SubAssemblyManager.jsx')),
   // Legacy alias for backward compatibility
   'assembly-manager': lazy(() => import('./plugins/SubAssemblyManager.jsx')),

@@ -7,13 +7,6 @@
     "icon": "LayoutDashboard"
   },
   {
-    "id": "quote-configurator",
-    "title": "Quote Configurator",
-    "path": "/quote-configurator",
-    "description": "Configure quotes for Craft Automation products",
-    "icon": "FileText"
-  },
-  {
     "id": "number-generator",
     "title": "Number Generator",
     "path": "/number-generator",

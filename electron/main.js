@@ -2047,6 +2047,40 @@ ipcMain.handle('runtime:run-diagnostics', async (event, options = {}) => {
   })()
 })
 
+// NAS Troubleshooter IPC handler
+ipcMain.handle('nas:runTroubleshooter', async (event, options = {}) => {
+  try {
+    // Run the NAS troubleshooter script in non-destructive mode and return JSON output
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'nas-troubleshooter.js')
+    const { execFileSync } = await import('child_process')
+    const args = []
+    // Prefer resolved runtime root when available
+    if (resolvedRuntimeRoot) {
+      args.push('--root', resolvedRuntimeRoot)
+    }
+    // Respect options
+    if (options.skipPing) args.push('--skip-ping')
+    if (options.skipWrite !== false) args.push('--skip-write')
+    args.push('--json')
+
+    try {
+      // Use `node` executable; assume node is available in PATH in dev/test environments
+      const stdout = execFileSync('node', [scriptPath, ...args], { encoding: 'utf8', timeout: 60000 })
+      try {
+        return JSON.parse(stdout)
+      } catch (parseErr) {
+        return { ok: false, error: 'Troubleshooter produced non-JSON output', raw: stdout }
+      }
+    } catch (execErr) {
+      console.error('Troubleshooter script failed:', execErr)
+      return { ok: false, error: String(execErr.message || execErr) }
+    }
+  } catch (err) {
+    console.error('Error running troubleshooter via IPC:', err)
+    return { ok: false, error: String(err.message || err) }
+  }
+})
+
 // Network credential IPC handlers moved to avoid duplicates (see line ~5147)
 
 ipcMain.on('credentials:save', async (event, creds) => {
@@ -5805,4 +5839,6 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     return { success: false, error: err.message };
   }
 });
+
+
 

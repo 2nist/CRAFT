@@ -12,6 +12,7 @@ import loggingService from './services/LoggingService';
 import ThemeToggle from './components/ThemeToggle';
 import RuntimeStatus from './components/RuntimeStatus';
 import SyncStatus from './components/SyncStatus';
+import NASTroubleshooter from './components/NASTroubleshooter';
 
 // Unused for now - may be used in future theme customization
 // const THEMES = [
@@ -240,7 +241,7 @@ export default function Settings() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+          <div className="inline-block w-12 h-12 border-b-2 rounded-full animate-spin border-accent"></div>
           <p className="mt-4 text-slateish/60">Loading settings...</p>
         </div>
       </div>
@@ -248,10 +249,10 @@ export default function Settings() {
   }
 
   return (
-    <div className="container mx-auto max-w-6xl p-6">
+    <div className="container max-w-6xl p-6 mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <SettingsIcon className="h-8 w-8" />
+        <h1 className="flex items-center gap-3 mb-2 text-3xl font-bold text-white">
+          <SettingsIcon className="w-8 h-8" />
           Settings
         </h1>
         <p className="text-gray-400">Configure your workspace, theme, and dashboard preferences</p>
@@ -268,35 +269,39 @@ export default function Settings() {
       <Tabs defaultValue="layout" className="space-y-6">
         <TabsList className="bg-gray-800 border border-gray-700">
           <TabsTrigger value="appearance" className="data-[state=active]:bg-gray-700">
-            <Palette className="h-4 w-4 mr-2" />
+            <Palette className="w-4 h-4 mr-2" />
             Appearance
           </TabsTrigger>
           <TabsTrigger value="layout" className="data-[state=active]:bg-gray-700">
-            <Layout className="h-4 w-4 mr-2" />
+            <Layout className="w-4 h-4 mr-2" />
             Layout
           </TabsTrigger>
           <TabsTrigger value="runtime" className="data-[state=active]:bg-gray-700">
-            <SettingsIcon className="h-4 w-4 mr-2" />
+            <SettingsIcon className="w-4 h-4 mr-2" />
             Runtime
           </TabsTrigger>
           <TabsTrigger value="sync" className="data-[state=active]:bg-gray-700">
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="w-4 h-4 mr-2" />
             Sync
           </TabsTrigger>
+          <TabsTrigger value="nas-troubleshooter" className="data-[state=active]:bg-gray-700">
+            <SettingsIcon className="w-4 h-4 mr-2" />
+            NAS Troubleshooter
+          </TabsTrigger>
           <TabsTrigger value="customers" className="data-[state=active]:bg-gray-700">
-            <Users className="h-4 w-4 mr-2" />
+            <Users className="w-4 h-4 mr-2" />
             Customers
           </TabsTrigger>
           <TabsTrigger value="links" className="data-[state=active]:bg-gray-700">
-            <Link className="h-4 w-4 mr-2" />
+            <Link className="w-4 h-4 mr-2" />
             Links
           </TabsTrigger>
           <TabsTrigger value="docs" className="data-[state=active]:bg-gray-700">
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="w-4 h-4 mr-2" />
             Documents
           </TabsTrigger>
             <TabsTrigger value="global" className="data-[state=active]:bg-gray-700">
-              <SettingsIcon className="h-4 w-4 mr-2" />
+              <SettingsIcon className="w-4 h-4 mr-2" />
               Global
             </TabsTrigger>
         </TabsList>
@@ -310,15 +315,15 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <Label className="text-gray-300 mb-3 block text-base">Color Theme</Label>
-                <p className="text-sm text-gray-400 mb-4">
+                <Label className="block mb-3 text-base text-gray-300">Color Theme</Label>
+                <p className="mb-4 text-sm text-gray-400">
                   Choose between light and dark mode. Your preference will be saved automatically.
                 </p>
                 <ThemeToggle />
               </div>
 
-              <div className="border-t border-gray-700 pt-6">
-                <Label className="text-gray-300 mb-3 block text-base">Theme Information</Label>
+              <div className="pt-6 border-t border-gray-700">
+                <Label className="block mb-3 text-base text-gray-300">Theme Information</Label>
                 <div className="space-y-2 text-sm text-gray-400">
                   <p>• Light mode uses warm earth tones with high contrast for readability</p>
                   <p>• Dark mode features a muted color palette optimized for low-light environments</p>
@@ -340,7 +345,7 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-sm text-gray-300 space-y-2">
+              <div className="space-y-2 text-sm text-gray-300">
                 <p>
                   The app now uses a local database with automatic synchronization to the network master database.
                   This allows multiple users to work simultaneously without conflicts.
@@ -368,7 +373,7 @@ export default function Settings() {
               <CardDescription>Monitor and control database synchronization between local and network databases</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-sm text-gray-300 space-y-2">
+              <div className="space-y-2 text-sm text-gray-300">
                 <p>
                   This section provides detailed information about the current synchronization status,
                   including last sync time, pending changes, and manual sync controls.
@@ -400,9 +405,9 @@ export default function Settings() {
                 { key: 'showUsefulLinks', label: 'Useful Links', icon: Link },
                 { key: 'showWelcomeMessage', label: 'Welcome Banner', icon: Eye }
               ].map(({ key, label, icon: Icon }) => (
-                <div key={key} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+                <div key={key} className="flex items-center justify-between p-4 rounded-lg bg-gray-700/50">
                   <div className="flex items-center gap-3">
-                    <Icon className="h-5 w-5 text-gray-400" />
+                    <Icon className="w-5 h-5 text-gray-400" />
                     <Label className="text-gray-300">{label}</Label>
                   </div>
                   <Switch
@@ -424,7 +429,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-gray-300 mb-2 block">Card Layout</Label>
+                <Label className="block mb-2 text-gray-300">Card Layout</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setSettings({
@@ -437,7 +442,7 @@ export default function Settings() {
                         : 'border-gray-600 bg-gray-900 hover:border-gray-500'
                     }`}
                   >
-                    <p className="font-medium text-white mb-1">Compact</p>
+                    <p className="mb-1 font-medium text-white">Compact</p>
                     <p className="text-xs text-gray-400">Dense, more items visible</p>
                   </button>
                   <button
@@ -451,7 +456,7 @@ export default function Settings() {
                         : 'border-gray-600 bg-gray-900 hover:border-gray-500'
                     }`}
                   >
-                    <p className="font-medium text-white mb-1">Expanded</p>
+                    <p className="mb-1 font-medium text-white">Expanded</p>
                     <p className="text-xs text-gray-400">Spacious, easier to read</p>
                   </button>
                 </div>
@@ -466,7 +471,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-gray-300 mb-2 block">Default Export Location</Label>
+                <Label className="block mb-2 text-gray-300">Default Export Location</Label>
                 <div className="flex gap-2">
                   <Input
                     value={settings?.export?.defaultPath || ''}
@@ -475,7 +480,7 @@ export default function Settings() {
                       export: { ...settings.export, defaultPath: e.target.value }
                     })}
                     placeholder="C:\Users\YourName\Documents\Exports"
-                    className="bg-gray-700 border-gray-600 text-white flex-1"
+                    className="flex-1 text-white bg-gray-700 border-gray-600"
                   />
                   <Button
                     variant="outline"
@@ -498,7 +503,7 @@ export default function Settings() {
               </div>
 
               <div>
-                <Label className="text-gray-300 mb-2 block">Default Export Format</Label>
+                <Label className="block mb-2 text-gray-300">Default Export Format</Label>
                 <div className="grid grid-cols-3 gap-3">
                   {['CSV', 'Excel', 'PDF'].map(format => (
                     <button
@@ -519,7 +524,7 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-700/50">
                 <div>
                   <Label className="text-gray-300">Include timestamps in filenames</Label>
                   <p className="text-sm text-gray-500">e.g., BOM_2025-11-06_14-30-00.csv</p>
@@ -536,6 +541,19 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
+        {/* NAS Troubleshooter Tab */}
+        <TabsContent value="nas-troubleshooter" className="space-y-6">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white">NAS Connectivity Troubleshooter</CardTitle>
+              <CardDescription>Diagnose and fix NAS connectivity issues for database synchronization</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NASTroubleshooter />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Customers Tab */}
         <TabsContent value="customers" className="space-y-6">
           <Card className="bg-gray-800 border-gray-700">
@@ -545,7 +563,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Add New Customer */}
-              <div className="border-b border-gray-700 pb-4 space-y-3">
+              <div className="pb-4 space-y-3 border-b border-gray-700">
                 <h4 className="font-medium text-white">Add New Customer</h4>
                 <div className="flex gap-3">
                   <Input
@@ -553,9 +571,9 @@ export default function Settings() {
                     value={newCustomer.name}
                     onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
                     onKeyPress={(e) => e.key === 'Enter' && addCustomer()}
-                    className="bg-gray-700 border-gray-600 text-white flex-1"
+                    className="flex-1 text-white bg-gray-700 border-gray-600"
                   />
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-700/50 rounded-lg border border-gray-600">
+                  <div className="flex items-center gap-2 px-4 py-2 border border-gray-600 rounded-lg bg-gray-700/50">
                     <input
                       type="checkbox"
                       id="isOEM"
@@ -568,7 +586,7 @@ export default function Settings() {
                     </Label>
                   </div>
                   <Button onClick={addCustomer}>
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="w-4 h-4 mr-2" />
                     Add
                   </Button>
                 </div>
@@ -603,7 +621,7 @@ export default function Settings() {
                           : 'bg-gray-700/50 border-gray-600'
                       }`}
                     >
-                      <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center flex-1 gap-3">
                         <span className={`text-xs font-mono font-semibold px-2 py-1 rounded ${
                           isOEM 
                             ? 'bg-blue-600 text-white' 
@@ -622,7 +640,7 @@ export default function Settings() {
                             }}
                             onBlur={() => setEditingCustomer(null)}
                             autoFocus
-                            className="bg-gray-700 border-gray-600 text-white flex-1"
+                            className="flex-1 text-white bg-gray-700 border-gray-600"
                           />
                         ) : (
                           <div className="flex-1">
@@ -647,24 +665,24 @@ export default function Settings() {
                           <>
                             <button
                               onClick={() => setEditingCustomer({ id: customer.id, name: customer.name })}
-                              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-700 rounded"
+                              className="p-2 text-blue-400 rounded hover:text-blue-300 hover:bg-gray-700"
                               title="Edit customer"
                             >
-                              <Edit2 className="h-4 w-4" />
+                              <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteCustomer(customer.id)}
-                              className="p-2 text-red-400 hover:text-red-300 hover:bg-gray-700 rounded"
+                              className="p-2 text-red-400 rounded hover:text-red-300 hover:bg-gray-700"
                               title="Delete customer"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </>
                         )}
                         {isEditing && (
                           <button
                             onClick={() => updateCustomer(customer.id, editingCustomer.name)}
-                            className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded"
+                            className="px-3 py-1 text-sm text-white bg-green-600 rounded hover:bg-green-700"
                           >
                             Save
                           </button>
@@ -696,7 +714,7 @@ export default function Settings() {
                     {Object.entries(globalSettings || {}).map(([key, val]) => {
                       const t = typeof val;
                       return (
-                        <div key={key} className="p-3 bg-gray-700/50 rounded-lg flex items-start gap-3">
+                        <div key={key} className="flex items-start gap-3 p-3 rounded-lg bg-gray-700/50">
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
                               <div className="font-medium text-white">{key}</div>
@@ -717,14 +735,14 @@ export default function Settings() {
                                   type="number"
                                   value={val}
                                   onChange={(e) => setGlobalSettings({ ...globalSettings, [key]: Number(e.target.value) })}
-                                  className="bg-gray-700 border border-gray-600 p-2 rounded w-full text-white"
+                                  className="w-full p-2 text-white bg-gray-700 border border-gray-600 rounded"
                                 />
                               ) : t === 'string' ? (
                                 <input
                                   type="text"
                                   value={val}
                                   onChange={(e) => setGlobalSettings({ ...globalSettings, [key]: e.target.value })}
-                                  className="bg-gray-700 border border-gray-600 p-2 rounded w-full text-white"
+                                  className="w-full p-2 text-white bg-gray-700 border border-gray-600 rounded"
                                 />
                               ) : (
                                 <div>
@@ -746,7 +764,7 @@ export default function Settings() {
                                         setGsErrors((prev) => ({ ...prev, [key]: 'Invalid JSON' }));
                                       }
                                     }}
-                                    className="bg-gray-800 border border-gray-700 p-2 rounded w-full text-white"
+                                    className="w-full p-2 text-white bg-gray-800 border border-gray-700 rounded"
                                     rows={6}
                                   />
                                   {gsErrors[key] && (
@@ -763,7 +781,7 @@ export default function Settings() {
                                 delete next[key];
                                 setGlobalSettings(next);
                               }}
-                              className="px-3 py-1 text-sm bg-red-600 rounded text-white"
+                              className="px-3 py-1 text-sm text-white bg-red-600 rounded"
                             >
                               Delete
                             </button>
@@ -772,25 +790,25 @@ export default function Settings() {
                       );
                     })}
 
-                    <div className="border-t border-gray-700 pt-4 mt-4">
-                      <h4 className="font-medium text-white mb-2">Add New Setting</h4>
+                    <div className="pt-4 mt-4 border-t border-gray-700">
+                      <h4 className="mb-2 font-medium text-white">Add New Setting</h4>
                       <div className="grid grid-cols-4 gap-2">
                         <input
                           placeholder="key.name"
                           value={newGsKey}
                           onChange={(e) => setNewGsKey(e.target.value)}
-                          className="bg-gray-700 border border-gray-600 p-2 rounded text-white col-span-1"
+                          className="col-span-1 p-2 text-white bg-gray-700 border border-gray-600 rounded"
                         />
                         <input
                           placeholder='value (JSON or plain)'
                           value={newGsValue}
                           onChange={(e) => setNewGsValue(e.target.value)}
-                          className="bg-gray-700 border border-gray-600 p-2 rounded text-white col-span-2"
+                          className="col-span-2 p-2 text-white bg-gray-700 border border-gray-600 rounded"
                         />
                         <select
                           value={newGsType}
                           onChange={(e) => setNewGsType(e.target.value)}
-                          className="bg-gray-700 border border-gray-600 p-2 rounded text-white"
+                          className="p-2 text-white bg-gray-700 border border-gray-600 rounded"
                         >
                           <option value="auto">Auto</option>
                           <option value="string">String</option>
@@ -798,8 +816,8 @@ export default function Settings() {
                           <option value="boolean">Boolean</option>
                           <option value="json">JSON</option>
                         </select>
-                        <div className="col-span-4 flex gap-2 justify-end">
-                          <div className="flex-1 text-left text-xs text-red-300">{newEntryError}</div>
+                        <div className="flex justify-end col-span-4 gap-2">
+                          <div className="flex-1 text-xs text-left text-red-300">{newEntryError}</div>
                           <button
                             onClick={() => {
                               setNewEntryError(null);
@@ -827,7 +845,7 @@ export default function Settings() {
                               setNewGsValue('');
                               setNewGsType('auto');
                             }}
-                            className="px-3 py-1 bg-blue-600 rounded text-white"
+                            className="px-3 py-1 text-white bg-blue-600 rounded"
                           >
                             Add
                           </button>
@@ -847,7 +865,7 @@ export default function Settings() {
                           }
                         }}
                         disabled={Object.keys(gsErrors).length > 0 || !!newEntryError}
-                        className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+                        className="px-4 py-2 text-white bg-green-600 rounded disabled:opacity-50"
                       >
                         Save Global Settings
                       </button>
@@ -862,7 +880,7 @@ export default function Settings() {
                             setMessage({ type: 'error', text: 'Failed to reload global settings' });
                           }
                         }}
-                        className="px-4 py-2 bg-gray-600 text-white rounded"
+                        className="px-4 py-2 text-white bg-gray-600 rounded"
                       >
                         Reload
                       </button>
@@ -874,7 +892,7 @@ export default function Settings() {
                             setMessage({ type: 'info', text: 'Cleared runtime global settings cache' });
                           } catch (e) {}
                         }}
-                        className="px-4 py-2 bg-yellow-600 text-white rounded"
+                        className="px-4 py-2 text-white bg-yellow-600 rounded"
                       >
                         Clear Cache
                       </button>
@@ -894,7 +912,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               {usefulLinks.map((link, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-700/50">
                   <div>
                     <p className="font-medium text-white">{link.title}</p>
                     <p className="text-sm text-gray-400">{link.link}</p>
@@ -909,28 +927,28 @@ export default function Settings() {
                 </div>
               ))}
 
-              <div className="border-t border-gray-700 pt-4 mt-4 space-y-3">
+              <div className="pt-4 mt-4 space-y-3 border-t border-gray-700">
                 <h4 className="font-medium text-white">Add New Link</h4>
                 <Input
                   placeholder="Title"
                   value={newLink.title}
                   onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="text-white bg-gray-700 border-gray-600"
                 />
                 <Input
                   placeholder="URL"
                   value={newLink.link}
                   onChange={(e) => setNewLink({ ...newLink, link: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="text-white bg-gray-700 border-gray-600"
                 />
                 <Input
                   placeholder="Icon name (e.g., Link, Database)"
                   value={newLink.icon}
                   onChange={(e) => setNewLink({ ...newLink, icon: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="text-white bg-gray-700 border-gray-600"
                 />
                 <Button onClick={addLink} className="w-full">
-                  <Link className="h-4 w-4 mr-2" />
+                  <Link className="w-4 h-4 mr-2" />
                   Add Link
                 </Button>
               </div>
@@ -947,7 +965,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               {docHubItems.map((doc, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-700/50">
                   <div>
                     <p className="font-medium text-white">{doc.title}</p>
                     <p className="text-sm text-gray-400">{doc.path}</p>
@@ -962,28 +980,28 @@ export default function Settings() {
                 </div>
               ))}
 
-              <div className="border-t border-gray-700 pt-4 mt-4 space-y-3">
+              <div className="pt-4 mt-4 space-y-3 border-t border-gray-700">
                 <h4 className="font-medium text-white">Add New Document</h4>
                 <Input
                   placeholder="Title"
                   value={newDoc.title}
                   onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="text-white bg-gray-700 border-gray-600"
                 />
                 <Input
                   placeholder="Path or URL"
                   value={newDoc.path}
                   onChange={(e) => setNewDoc({ ...newDoc, path: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="text-white bg-gray-700 border-gray-600"
                 />
                 <Input
                   placeholder="Icon name (e.g., FileText, BookOpen)"
                   value={newDoc.icon}
                   onChange={(e) => setNewDoc({ ...newDoc, icon: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="text-white bg-gray-700 border-gray-600"
                 />
                 <Button onClick={addDoc} className="w-full">
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="w-4 h-4 mr-2" />
                   Add Document
                 </Button>
               </div>
@@ -995,11 +1013,11 @@ export default function Settings() {
       {/* Action Buttons */}
       <div className="flex gap-3 mt-6">
         <Button onClick={handleSave} disabled={saving || Object.keys(gsErrors).length > 0 || !!newEntryError} className="flex-1">
-          <Save className="h-4 w-4 mr-2" />
+          <Save className="w-4 h-4 mr-2" />
           {saving ? 'Saving...' : 'Save Settings'}
         </Button>
         <Button onClick={handleReset} variant="outline" className="border-gray-600">
-          <RotateCcw className="h-4 w-4 mr-2" />
+          <RotateCcw className="w-4 h-4 mr-2" />
           Reset to Defaults
         </Button>
       </div>

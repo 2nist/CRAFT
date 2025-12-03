@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Settings, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { IOLibraryDrawer, PIDIcons } from '@/components/IOLibraryDrawer';
-import loggingService from '../services/LoggingService';
+import React from 'react';
 
-const DESKTOP_BREAKPOINT = '(min-width: 1280px)';
-const LEFT_DRAWER_HANDLE_WIDTH = 28;
-const LEFT_DRAWER_WIDTH = 360;
-const LEFT_DRAWER_OFFSETS = { top: 65, left: 150, bottomGap: 0 };
-const RIGHT_DRAWER_HANDLE_WIDTH = 20;
+// Quote Configurator plugin removed from Electron build (placeholder)
+export default function QuoteConfigurator() {
+  return (
+    <div className="min-h-screen p-6 text-center text-gray-400">
+      <p className="text-lg">This plugin has been removed from the Electron build.</p>
+    </div>
+  );
+}
+
 const RIGHT_DRAWER_WIDTH = 352;
 const RIGHT_DRAWER_OFFSETS = { top: 65, right: 24, bottomGap: 0 };
 

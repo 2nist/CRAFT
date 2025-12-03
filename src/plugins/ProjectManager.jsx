@@ -241,19 +241,19 @@ export default function ProjectManager({ context, onNavigate }) {
 
   const handleNewQuote = () => {
     if (onNavigate) {
-      onNavigate('quote-configurator', { isNew: true });
+      onNavigate('number-generator', { isNew: true });
     }
   };
 
   const handleCreateQuote = (quoteContext) => {
     if (onNavigate) {
-      onNavigate('quote-configurator', quoteContext);
+      onNavigate('number-generator', quoteContext);
     }
   };
 
   const handleEditQuote = (quoteContext) => {
     if (onNavigate) {
-      onNavigate('quote-configurator', quoteContext);
+      onNavigate('number-generator', quoteContext);
     }
   };
 
