@@ -62,3 +62,5 @@ ARCHIVE/
 
 # Server environment
 server-setup/.env
+
+tools/number-service/_test_data*
