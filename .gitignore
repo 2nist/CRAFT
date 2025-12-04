@@ -38,10 +38,27 @@ TEST/
 OUTPUT/
 *.tmp
 *.temp
+_test_data/
+nas-report.json
+
+# Duplicate/backup directories
+craft-cpq/
+craft_tools_hub/
+fresh-test/
 
 # OS files
 Thumbs.db
 .DS_Store
 
 # Archive (keep for reference but don't track changes)
-# ARCHIVE/
+ARCHIVE/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Server environment
+server-setup/.env

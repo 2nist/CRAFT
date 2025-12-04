@@ -1,9 +1,18 @@
 {
-  "name": "electron-vite-react-app",
+  "name": "craft-tools-hub",
   "version": "1.0.0",
-  "description": "Electron app with Vite, React, and Tailwind CSS",
+  "description": "CPQ (Configure, Price, Quote) system for industrial automation - Desktop application for managing quotes, configurations, and pricing",
   "main": "electron/main.js",
   "type": "module",
+  "author": "Craft Automation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2nist/craft_tools_hub.git"
+  },
+  "homepage": "https://github.com/2nist/craft_tools_hub#readme",
+  "bugs": {
+    "url": "https://github.com/2nist/craft_tools_hub/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "npm run electron:build",
@@ -23,13 +32,18 @@
     "check:nas": "node ./scripts/nas-diagnostics.js"
   },
   "keywords": [
+    "cpq",
+    "quote",
+    "configurator",
+    "pricing",
     "electron",
-    "vite",
-    "react",
-    "tailwind"
+    "industrial-automation",
+    "bom",
+    "sql-sync",
+    "offline-first",
+    "desktop-app"
   ],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
