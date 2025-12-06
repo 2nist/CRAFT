@@ -1,16 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { PanelRightClose, PanelRightOpen, PanelLeftOpen, PanelLeftClose, Settings, X } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { IOLibraryDrawer } from '../components/IOLibraryDrawer';
 
-// Quote Configurator plugin removed from Electron build (placeholder)
-export default function QuoteConfigurator() {
-  return (
-    <div className="min-h-screen p-6 text-center text-gray-400">
-      <p className="text-lg">This plugin has been removed from the Electron build.</p>
-    </div>
-  );
-}
-
+const DESKTOP_BREAKPOINT = '(min-width: 1280px)';
 const RIGHT_DRAWER_WIDTH = 352;
 const RIGHT_DRAWER_OFFSETS = { top: 65, right: 24, bottomGap: 0 };
+const LEFT_DRAWER_OFFSETS = { top: 65, left: 150, bottomGap: 0 };
+const LEFT_DRAWER_WIDTH = 360;
+const LEFT_DRAWER_HANDLE_WIDTH = 28;
 
 // Normalizes schema entries so dropdowns always receive a `code` field.
 const normalizeSchemaOptions = (options = []) =>
@@ -879,12 +877,10 @@ function ProductConfigurationForm({ currentTemplate, productConfiguration, setPr
 
     const handleOpenInstanceModal = React.useCallback((assemblyId, instanceId) => {
       setActiveInstanceModal({ assemblyId, instanceId });
-    setActiveAssembly({ assemblyId, instanceId });
     }, []);
 
     const handleCloseInstanceModal = React.useCallback(() => {
       setActiveInstanceModal(null);
-    setActiveAssembly(null);
     }, []);
 
   // Drag-drop handlers for I/O Library integration

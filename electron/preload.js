@@ -49,6 +49,17 @@ contextBridge.exposeInMainWorld('components', {
   syncFromCsv: (csvContent) => ipcRenderer.invoke('components:sync-from-csv', csvContent)
 })
 
+// Expose assemblies API
+contextBridge.exposeInMainWorld('assemblies', {
+  getAll: () => ipcRenderer.invoke('assemblies:getAll'),
+  save: (assemblyObj) => ipcRenderer.invoke('assemblies:save', assemblyObj),
+  delete: (assemblyId) => ipcRenderer.invoke('assemblies:delete', assemblyId),
+  search: (filters) => ipcRenderer.invoke('assemblies:search', filters),
+  getById: (assemblyId) => ipcRenderer.invoke('assemblies:getById', assemblyId),
+  expand: (assemblyId) => ipcRenderer.invoke('assemblies:expand', assemblyId),
+  getCategories: () => ipcRenderer.invoke('assemblies:getCategories'),
+})
+
 // Expose sub-assemblies API
 contextBridge.exposeInMainWorld('subAssemblies', {
   getAll: () => ipcRenderer.invoke('sub-assemblies:getAll'),

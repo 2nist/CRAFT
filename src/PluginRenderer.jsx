@@ -5,10 +5,12 @@ const pluginMap = {
   'hub-dashboard': lazy(() => import('./plugins/HubDashboard.jsx')),
   'project-manager': lazy(() => import('./plugins/ProjectManager.jsx')),
   'sub-assembly-manager': lazy(() => import('./plugins/SubAssemblyManager.jsx')),
+  'assembly-io-builder': lazy(() => import('./plugins/AssemblyIOBuilderPlugin.jsx')),
   // Legacy alias for backward compatibility
   'assembly-manager': lazy(() => import('./plugins/SubAssemblyManager.jsx')),
   'product-template-manager': lazy(() => import('./plugins/ProductTemplateManagerV2.jsx')),
   'component-manager': lazy(() => import('./plugins/ComponentManager.jsx')),
+  'quote-configurator': lazy(() => import('./plugins/QuoteConfigurator.jsx')),
   'number-generator': lazy(() => import('./plugins/NumberGenerator.jsx')),
   'fla-calc': lazy(() => import('./plugins/FlaCalculator.jsx')),
   'margin-calc': lazy(() => import('./plugins/MarginCalculator.jsx')),

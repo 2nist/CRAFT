@@ -22,6 +22,9 @@
     "build:electron": "vite build --config vite.config.electron.js",
     "build:renderer": "vite build",
     "dist": "npm run electron:build && electron-builder --win --publish=never",
+    "dist:portable": "npm run electron:build && node build-portable-final.mjs",
+    "dist:installer": "npm run electron:build && node build-installer-standalone.mjs",
+    "package:portable": "node -e \"const fs=require('fs'); const path=require('path'); const src='release/win-unpacked'; const dest='release'; if(fs.existsSync(src)) { console.log('✓ Portable application ready at:', src); console.log('  Executable: ' + src + '/Craft Automation CPQ.exe'); } else { console.log('Build directory not found'); }\"",
     "dist:dir": "npm run electron:build && electron-builder --win --dir",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -96,7 +99,9 @@
     "electron-store": "^11.0.2",
     "express": "^5.1.0",
     "lucide-react": "^0.294.0",
+    "mssql": "^12.2.0",
     "papaparse": "^5.5.3",
+    "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-rnd": "^10.5.2",
@@ -121,28 +126,50 @@
       "dist/**/*",
       "dist-electron/**/*",
       "src/data/**/*",
-      "!node_modules/sqlite3/build-tmp-napi-*/**/*"
-    ],
-    "asarUnpack": [
-      "node_modules/sqlite3/**/*"
+      "src/database/**/*",
+      "src/services/**/*",
+      "database/**/*",
+      "public/**/*",
+      "electron/sync-*.js",
+      "electron/DatabaseSyncService.js",
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/mssql/**/*",
+      "node_modules/tedious/**/*",
+      "node_modules/electron-store/**/*",
+      "node_modules/axios/**/*",
+      "!node_modules/*/test/**/*",
+      "!node_modules/*/docs/**/*",
+      "!node_modules/*/*.md"
     ],
     "win": {
       "target": [
         {
-          "target": "dir",
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
           "arch": [
             "x64"
           ]
         }
       ],
       "sign": false,
+      "forceCodeSigning": false,
       "certificateFile": null,
       "certificatePassword": null,
       "verifyUpdateCodeSignature": false,
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
       "signDlls": false,
       "rfc3161TimeStampServer": null,
       "timeStampServer": null
     },
+    "asar": false,
+    "asarUnpack": [],
     "nsis": {
       "oneClick": false,
       "perMachine": true,
@@ -151,7 +178,13 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Craft Automation CPQ",
       "license": "LICENSE",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": null,
+      "uninstallerIcon": null,
+      "installerHeaderIcon": null,
+      "installerSidebar": null,
+      "uninstallerSidebar": null,
+      "include": "installer.nsi"
     },
     "extraMetadata": {
       "main": "dist-electron/main.cjs"

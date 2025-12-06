@@ -10,9 +10,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loadGlobalSettings, writeGlobalSettings } from './plugins/global-settings';
 import loggingService from './services/LoggingService';
 import ThemeToggle from './components/ThemeToggle';
-import RuntimeStatus from './components/RuntimeStatus';
-import SyncStatus from './components/SyncStatus';
-import NASTroubleshooter from './components/NASTroubleshooter';
 
 // Unused for now - may be used in future theme customization
 // const THEMES = [
@@ -33,9 +30,9 @@ import NASTroubleshooter from './components/NASTroubleshooter';
 
 export default function Settings() {
   console.log('🔧 Settings component loaded');
-  console.log('🔧 Available tabs:', ['appearance', 'layout', 'runtime', 'sync', 'customers', 'links', 'docs', 'global']);
+  console.log('🔧 Available tabs:', ['appearance', 'layout', 'customers', 'links', 'docs']);
   console.log('🎨 Settings component loaded - checking for theme tabs...');
-  console.log('Available tabs should include: appearance, layout, runtime, sync, customers, links, docs, global');
+  console.log('Available tabs should include: appearance, layout, customers, links, docs');
   const [settings, setSettings] = useState(null);
   const [globalSettings, setGlobalSettings] = useState({});
   const [gsLoading, setGsLoading] = useState(true);
@@ -276,18 +273,6 @@ export default function Settings() {
             <Layout className="w-4 h-4 mr-2" />
             Layout
           </TabsTrigger>
-          <TabsTrigger value="runtime" className="data-[state=active]:bg-gray-700">
-            <SettingsIcon className="w-4 h-4 mr-2" />
-            Runtime
-          </TabsTrigger>
-          <TabsTrigger value="sync" className="data-[state=active]:bg-gray-700">
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Sync
-          </TabsTrigger>
-          <TabsTrigger value="nas-troubleshooter" className="data-[state=active]:bg-gray-700">
-            <SettingsIcon className="w-4 h-4 mr-2" />
-            NAS Troubleshooter
-          </TabsTrigger>
           <TabsTrigger value="customers" className="data-[state=active]:bg-gray-700">
             <Users className="w-4 h-4 mr-2" />
             Customers
@@ -300,10 +285,6 @@ export default function Settings() {
             <FileText className="w-4 h-4 mr-2" />
             Documents
           </TabsTrigger>
-            <TabsTrigger value="global" className="data-[state=active]:bg-gray-700">
-              <SettingsIcon className="w-4 h-4 mr-2" />
-              Global
-            </TabsTrigger>
         </TabsList>
 
         {/* Appearance Tab */}
@@ -335,61 +316,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Runtime Tab */}
-        <TabsContent value="runtime" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle>Database Synchronization</CardTitle>
-              <CardDescription>
-                Multi-user database sync is now handled automatically by the Sync Manager.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>
-                  The app now uses a local database with automatic synchronization to the network master database.
-                  This allows multiple users to work simultaneously without conflicts.
-                </p>
-                <p>
-                  Sync happens automatically every 2 hours, or you can trigger it manually using the Sync Status component in the app.
-                </p>
-                <p className="text-xs text-gray-400">
-                  For more information, see <strong>MULTI_USER_SYNC.md</strong> or <strong>SYNC_QUICK_START.md</strong>.
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <RuntimeStatus />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Sync Tab */}
-        <TabsContent value="sync" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Database Synchronization Status</CardTitle>
-              <CardDescription>Monitor and control database synchronization between local and network databases</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>
-                  This section provides detailed information about the current synchronization status,
-                  including last sync time, pending changes, and manual sync controls.
-                </p>
-                <p>
-                  The sync system automatically synchronizes your local database with the network master database
-                  every 2 hours, or you can trigger manual synchronization using the controls below.
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <SyncStatus />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Layout Tab */}
         <TabsContent value="layout" className="space-y-6">
@@ -541,19 +467,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* NAS Troubleshooter Tab */}
-        <TabsContent value="nas-troubleshooter" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">NAS Connectivity Troubleshooter</CardTitle>
-              <CardDescription>Diagnose and fix NAS connectivity issues for database synchronization</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <NASTroubleshooter />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Customers Tab */}
         <TabsContent value="customers" className="space-y-6">
           <Card className="bg-gray-800 border-gray-700">
@@ -695,213 +608,6 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
-
-          {/* Global Settings Tab */}
-          <TabsContent value="global" className="space-y-6">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Global Settings</CardTitle>
-                <CardDescription>Edit `config/global-settings.json` (WYSIWYG)</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {gsLoading ? (
-                  <div className="text-gray-400">Loading global settings...</div>
-                ) : (
-                  <div className="space-y-3">
-                    {Object.keys(globalSettings || {}).length === 0 && (
-                      <div className="text-sm text-gray-400">No global settings defined.</div>
-                    )}
-                    {Object.entries(globalSettings || {}).map(([key, val]) => {
-                      const t = typeof val;
-                      return (
-                        <div key={key} className="flex items-start gap-3 p-3 rounded-lg bg-gray-700/50">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium text-white">{key}</div>
-                              <div className="text-xs text-gray-400">{t}</div>
-                            </div>
-                            <div className="mt-2">
-                              {t === 'boolean' ? (
-                                <label className="inline-flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={!!val}
-                                    onChange={(e) => setGlobalSettings({ ...globalSettings, [key]: e.target.checked })}
-                                  />
-                                  <span className="text-sm text-gray-200">{String(val)}</span>
-                                </label>
-                              ) : t === 'number' ? (
-                                <input
-                                  type="number"
-                                  value={val}
-                                  onChange={(e) => setGlobalSettings({ ...globalSettings, [key]: Number(e.target.value) })}
-                                  className="w-full p-2 text-white bg-gray-700 border border-gray-600 rounded"
-                                />
-                              ) : t === 'string' ? (
-                                <input
-                                  type="text"
-                                  value={val}
-                                  onChange={(e) => setGlobalSettings({ ...globalSettings, [key]: e.target.value })}
-                                  className="w-full p-2 text-white bg-gray-700 border border-gray-600 rounded"
-                                />
-                              ) : (
-                                <div>
-                                  <textarea
-                                    value={JSON.stringify(val, null, 2)}
-                                    onChange={(e) => {
-                                      const raw = e.target.value;
-                                      try {
-                                        const parsed = JSON.parse(raw);
-                                        setGlobalSettings({ ...globalSettings, [key]: parsed });
-                                        setGsErrors((prev) => {
-                                          const next = { ...prev };
-                                          delete next[key];
-                                          return next;
-                                        });
-                                      } catch (err) {
-                                        // keep string until valid JSON
-                                        setGlobalSettings({ ...globalSettings, [key]: raw });
-                                        setGsErrors((prev) => ({ ...prev, [key]: 'Invalid JSON' }));
-                                      }
-                                    }}
-                                    className="w-full p-2 text-white bg-gray-800 border border-gray-700 rounded"
-                                    rows={6}
-                                  />
-                                  {gsErrors[key] && (
-                                    <div className="mt-2 text-xs text-red-300">{gsErrors[key]}</div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <button
-                              onClick={() => {
-                                const next = { ...globalSettings };
-                                delete next[key];
-                                setGlobalSettings(next);
-                              }}
-                              className="px-3 py-1 text-sm text-white bg-red-600 rounded"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    <div className="pt-4 mt-4 border-t border-gray-700">
-                      <h4 className="mb-2 font-medium text-white">Add New Setting</h4>
-                      <div className="grid grid-cols-4 gap-2">
-                        <input
-                          placeholder="key.name"
-                          value={newGsKey}
-                          onChange={(e) => setNewGsKey(e.target.value)}
-                          className="col-span-1 p-2 text-white bg-gray-700 border border-gray-600 rounded"
-                        />
-                        <input
-                          placeholder='value (JSON or plain)'
-                          value={newGsValue}
-                          onChange={(e) => setNewGsValue(e.target.value)}
-                          className="col-span-2 p-2 text-white bg-gray-700 border border-gray-600 rounded"
-                        />
-                        <select
-                          value={newGsType}
-                          onChange={(e) => setNewGsType(e.target.value)}
-                          className="p-2 text-white bg-gray-700 border border-gray-600 rounded"
-                        >
-                          <option value="auto">Auto</option>
-                          <option value="string">String</option>
-                          <option value="number">Number</option>
-                          <option value="boolean">Boolean</option>
-                          <option value="json">JSON</option>
-                        </select>
-                        <div className="flex justify-end col-span-4 gap-2">
-                          <div className="flex-1 text-xs text-left text-red-300">{newEntryError}</div>
-                          <button
-                            onClick={() => {
-                              setNewEntryError(null);
-                              if (!newGsKey) return;
-                              let parsed;
-                              try {
-                                if (newGsType === 'auto') {
-                                  parsed = JSON.parse(newGsValue);
-                                } else if (newGsType === 'number') {
-                                  parsed = Number(newGsValue);
-                                } else if (newGsType === 'boolean') {
-                                  const lower = String(newGsValue).toLowerCase();
-                                  parsed = lower === 'true' || lower === '1';
-                                } else if (newGsType === 'json') {
-                                  parsed = JSON.parse(newGsValue);
-                                } else {
-                                  parsed = String(newGsValue);
-                                }
-                              } catch (e) {
-                                setNewEntryError('Value is not valid JSON for chosen type');
-                                return;
-                              }
-                              setGlobalSettings({ ...globalSettings, [newGsKey]: parsed });
-                              setNewGsKey('');
-                              setNewGsValue('');
-                              setNewGsType('auto');
-                            }}
-                            className="px-3 py-1 text-white bg-blue-600 rounded"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 mt-4">
-                      <button
-                        onClick={async () => {
-                          try {
-                            await writeGlobalSettings(globalSettings, { backup: true });
-                            setMessage({ type: 'success', text: 'Global settings saved (backup created)' });
-                          } catch (e) {
-                            console.error(e);
-                            setMessage({ type: 'error', text: 'Failed to save global settings' });
-                          }
-                        }}
-                        disabled={Object.keys(gsErrors).length > 0 || !!newEntryError}
-                        className="px-4 py-2 text-white bg-green-600 rounded disabled:opacity-50"
-                      >
-                        Save Global Settings
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            const data = await loadGlobalSettings();
-                            setGlobalSettings(data || {});
-                            setMessage({ type: 'info', text: 'Reloaded global settings' });
-                          } catch (e) {
-                            console.error(e);
-                            setMessage({ type: 'error', text: 'Failed to reload global settings' });
-                          }
-                        }}
-                        className="px-4 py-2 text-white bg-gray-600 rounded"
-                      >
-                        Reload
-                      </button>
-                      <button
-                        onClick={() => {
-                          // clear cache in runtime helper if present
-                          try {
-                            window.api && window.api.clearGlobalSettingsCache && window.api.clearGlobalSettingsCache();
-                            setMessage({ type: 'info', text: 'Cleared runtime global settings cache' });
-                          } catch (e) {}
-                        }}
-                        className="px-4 py-2 text-white bg-yellow-600 rounded"
-                      >
-                        Clear Cache
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
         {/* Links Tab */}
         <TabsContent value="links" className="space-y-6">

@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Plus, X, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+/**
+ * AssemblyIOBuilder Component
+ * @param {Object} assemblyToEdit - Assembly to edit (null for new)
+ * @param {Function} onSave - Callback when assembly is saved
+ * @param {Function} onClose - Callback when editor is closed
+ */
 const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
   const [ioPalette, setIoPalette] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,12 +164,12 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-800">
+      <div className="flex justify-between items-center border-b border-slateish/30 p-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Assembly I/O Builder</h2>
-          <p className="text-sm text-slate-400">Build logical process assemblies with I/O points</p>
+          <h2 className="text-lg font-semibold text-foreground">Assembly I/O Builder</h2>
+          <p className="mt-1 text-sm text-slateish">Build logical process assemblies with I/O points</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
@@ -177,34 +184,34 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
       {/* Two-Pane Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Pane: I/O Palette */}
-        <div className="w-1/2 border-r border-slate-800 flex flex-col">
-          <div className="p-4 border-b border-slate-800">
-            <h3 className="text-sm font-semibold text-white mb-3">I/O Palette</h3>
+        <div className="w-1/2 flex flex-col border-r border-slateish/30">
+          <div className="border-b border-slateish/30 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">I/O Palette</h3>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slateish" />
               <Input
                 placeholder="Search I/O types..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-800 border-slate-700 text-white"
+                className="pl-10 border-slateish/30 bg-background text-foreground"
               />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="overflow-y-auto flex-1 space-y-4 p-4">
             {Object.entries(filteredPalette).map(([section, fields]) => (
-              <Card key={section} className="bg-slate-800 border-slate-700">
+              <Card key={section} className="border-slateish/30 bg-background">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-slate-300">
+                  <CardTitle className="text-sm text-slateish">
                     {getSectionDisplayName(section)}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {fields.map((field, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-slate-900 rounded border border-slate-700">
+                    <div key={index} className="flex items-center justify-between rounded border border-slateish/30 bg-muted/50 p-2">
                       <div className="flex-1">
-                        <p className="text-sm text-white">{field.fieldName}</p>
-                        <Badge variant="secondary" className="text-xs mt-1">
+                        <p className="text-sm text-foreground">{field.fieldName}</p>
+                        <Badge variant="secondary" className="mt-1 text-xs">
                           {field.fieldType}
                         </Badge>
                       </div>
@@ -212,14 +219,14 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
                         size="sm"
                         variant="ghost"
                         onClick={() => addIOField(section, field)}
-                        className="text-blue-400 hover:text-blue-300"
+                        className="text-accent hover:text-accent/80"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="size-4" />
                       </Button>
                     </div>
                   ))}
                   {fields.length === 0 && (
-                    <p className="text-sm text-slate-500 text-center py-4">No matching I/O types</p>
+                    <p className="py-4 text-center text-sm text-slateish">No matching I/O types</p>
                   )}
                 </CardContent>
               </Card>
@@ -229,46 +236,46 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
 
         {/* Right Pane: Assembly Container */}
         <div className="w-1/2 flex flex-col">
-          <div className="p-4 border-b border-slate-800">
-            <h3 className="text-sm font-semibold text-white mb-3">Assembly Container</h3>
+          <div className="border-b border-slateish/30 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">Assembly Container</h3>
             <div className="space-y-3">
               <Input
                 placeholder="Assembly ID (e.g., proc_acid_bath)"
                 value={assembly.assemblyId}
                 onChange={(e) => setAssembly(prev => ({ ...prev, assemblyId: e.target.value }))}
-                className="bg-slate-800 border-slate-700 text-white"
+                className="border-slateish/30 bg-background text-foreground"
               />
               <Input
                 placeholder="Display Name (e.g., Acid Bath Process)"
                 value={assembly.displayName}
                 onChange={(e) => setAssembly(prev => ({ ...prev, displayName: e.target.value }))}
-                className="bg-slate-800 border-slate-700 text-white"
+                className="border-slateish/30 bg-background text-foreground"
               />
               <Input
                 type="number"
                 placeholder="Estimated Labor Hours"
                 value={assembly.estimatedLaborHours || ''}
                 onChange={(e) => setAssembly(prev => ({ ...prev, estimatedLaborHours: parseFloat(e.target.value) || 0 }))}
-                className="bg-slate-800 border-slate-700 text-white"
+                className="border-slateish/30 bg-background text-foreground"
               />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="overflow-y-auto flex-1 space-y-4 p-4">
             {Object.entries(assembly.fields).map(([section, fields]) => (
-              <Card key={section} className="bg-slate-800 border-slate-700">
+              <Card key={section} className="border-slateish/30 bg-background">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-slate-300">
+                  <CardTitle className="text-sm text-slateish">
                     {getSectionDisplayName(section)} ({fields.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {fields.map((field, index) => (
-                    <div key={index} className="p-3 bg-slate-900 rounded border border-slate-700">
-                      <div className="flex items-start justify-between mb-2">
+                    <div key={index} className="rounded border border-slateish/30 bg-muted/50 p-3">
+                      <div className="mb-2 flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-white">{field.fieldName}</p>
-                          <Badge variant="secondary" className="text-xs mt-1">
+                          <p className="text-sm font-medium text-foreground">{field.fieldName}</p>
+                          <Badge variant="secondary" className="mt-1 text-xs">
                             {field.fieldType}
                           </Badge>
                         </div>
@@ -276,31 +283,31 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
                           size="sm"
                           variant="ghost"
                           onClick={() => removeIOField(section, index)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-danger hover:text-danger/80"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="size-4" />
                         </Button>
                       </div>
 
                       {/* Quantity Control */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <label className="text-xs text-slate-400">Quantity:</label>
+                      <div className="mb-2 flex items-center gap-2">
+                        <label className="text-xs text-slateish">Quantity:</label>
                         <div className="flex items-center gap-1">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(section, index, field.quantity - 1)}
                             disabled={field.quantity <= 1}
-                            className="h-6 w-6 p-0"
+                            className="size-6 p-0"
                           >
                             -
                           </Button>
-                          <span className="text-sm text-white min-w-[2rem] text-center">{field.quantity}</span>
+                          <span className="min-w-8 text-center text-sm text-foreground">{field.quantity}</span>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(section, index, field.quantity + 1)}
-                            className="h-6 w-6 p-0"
+                            className="size-6 p-0"
                           >
                             +
                           </Button>
@@ -310,7 +317,7 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
                       {/* Parameters for Number type fields */}
                       {field.fieldType === 'Number' && field.parameters && (
                         <div className="space-y-2">
-                          <label className="text-xs text-slate-400">
+                          <label className="text-xs text-slateish">
                             {getParameterLabel(field.fieldName)} Values:
                           </label>
                           <div className="grid grid-cols-2 gap-2">
@@ -322,7 +329,7 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
                                 placeholder={`${getParameterLabel(field.fieldName)} ${paramIndex + 1}`}
                                 value={param}
                                 onChange={(e) => updateParameter(section, index, paramIndex, e.target.value)}
-                                className="bg-slate-800 border-slate-600 text-white text-sm h-8"
+                                className="h-8 bg-background text-sm text-foreground"
                               />
                             ))}
                           </div>
@@ -331,7 +338,7 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
                     </div>
                   ))}
                   {fields.length === 0 && (
-                    <p className="text-sm text-slate-500 text-center py-4">
+                    <p className="py-4 text-center text-sm text-slateish">
                       No I/O added yet. Select from the palette.
                     </p>
                   )}
@@ -343,6 +350,12 @@ const AssemblyIOBuilder = ({ assemblyToEdit, onSave, onClose }) => {
       </div>
     </div>
   );
+};
+
+AssemblyIOBuilder.propTypes = {
+  assemblyToEdit: PropTypes.object,
+  onSave: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired
 };
 
 export default AssemblyIOBuilder;

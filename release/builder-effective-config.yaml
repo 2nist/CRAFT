@@ -8,21 +8,34 @@ files:
       - dist/**/*
       - dist-electron/**/*
       - src/data/**/*
-      - '!node_modules/sqlite3/build-tmp-napi-*/**/*'
-asarUnpack:
-  - node_modules/sqlite3/**/*
+      - src/database/**/*
+      - src/services/**/*
+      - database/**/*
+      - public/**/*
+      - electron/sync-*.js
+      - electron/DatabaseSyncService.js
+      - node_modules/better-sqlite3/**/*
+      - node_modules/mssql/**/*
+      - node_modules/tedious/**/*
+      - node_modules/electron-store/**/*
+      - node_modules/axios/**/*
+      - '!node_modules/*/test/**/*'
+      - '!node_modules/*/docs/**/*'
+      - '!node_modules/*/*.md'
 win:
-  target:
-    - target: dir
-      arch:
-        - x64
-  sign: false
+  target: portable
+  sign: 'false'
+  forceCodeSigning: false
   certificateFile: null
   certificatePassword: <stripped sensitive data>
   verifyUpdateCodeSignature: false
+  signingHashAlgorithms:
+    - sha256
   signDlls: false
   rfc3161TimeStampServer: null
   timeStampServer: null
+asar: false
+asarUnpack: []
 nsis:
   oneClick: false
   perMachine: true
@@ -32,6 +45,12 @@ nsis:
   shortcutName: Craft Automation CPQ
   license: LICENSE
   deleteAppDataOnUninstall: false
+  installerIcon: null
+  uninstallerIcon: null
+  installerHeaderIcon: null
+  installerSidebar: null
+  uninstallerSidebar: null
+  include: installer.nsi
 extraMetadata:
   main: dist-electron/main.cjs
 npmRebuild: false

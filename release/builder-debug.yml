@@ -6,7 +6,20 @@ x64:
     - dist/**/*
     - dist-electron/**/*
     - src/data/**/*
-    - '!node_modules/sqlite3/build-tmp-napi-*/**/*'
+    - src/database/**/*
+    - src/services/**/*
+    - database/**/*
+    - public/**/*
+    - electron/sync-*.js
+    - electron/DatabaseSyncService.js
+    - node_modules/better-sqlite3/**/*
+    - node_modules/mssql/**/*
+    - node_modules/tedious/**/*
+    - node_modules/electron-store/**/*
+    - node_modules/axios/**/*
+    - '!node_modules/*/test/**/*'
+    - '!node_modules/*/docs/**/*'
+    - '!node_modules/*/*.md'
     - package.json
     - '!**/*.{iml,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,suo,xproj,cc,d.ts,mk,a,o,forge-meta,pdb}'
     - '!**/._*'
@@ -20,4 +33,17 @@ x64:
     - dist/**/*
     - dist-electron/**/*
     - src/data/**/*
-    - '!node_modules/sqlite3/build-tmp-napi-*/**/*'
+    - src/database/**/*
+    - src/services/**/*
+    - database/**/*
+    - public/**/*
+    - electron/sync-*.js
+    - electron/DatabaseSyncService.js
+    - node_modules/better-sqlite3/**/*
+    - node_modules/mssql/**/*
+    - node_modules/tedious/**/*
+    - node_modules/electron-store/**/*
+    - node_modules/axios/**/*
+    - '!node_modules/*/test/**/*'
+    - '!node_modules/*/docs/**/*'
+    - '!node_modules/*/*.md'

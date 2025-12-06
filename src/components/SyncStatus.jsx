@@ -109,7 +109,7 @@ export default function SyncStatus() {
         onClick={handleManualSync}
         disabled={isSyncing || syncStatus.isSyncing}
         className="btn ca-btn-primary flex items-center gap-1 text-xs2 px-1.5 py-0.5"
-        title="Manually sync with NAS database"
+        title="Manually sync database"
       >
         <RefreshCw className={`w-3 h-3 ${isSyncing || syncStatus.isSyncing ? 'animate-spin' : ''}`} />
         <span>Sync</span>

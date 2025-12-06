@@ -3,9 +3,59 @@
  * Handles customers, quotes, and order numbers with two-way sync
  */
 
-import EventEmitter from 'events';
+// EventEmitter polyfill for browser/Electron environment
+class EventEmitterBase {
+  constructor() {
+    this.events = {};
+  }
 
-class SyncService extends EventEmitter {
+  on(event, listener) {
+    if (!this.events[event]) {
+      this.events[event] = [];
+    }
+    this.events[event].push(listener);
+    return this;
+  }
+
+  emit(event, ...args) {
+    if (this.events[event]) {
+      this.events[event].forEach(listener => {
+        try {
+          listener(...args);
+        } catch (error) {
+          console.error(`Error in event listener for '${event}':`, error);
+        }
+      });
+    }
+    return this;
+  }
+
+  off(event, listener) {
+    if (this.events[event]) {
+      this.events[event] = this.events[event].filter(l => l !== listener);
+    }
+    return this;
+  }
+
+  removeAllListeners(event) {
+    if (event) {
+      delete this.events[event];
+    } else {
+      this.events = {};
+    }
+    return this;
+  }
+
+  once(event, listener) {
+    const wrappedListener = (...args) => {
+      listener(...args);
+      this.off(event, wrappedListener);
+    };
+    return this.on(event, wrappedListener);
+  }
+}
+
+class SyncService extends EventEmitterBase {
   constructor() {
     super();
     this.isSyncing = false;
@@ -34,20 +84,32 @@ class SyncService extends EventEmitter {
    * Initialize the sync service
    */
   async initialize() {
-    console.log('[SyncService] Initializing...');
-    
-    // Load sync settings from storage
-    await this.loadSettings();
-    
-    // Test connection to remote database
-    await this.testConnection();
-    
-    // Start auto-sync if enabled
-    if (this.autoSyncEnabled) {
-      this.startAutoSync();
+    try {
+      console.log('[SyncService] Initializing...');
+      
+      // Check if window.sync is available (from Electron preload)
+      if (!window.sync) {
+        console.warn('[SyncService] window.sync not available - sync features disabled');
+        this.isConnected = false;
+        return;
+      }
+      
+      // Load sync settings from storage
+      await this.loadSettings();
+      
+      // Test connection to remote database
+      await this.testConnection();
+      
+      // Start auto-sync if enabled
+      if (this.autoSyncEnabled) {
+        this.startAutoSync();
+      }
+      
+      console.log('[SyncService] Initialized successfully');
+    } catch (error) {
+      console.error('[SyncService] Initialization error:', error);
+      // Don't throw - allow app to continue even if sync fails
     }
-    
-    console.log('[SyncService] Initialized successfully');
   }
 
   /**
@@ -55,6 +117,7 @@ class SyncService extends EventEmitter {
    */
   async loadSettings() {
     try {
+      if (!window.sync) return;
       const settings = await window.sync.getSettings();
       this.autoSyncEnabled = settings.autoSyncEnabled || false;
       this.syncIntervalMinutes = settings.syncIntervalMinutes || 30;
@@ -70,6 +133,7 @@ class SyncService extends EventEmitter {
    */
   async saveSettings() {
     try {
+      if (!window.sync) return;
       await window.sync.saveSettings({
         autoSyncEnabled: this.autoSyncEnabled,
         syncIntervalMinutes: this.syncIntervalMinutes,
@@ -86,6 +150,10 @@ class SyncService extends EventEmitter {
    */
   async testConnection() {
     try {
+      if (!window.sync) {
+        return { success: false, error: 'window.sync not available' };
+      }
+      
       console.log('[SyncService] Testing connection to remote database...');
       const result = await window.sync.testConnection();
       this.isConnected = result.success;
@@ -115,6 +183,11 @@ class SyncService extends EventEmitter {
    * @returns {Object} Sync result
    */
   async syncAll(options = {}) {
+    if (!window.sync) {
+      console.warn('[SyncService] window.sync not available - sync disabled');
+      return { success: false, error: 'Sync not available' };
+    }
+
     if (this.isSyncing) {
       console.warn('[SyncService] Sync already in progress');
       return { success: false, error: 'Sync already in progress' };

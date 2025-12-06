@@ -6,42 +6,48 @@ import PluginRenderer from './PluginRenderer';
 import GlobalComponentSearch from './components/GlobalComponentSearch';
 import { useAppContext } from './context/AppContext';
 import loggingService from './services/LoggingService';
+import pluginRegistry from './data/plugin_registry.json';
 import { syncService } from './services/SyncService';
 
 export default function App() {
-  const [plugins, setPlugins] = useState([]);
+  const [plugins, setPlugins] = useState(pluginRegistry);
   const [activeTab, setActiveTab] = useState('TOOLS');
   const { openSearchModal } = useAppContext();
 
   // Plugin categories
   const pluginCategories = {
     'TOOLS': ['fla-calc', 'margin-calc', 'manual-bom-builder', 'number-generator'],
-    'PRODUCTS': ['sub-assembly-manager', 'product-template-manager', 'component-manager', 'bom-importer'],
-    'QUOTING': ['number-generator', 'margin-calc']
+    'PRODUCTS': ['assembly-io-builder', 'sub-assembly-manager', 'product-template-manager', 'component-manager', 'bom-importer'],
+    'QUOTING': ['quote-configurator', 'project-manager', 'number-generator', 'margin-calc']
   };
 
   useEffect(() => {
+    // Prefer IPC if available, otherwise use bundled registry
     async function fetchPluginRegistry() {
       try {
-        const registry = await window.api.getPluginRegistry();
-        setPlugins(registry);
+        if (window.api?.getPluginRegistry) {
+          const registry = await window.api.getPluginRegistry();
+          if (Array.isArray(registry) && registry.length) {
+            setPlugins(registry);
+          }
+        }
       } catch (error) {
-        console.error("Failed to load plugin registry:", error);
+        console.error("Failed to load plugin registry via IPC:", error);
       }
     }
     fetchPluginRegistry();
   }, []);
 
-  // Initialize Sync Service
-  useEffect(() => {
-    syncService.initialize().catch(err => {
-      console.error('[App] Failed to initialize sync service:', err);
-    });
+  // Initialize Sync Service - DISABLED: Not needed for SQL Server direct connection
+  // useEffect(() => {
+  //   syncService.initialize().catch(err => {
+  //     console.error('[App] Failed to initialize sync service:', err);
+  //   });
     
-    return () => {
-      syncService.destroy();
-    };
-  }, []);
+  //   return () => {
+  //     syncService.destroy();
+  //   };
+  // }, []);
 
   // Filter plugins based on active tab
   const visiblePlugins = plugins.filter(plugin => 
@@ -119,6 +125,18 @@ export default function App() {
               <Route
                 path="/"
                 element={<PluginRenderer pluginId="hub-dashboard" />}
+              />
+              {/* Catch-all wildcard route to handle any unmatched plugin paths */}
+              <Route 
+                path="*" 
+                element={
+                  <div className="p-8 text-center">
+                    <div className="bg-yellow-100 text-yellow-800 border border-yellow-300 p-4 rounded-lg">
+                      <p className="font-semibold">Plugin not found</p>
+                      <p className="text-sm mt-2">The requested page does not exist.</p>
+                    </div>
+                  </div>
+                } 
               />
             </Routes>
           </main>

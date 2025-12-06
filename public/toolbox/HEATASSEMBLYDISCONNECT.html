@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heater Disconnect Calculator</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#7dd3fc;--muted:#94a3b8;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#e6eef6;background:linear-gradient(180deg,#071124 0%, #061827 100%);}
+    .wrap{max-width:920px;margin:28px auto;padding:24px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6);}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:4px 0 12px;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=number],select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;font-size:14px}
+    .heaters{margin-top:8px}
+    .heater-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    .heater-row input{flex:1}
+    .btn{display:inline-block;padding:8px 10px;border-radius:8px;background:linear-gradient(90deg,var(--accent),#60a5fa);color:#012;cursor:pointer;border:none}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(255,255,255,0.04)}
+    .results pre{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;overflow:auto}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px}
+    .small{font-size:12px;color:var(--muted)}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Heater Disconnect Calculator</h1>
+        <p class="lead">Enter voltage, phasing and heater kW ratings. Calculator shows FLA and recommended disconnect size (125% continuous by default).</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div>
+          <label>Voltage (V)</label>
+          <input id="voltage" type="number" value="230" min="1" />
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <div style="flex:1">
+            <label>Phasing</label>
+            <select id="phase">
+              <option value="1">Single-phase</option>
+              <option value="3">Three-phase</option>
+            </select>
+          </div>
+          <div style="width:160px">
+            <label><span class="small">Continuous load?</span></label>
+            <select id="continuous">
+              <option value="125">Yes — apply 125%</option>
+              <option value="100">No — use 100%</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Heaters (kW) — add/edit rows</label>
+          <div class="heaters" id="heaters"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" id="addHeater">+ Add heater</button>
+            <button class="btn ghost" id="pasteList">Paste list (kW per line)</button>
+            <button class="btn ghost" id="clearAll">Clear</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn" id="calc">Calculate</button>
+          <button class="btn ghost" id="exportCsv">Export CSV</button>
+          <button class="btn ghost" id="print">Print</button>
+        </div>
+
+        <div style="margin-top:12px" class="small">Suggested breaker sizes use common commercial sizes. Confirm final selection with a licensed electrician.</div>
+      </div>
+
+      <div class="card results">
+        <h3 style="margin:0 0 8px 0">Results</h3>
+        <div id="summary">
+          <pre id="summaryPre">No calculation yet — enter heaters and press Calculate.</pre>
+        </div>
+        <div id="tableWrap"></div>
+      </div>
+    </div>
+
+    <footer>Built for brewhouse heater planning — assumes resistive loads and no other loads on the circuit. Always verify with local code.</footer>
+  </div>
+
+<script>
+(function(){
+  const heatersEl = document.getElementById('heaters');
+  const addHeaterBtn = document.getElementById('addHeater');
+  const calcBtn = document.getElementById('calc');
+  const summaryPre = document.getElementById('summaryPre');
+  const tableWrap = document.getElementById('tableWrap');
+  const pasteListBtn = document.getElementById('pasteList');
+  const clearAllBtn = document.getElementById('clearAll');
+  const exportCsvBtn = document.getElementById('exportCsv');
+  const printBtn = document.getElementById('print');
+
+  const standardBreakers = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400];
+
+  function createHeaterRow(value){
+    const row = document.createElement('div');
+    row.className = 'heater-row';
+    const input = document.createElement('input');
+    input.type = 'number'; input.min='0'; input.step='0.001'; input.value = value || '6';
+    input.title = 'kW';
+    const label = document.createElement('div'); label.className='small'; label.style.width='80px'; label.textContent = 'kW';
+    const rem = document.createElement('button'); rem.className='btn ghost'; rem.textContent='Remove';
+    rem.onclick = ()=>{heatersEl.removeChild(row)};
+    row.appendChild(input); row.appendChild(label); row.appendChild(rem);
+    heatersEl.appendChild(row);
+  }
+
+  addHeaterBtn.addEventListener('click', ()=>createHeaterRow('6'));
+  clearAllBtn.addEventListener('click', ()=>{heatersEl.innerHTML=''; summaryPre.textContent='No calculation yet — enter heaters and press Calculate.'; tableWrap.innerHTML='';});
+  pasteListBtn.addEventListener('click', ()=>{
+    const txt = prompt('Paste kW values, one per line (e.g. 6\n6\n3)');
+    if(!txt) return;
+    const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    lines.forEach(l=>createHeaterRow(l));
+  });
+
+  function readHeaters(){
+    const inputs = Array.from(heatersEl.querySelectorAll('input'));
+    const vals = inputs.map(i=>Number(i.value)).filter(n=>!Number.isNaN(n) && n>0);
+    return vals;
+  }
+
+  function roundUpStandard(val){
+    for(const s of standardBreakers) if(s >= val) return s;
+    return Math.ceil(val/50)*50; // fall back
+  }
+
+  function calc(){
+    const V = Number(document.getElementById('voltage').value) || 230;
+    const phase = Number(document.getElementById('phase').value) || 1;
+    const contPct = Number(document.getElementById('continuous').value) || 125;
+    const heaters = readHeaters();
+    if(heaters.length===0){ alert('Please add at least one heater.'); return; }
+
+    // per-heater current and totals
+    const per = heaters.map(kW=>{
+      const P = kW * 1000;
+      const I = (phase===1) ? (P / V) : (P / (Math.sqrt(3)*V));
+      return {kW, I};
+    });
+
+    const totalFLA = per.reduce((s,h)=>s+h.I,0);
+    const adjusted = totalFLA * (contPct/100);
+    const suggested = roundUpStandard(adjusted);
+
+    // Suggest per-heater circuits if desired (optional): compute suggested breaker per element
+    const perSuggested = per.map(p=>{
+      const adj = p.I * (contPct/100);
+      return {kW:p.kW, I:p.I, adj, suggested: roundUpStandard(adj)};
+    });
+
+    // Build summary
+    const summaryLines = [];
+    summaryLines.push('Voltage: ' + V + ' V — ' + (phase===1 ? 'Single-phase' : 'Three-phase'));
+    summaryLines.push('Heaters: ' + heaters.map(h=>h+' kW').join(', '));
+    summaryLines.push('\nPer-heater currents (FLA):');
+    perSuggested.forEach((p,idx)=> summaryLines.push('  • Heater ' + (idx+1) + ': ' + p.kW + ' kW = ' + p.I.toFixed(3) + ' A (adj ' + p.adj.toFixed(3) + ' A) → suggested ' + p.suggested + ' A breaker'));
+    summaryLines.push('\nTotal FLA: ' + totalFLA.toFixed(3) + ' A');
+    summaryLines.push('Adjusted (' + contPct + '%) required ampacity: ' + adjusted.toFixed(3) + ' A');
+    summaryLines.push('Recommended disconnect / breaker (next standard size): ' + suggested + ' A');
+
+    summaryPre.textContent = summaryLines.join('\n');
+
+    // Build detailed table
+    let html = '<table><thead><tr><th>#</th><th>kW</th><th>FLA (A)</th><th>Adjusted (A)</th><th>Suggested breaker (A)</th></tr></thead><tbody>';
+    perSuggested.forEach((p,idx)=>{
+      html += `<tr><td>${idx+1}</td><td>${p.kW}</td><td>${p.I.toFixed(3)}</td><td>${p.adj.toFixed(3)}</td><td>${p.suggested}</td></tr>`;
+    });
+    html += `<tr style="font-weight:700"><td>—</td><td>Total</td><td>${totalFLA.toFixed(3)}</td><td>${adjusted.toFixed(3)}</td><td>${suggested}</td></tr>`;
+    html += '</tbody></table>';
+    tableWrap.innerHTML = html;
+  }
+
+  calcBtn.addEventListener('click', calc);
+
+  exportCsvBtn.addEventListener('click', ()=>{
+    const heaters = readHeaters();
+    if(heaters.length===0){ alert('No heaters to export'); return; }
+    const rows = [];
+    const V = Number(document.getElementById('voltage').value) || 230;
+    const phase = Number(document.getElementById('phase').value) || 1;
+    const contPct = Number(document.getElementById('continuous').value) || 125;
+    const per = heaters.map(kW=>{
+      const P = kW * 1000;
+      const I = (phase===1) ? (P / V) : (P / (Math.sqrt(3)*V));
+      const adj = I * (contPct/100);
+      return {kW,I,adj};
+    });
+    const totalFLA = per.reduce((s,p)=>s+p.I,0);
+    const adjusted = totalFLA * (contPct/100);
+    const suggested = roundUpStandard(adjusted);
+
+    let csv = 'Heater#,kW,FLA(A),Adjusted(A)\n';
+    per.forEach((p,idx)=> csv += `${idx+1},${p.kW},${p.I.toFixed(3)},${(p.I*(contPct/100)).toFixed(3)}\n`);
+    csv += `Total, ,${totalFLA.toFixed(3)},${adjusted.toFixed(3)}\n`; csv += `Recommended Disconnect,, ,${suggested}\n`;
+
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'heater_disconnects.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+
+  printBtn.addEventListener('click', ()=> window.print());
+
+  // seed with common setup for brewhouse
+  createHeaterRow('6'); createHeaterRow('6'); createHeaterRow('3');
+
+})();
+</script>
+</body>
+</html>

@@ -16,8 +16,11 @@ import { open } from 'sqlite'
 // Sync Manager
 import SyncManager from './sync-manager.js'
 
-// Database Sync System
-import { initializeSyncService, registerSyncHandlers, cleanupSyncService } from './sync-ipc-handlers.js'
+// Database Sync System - NOT NEEDED: Components use window.quotes.* and window.app.* directly
+// import { initializeSyncService, registerSyncHandlers, cleanupSyncService } from './sync-ipc-handlers.js'
+
+// SQL Server Integration
+import { initializeSqlServer, shutdownSqlServer } from '../src/database/init-handler.js'
 
 // Note: Services are imported dynamically in IPC handlers to handle ES module resolution
 // This avoids import errors in development mode when Electron may not resolve paths correctly
@@ -50,6 +53,22 @@ async function initializeRuntimeConfig() {
     runtimeConfigLoaded = true;
   }
   return packagedRuntimeRoot;
+}
+
+// Helper function to resolve packaged paths (handles both asar and non-asar builds)
+function getPackagedPath(relativePath) {
+  if (!app.isPackaged) {
+    return path.join(__dirname, '..', relativePath);
+  }
+  
+  // Check if using asar
+  if (fssync.existsSync(path.join(process.resourcesPath, 'app.asar'))) {
+    // Asar build - data files are inside app.asar
+    return path.join(process.resourcesPath, 'app.asar', relativePath);
+  }
+  
+  // Non-asar build - files are directly in resources/app
+  return path.join(process.resourcesPath, 'app', relativePath);
 }
 
 // Load network credentials from Windows Credential Manager
@@ -1145,10 +1164,8 @@ async function initializeGeneratedNumbersDatabase() {
     // Ensure database directory exists
     await fs.mkdir(dbDir, { recursive: true })
 
-    // For ASAR-packed applications, sqlite3 binaries must be unpacked
-    const actualDbPath = app.isPackaged && dbPath.includes('app.asar')
-      ? dbPath.replace('app.asar', 'app.asar.unpacked')
-      : dbPath
+    // Use path as-is (asar is disabled)
+    const actualDbPath = dbPath
 
     console.log('Opening generated numbers database at:', actualDbPath)
     console.log('Database location type:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
@@ -1271,11 +1288,8 @@ async function initEmbeddedServer() {
 
     // Ensure database directory exists
     await fs.mkdir(dbDir, { recursive: true })
-
-    // For ASAR-packed applications, sqlite3 binaries must be unpacked
-    const actualDbPath = app.isPackaged && dbPath.includes('app.asar')
-      ? dbPath.replace('app.asar', 'app.asar.unpacked')
-      : dbPath
+    // Use path as-is (asar is disabled)
+    const actualDbPath = dbPath
 
     console.log('Opening main database at:', actualDbPath)
     console.log('Database location type:', resolvedRuntimeRoot ? 'NAS/Shared' : 'Local')
@@ -1453,7 +1467,7 @@ async function loadComponents() {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       componentsPath = path.join(__dirname, '..', 'src', 'data', 'components', 'component_catalog.json');
     } else {
-      componentsPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'components', 'component_catalog.json');
+      componentsPath = getPackagedPath('src/data/components/component_catalog.json');
     }
 
     const data = await fs.readFile(componentsPath, 'utf-8');
@@ -1484,7 +1498,7 @@ async function loadSubAssemblies() {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       subAssembliesPath = path.join(__dirname, '..', 'src', 'data', 'sub-assemblies', 'sub_assemblies.json')
     } else {
-      subAssembliesPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'sub-assemblies', 'sub_assemblies.json')
+      subAssembliesPath = getPackagedPath('src/data/sub-assemblies/sub_assemblies.json')
     }
 
     const data = await fs.readFile(subAssembliesPath, 'utf-8')
@@ -1803,6 +1817,14 @@ app.whenReady().then(async () => {
   // Show splash screen first
   createSplashWindow();
   
+  // Initialize SQL Server connection
+  const sqlStatus = await initializeSqlServer();
+  if (sqlStatus.success) {
+    console.log('📊 Using SQL Server as primary database');
+  } else {
+    console.warn('📁 SQL Server unavailable, using local storage fallback');
+  }
+  
   await initDataStorage()
   await initPluginsDirectory()
   await initEmbeddedServer()
@@ -1816,7 +1838,7 @@ app.whenReady().then(async () => {
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     quoteSchemaPath = path.join(__dirname, '..', 'src', 'data', 'quotes', 'project_quote_schema.json')
   } else {
-    quoteSchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'quotes', 'project_quote_schema.json')
+    quoteSchemaPath = getPackagedPath('src/data/quotes/project_quote_schema.json')
   }
   const quoteSchemaData = await fs.readFile(quoteSchemaPath, 'utf-8')
   quoteSchema = JSON.parse(quoteSchemaData)
@@ -1830,12 +1852,12 @@ app.whenReady().then(async () => {
   // Initialize Sync Manager
   await initializeSyncManager()
   
-  // Initialize Database Sync Service
-  initializeSyncService({
-    remoteApiUrl: process.env.REMOTE_API_URL || 'https://your-api.com/api',
-    remoteApiKey: process.env.REMOTE_API_KEY || 'your-key'
-  })
-  registerSyncHandlers()
+  // Database Sync Service - NOT NEEDED: Components use window.quotes.* and window.app.* directly
+  // initializeSyncService({
+  //   remoteApiUrl: process.env.REMOTE_API_URL || 'https://your-api.com/api',
+  //   remoteApiKey: process.env.REMOTE_API_KEY || 'your-key'
+  // })
+  // registerSyncHandlers()
   
   createMenu();
   createWindow()
@@ -1854,8 +1876,8 @@ app.whenReady().then(async () => {
         serverInstance.close(async () => {
           console.log('Embedded server closed')
           
-          // Cleanup Database Sync Service
-          cleanupSyncService()
+          // Database Sync Service cleanup - DEPRECATED: Now using SQL Server
+          // cleanupSyncService()
           
           if (syncManager) {
             await syncManager.cleanup()
@@ -2061,39 +2083,34 @@ ipcMain.handle('runtime:run-diagnostics', async (event, options = {}) => {
   })()
 })
 
-// NAS Troubleshooter IPC handler
-ipcMain.handle('nas:runTroubleshooter', async (event, options = {}) => {
-  try {
-    // Run the NAS troubleshooter script in non-destructive mode and return JSON output
-    const scriptPath = path.join(__dirname, '..', 'scripts', 'nas-troubleshooter.js')
-    const { execFileSync } = await import('child_process')
-    const args = []
-    // Prefer resolved runtime root when available
-    if (resolvedRuntimeRoot) {
-      args.push('--root', resolvedRuntimeRoot)
-    }
-    // Respect options
-    if (options.skipPing) args.push('--skip-ping')
-    if (options.skipWrite !== false) args.push('--skip-write')
-    args.push('--json')
-
-    try {
-      // Use `node` executable; assume node is available in PATH in dev/test environments
-      const stdout = execFileSync('node', [scriptPath, ...args], { encoding: 'utf8', timeout: 60000 })
-      try {
-        return JSON.parse(stdout)
-      } catch (parseErr) {
-        return { ok: false, error: 'Troubleshooter produced non-JSON output', raw: stdout }
-      }
-    } catch (execErr) {
-      console.error('Troubleshooter script failed:', execErr)
-      return { ok: false, error: String(execErr.message || execErr) }
-    }
-  } catch (err) {
-    console.error('Error running troubleshooter via IPC:', err)
-    return { ok: false, error: String(err.message || err) }
-  }
-})
+// NAS Troubleshooter IPC handler - DEPRECATED: Using SQL Server now
+// ipcMain.handle('nas:runTroubleshooter', async (event, options = {}) => {
+//   try {
+//     const scriptPath = path.join(__dirname, '..', 'scripts', 'nas-troubleshooter.js')
+//     const { execFileSync } = await import('child_process')
+//     const args = []
+//     if (resolvedRuntimeRoot) {
+//       args.push('--root', resolvedRuntimeRoot)
+//     }
+//     if (options.skipPing) args.push('--skip-ping')
+//     if (options.skipWrite !== false) args.push('--skip-write')
+//     args.push('--json')
+//     try {
+//       const stdout = execFileSync('node', [scriptPath, ...args], { encoding: 'utf8', timeout: 60000 })
+//       try {
+//         return JSON.parse(stdout)
+//       } catch (parseErr) {
+//         return { ok: false, error: 'Troubleshooter produced non-JSON output', raw: stdout }
+//       }
+//     } catch (execErr) {
+//       console.error('Troubleshooter script failed:', execErr)
+//       return { ok: false, error: String(execErr.message || execErr) }
+//     }
+//   } catch (err) {
+//     console.error('Error running troubleshooter via IPC:', err)
+//     return { ok: false, error: String(err.message || err) }
+//   }
+// })
 
 // Network credential IPC handlers moved to avoid duplicates (see line ~5147)
 
@@ -2202,8 +2219,23 @@ ipcMain.handle('db:deleteSetting', async (event, key) => {
 
 // Get all components
 ipcMain.handle('components:getAll', async () => {
-  return loadedComponents
-})
+  try {
+    // Try SQL Server first
+    const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+    const sqlConnection = sqlConnectionModule.default;
+    
+    if (sqlConnection.isConnected()) {
+      const query = 'SELECT sku, vendor, category, description, price, lead_time, notes FROM dbo.components ORDER BY sku';
+      const components = await sqlConnection.query(query);
+      console.log(`[IPC] Loaded ${components.length} components from SQL Server`);
+      return components;
+    }
+  } catch (error) {
+    console.warn('[IPC] SQL Server unavailable, using in-memory components:', error.message);
+  }
+  // Fallback to in-memory
+  return loadedComponents;
+});
 
 // Open global component search modal
 ipcMain.on('components:openGlobalSearch', () => {
@@ -2214,43 +2246,125 @@ ipcMain.on('components:openGlobalSearch', () => {
 
 // Search components by filters
 ipcMain.handle('components:search', async (event, filters) => {
-  let results = loadedComponents
+  try {
+    // Try SQL Server first
+    const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+    const sqlConnection = sqlConnectionModule.default;
+    
+    if (sqlConnection.isConnected()) {
+      let query = 'SELECT sku, vendor, category, description, price, lead_time, notes FROM dbo.components WHERE 1=1';
+      const params = {};
+      
+      if (filters.category) {
+        query += ' AND category LIKE @category';
+        params.category = `%${filters.category}%`;
+      }
+      if (filters.sku) {
+        query += ' AND sku LIKE @sku';
+        params.sku = `%${filters.sku}%`;
+      }
+      if (filters.vendor) {
+        query += ' AND vendor LIKE @vendor';
+        params.vendor = `%${filters.vendor}%`;
+      }
+      if (filters.description) {
+        query += ' AND description LIKE @description';
+        params.description = `%${filters.description}%`;
+      }
+      if (filters.maxPrice) {
+        query += ' AND price <= @maxPrice';
+        params.maxPrice = filters.maxPrice;
+      }
+      
+      query += ' ORDER BY sku';
+      const results = await sqlConnection.query(query, params);
+      console.log(`[IPC] Found ${results.length} components matching filters`);
+      return results;
+    }
+  } catch (error) {
+    console.warn('[IPC] SQL Server search failed, using in-memory:', error.message);
+  }
+  
+  // Fallback to in-memory search
+  let results = loadedComponents;
   
   if (filters.category) {
-    results = results.filter(c => c.category?.toLowerCase().includes(filters.category.toLowerCase()))
+    results = results.filter(c => c.category?.toLowerCase().includes(filters.category.toLowerCase()));
   }
   if (filters.sku) {
-    results = results.filter(c => c.sku?.toLowerCase().includes(filters.sku.toLowerCase()))
+    results = results.filter(c => c.sku?.toLowerCase().includes(filters.sku.toLowerCase()));
   }
   if (filters.vendor) {
-    results = results.filter(c => c.vendor?.toLowerCase().includes(filters.vendor.toLowerCase()))
+    results = results.filter(c => c.vendor?.toLowerCase().includes(filters.vendor.toLowerCase()));
   }
   if (filters.description) {
-    results = results.filter(c => c.description?.toLowerCase().includes(filters.description.toLowerCase()))
+    results = results.filter(c => c.description?.toLowerCase().includes(filters.description.toLowerCase()));
   }
   if (filters.maxPrice) {
-    results = results.filter(c => c.price <= filters.maxPrice)
+    results = results.filter(c => c.price <= filters.maxPrice);
   }
   
-  return results
-})
+  return results;
+});
 
 // Get component by SKU
 ipcMain.handle('components:getBySku', async (event, sku) => {
-  return loadedComponents.find(c => c.sku === sku) || null
-})
+  try {
+    // Try SQL Server first
+    const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+    const sqlConnection = sqlConnectionModule.default;
+    
+    if (sqlConnection.isConnected()) {
+      const query = 'SELECT sku, vendor, category, description, price, lead_time, notes FROM dbo.components WHERE sku = @sku';
+      const result = await sqlConnection.query(query, { sku });
+      return result.length > 0 ? result[0] : null;
+    }
+  } catch (error) {
+    console.warn('[IPC] SQL Server lookup failed, using in-memory:', error.message);
+  }
+  // Fallback to in-memory
+  return loadedComponents.find(c => c.sku === sku) || null;
+});
 
 // Get unique categories
 ipcMain.handle('components:getCategories', async () => {
-  const categories = [...new Set(loadedComponents.map(c => c.category).filter(Boolean))]
-  return categories.sort()
-})
+  try {
+    // Try SQL Server first
+    const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+    const sqlConnection = sqlConnectionModule.default;
+    
+    if (sqlConnection.isConnected()) {
+      const query = 'SELECT DISTINCT category FROM dbo.components WHERE category IS NOT NULL ORDER BY category';
+      const result = await sqlConnection.query(query);
+      return result.map(r => r.category);
+    }
+  } catch (error) {
+    console.warn('[IPC] SQL Server categories failed, using in-memory:', error.message);
+  }
+  // Fallback to in-memory
+  const categories = [...new Set(loadedComponents.map(c => c.category).filter(Boolean))];
+  return categories.sort();
+});
 
 // Get unique vendors
 ipcMain.handle('components:getVendors', async () => {
-  const vendors = [...new Set(loadedComponents.map(c => c.vendor).filter(Boolean))]
-  return vendors.sort()
-})
+  try {
+    // Try SQL Server first
+    const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+    const sqlConnection = sqlConnectionModule.default;
+    
+    if (sqlConnection.isConnected()) {
+      const query = 'SELECT DISTINCT vendor FROM dbo.components WHERE vendor IS NOT NULL ORDER BY vendor';
+      const result = await sqlConnection.query(query);
+      return result.map(r => r.vendor);
+    }
+  } catch (error) {
+    console.warn('[IPC] SQL Server vendors failed, using in-memory:', error.message);
+  }
+  // Fallback to in-memory
+  const vendors = [...new Set(loadedComponents.map(c => c.vendor).filter(Boolean))];
+  return vendors.sort();
+});
 
 // Sync components from CSV
 ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
@@ -2362,7 +2476,72 @@ ipcMain.handle('components:sync-from-csv', async (event, csvContent) => {
       console.log(`Excluded ${removedCount} catalog entries with missing pricing during sync`)
     }
 
-    return { success: true, updated: updatedCount, added: newCount };
+    // 6. Sync to SQL Server if available
+    let sqlSyncCount = 0;
+    try {
+      const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+      const sqlConnection = sqlConnectionModule.default;
+      
+      if (sqlConnection.isConnected()) {
+        console.log('[SQL Server] Syncing components to SQL Server...');
+        
+        for (const component of sanitizedCatalog) {
+          // Check if component exists
+          const checkQuery = 'SELECT COUNT(*) as count FROM dbo.components WHERE sku = @sku';
+          const checkResult = await sqlConnection.query(checkQuery, { sku: component.sku });
+          
+          if (checkResult[0].count > 0) {
+            // Update existing
+            const updateQuery = `
+              UPDATE dbo.components 
+              SET vendor = @vendor,
+                  category = @category,
+                  description = @description,
+                  price = @price,
+                  notes = @notes,
+                  updated_at = GETDATE(),
+                  updated_by = @user
+              WHERE sku = @sku
+            `;
+            await sqlConnection.execute(updateQuery, {
+              sku: component.sku,
+              vendor: component.vendor || null,
+              category: component.category || null,
+              description: component.description || null,
+              price: component.price || 0,
+              notes: component.notes || null,
+              user: 'csv_sync'
+            });
+          } else {
+            // Insert new
+            const insertQuery = `
+              INSERT INTO dbo.components (sku, vendor, category, description, price, notes, created_at, updated_at, updated_by)
+              VALUES (@sku, @vendor, @category, @description, @price, @notes, GETDATE(), GETDATE(), @user)
+            `;
+            await sqlConnection.execute(insertQuery, {
+              sku: component.sku,
+              vendor: component.vendor || null,
+              category: component.category || null,
+              description: component.description || null,
+              price: component.price || 0,
+              notes: component.notes || null,
+              user: 'csv_sync'
+            });
+          }
+          sqlSyncCount++;
+        }
+        console.log(`[SQL Server] Synced ${sqlSyncCount} components to SQL Server`);
+      }
+    } catch (sqlError) {
+      console.warn('[SQL Server] Component sync failed (non-critical):', sqlError.message);
+    }
+
+    return { 
+      success: true, 
+      updated: updatedCount, 
+      added: newCount,
+      sqlSynced: sqlSyncCount
+    };
   } catch (error) {
     console.error('Error in Smart Sync:', error);
     return { success: false, error: error.message };
@@ -3138,7 +3317,7 @@ ipcMain.handle('sub-assemblies:save', async (event, subAssemblyToSave) => {
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       subAssemblySchemaPath = path.join(__dirname, '..', 'src', 'data', 'schemas', 'sub_assembly_schema.json')
     } else {
-      subAssemblySchemaPath = path.join(process.resourcesPath, 'app.asar', 'src', 'data', 'schemas', 'sub_assembly_schema.json')
+      subAssemblySchemaPath = getPackagedPath('src/data/schemas/sub_assembly_schema.json')
     }
     
     const schemaData = await fs.readFile(subAssemblySchemaPath, 'utf-8')
@@ -3964,107 +4143,236 @@ const MOCK_CUSTOMERS = Object.entries(DEFAULT_CUSTOMER_DATA).map(([id, name]) =>
   name: name
 }));
 
-ipcMain.handle('customers:get-all', () => { return MOCK_CUSTOMERS; });
+ipcMain.handle('customers:get-all', async () => {
+  try {
+    // Try SQL Server first
+    const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+    const sqlConnection = sqlConnectionModule.default;
+    
+    if (sqlConnection.isConnected()) {
+      const query = 'SELECT id, name, code, isOEM, contact_email, contact_phone FROM dbo.customers ORDER BY name';
+      const customers = await sqlConnection.query(query);
+      console.log(`[IPC] Loaded ${customers.length} customers from SQL Server`);
+      return customers.map(c => ({
+        id: c.id,
+        name: c.name,
+        code: c.code,
+        isOEM: c.isOEM,
+        email: c.contact_email,
+        phone: c.contact_phone
+      }));
+    }
+  } catch (error) {
+    console.warn('[IPC] SQL Server unavailable, using mock data:', error.message);
+  }
+  // Fallback to mock data
+  return MOCK_CUSTOMERS;
+});
 
 // Add customer
 ipcMain.handle('customers:add', async (event, { name, isOEM }) => {
   try {
-    // Load existing custom customers
-    const settings = await readJSONFile('settings.json') || {}
-    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {}
-    const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData }
+    if (!name || !name.trim()) {
+      throw new Error('Customer name is required');
+    }
+
+    // Try SQL Server first
+    try {
+      const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+      const sqlConnection = sqlConnectionModule.default;
+      
+      if (sqlConnection.isConnected()) {
+        // Generate code from name (lowercase, replace spaces/special chars with underscore)
+        const code = name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 50);
+        
+        // Generate numeric ID based on OEM status
+        const existingQuery = 'SELECT MAX(CAST(id AS INT)) as maxId FROM dbo.customers WHERE isOEM = @isOEM';
+        const existingResult = await sqlConnection.query(existingQuery, { isOEM: isOEM ? 1 : 0 });
+        
+        const rangeStart = isOEM ? 0 : 100;
+        const maxExisting = existingResult[0]?.maxId || (rangeStart - 1);
+        const nextId = Math.max(rangeStart, maxExisting + 1);
+        const customerId = String(nextId).padStart(3, '0');
+
+        const insertQuery = `
+          INSERT INTO dbo.customers (id, name, code, isOEM, created_at, updated_at, updated_by)
+          VALUES (@id, @name, @code, @isOEM, GETDATE(), GETDATE(), @user)
+        `;
+
+        await sqlConnection.execute(insertQuery, {
+          id: customerId,
+          name: name.trim(),
+          code: code,
+          isOEM: isOEM ? 1 : 0,
+          user: 'system'
+        });
+        
+        console.log('[SQL Server] Customer added:', customerId);
+        
+        // Log customer creation
+        try {
+          const loggingServicePath = path.join(__dirname, '..', 'src', 'services', 'LoggingService.js');
+          const { default: LoggingService } = await import(pathToFileURL(loggingServicePath).href);
+          LoggingService.logCustomerActivity('create', customerId, name, {
+            type: isOEM ? 'OEM' : 'End User',
+            source: 'sql_server'
+          });
+        } catch (logError) {
+          console.error('Error logging customer creation:', logError);
+        }
+        
+        return { id: customerId, name: name.trim(), code, isOEM };
+      }
+    } catch (sqlError) {
+      console.warn('[IPC] SQL Server failed, using fallback:', sqlError.message);
+    }
+
+    // Fallback to settings.json
+    const settings = await readJSONFile('settings.json') || {};
+    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {};
+    const allCustomers = { ...DEFAULT_CUSTOMER_DATA, ...customCustomerData };
     
-    // Determine the next available number
-    const existingIds = Object.keys(allCustomers).map(id => parseInt(id))
-    const rangeStart = isOEM ? 0 : 100
-    const rangeEnd = isOEM ? 99 : 999
+    const existingIds = Object.keys(allCustomers).map(id => parseInt(id));
+    const rangeStart = isOEM ? 0 : 100;
+    const rangeEnd = isOEM ? 99 : 999;
     
-    let nextId = rangeStart
+    let nextId = rangeStart;
     for (let i = rangeStart; i <= rangeEnd; i++) {
       if (!existingIds.includes(i)) {
-        nextId = i
-        break
+        nextId = i;
+        break;
       }
     }
     
-    // Validate we found an available ID
     if (nextId > rangeEnd) {
-      throw new Error(`No available ${isOEM ? 'OEM' : 'End User'} customer numbers`)
+      throw new Error(`No available ${isOEM ? 'OEM' : 'End User'} customer numbers`);
     }
     
-    const customerId = String(nextId).padStart(3, '0')
+    const customerId = String(nextId).padStart(3, '0');
+    customCustomerData[customerId] = name;
+    settings.customCustomers = JSON.stringify(customCustomerData);
+    await writeJSONFile('settings.json', settings);
     
-    // Add to custom customers
-    customCustomerData[customerId] = name
-    settings.customCustomers = JSON.stringify(customCustomerData)
-    
-    // Save to settings.json
-    await writeJSONFile('settings.json', settings)
-    
-    // Log customer creation using LoggingService
-    // Import LoggingService dynamically to avoid circular dependencies
-    let loggingService;
-    try {
-      const loggingServicePath = path.join(__dirname, '..', 'src', 'services', 'LoggingService.js');
-      const loggingServiceURL = pathToFileURL(loggingServicePath).href;
-      const { default: LoggingService } = await import(loggingServiceURL);
-      loggingService = LoggingService;
-      loggingService.logCustomerActivity('create', customerId, name, {
-        type: isOEM ? 'OEM' : 'End User',
-        source: 'settings_ui'
-      });
-    } catch (logError) {
-      console.error('Error logging customer creation:', logError);
-    }
-    
-    return { id: customerId, name, isOEM }
+    console.log('[Settings] Customer added (fallback):', customerId);
+    return { id: customerId, name, isOEM };
   } catch (err) {
-    console.error('Error adding customer:', err)
-    throw err
+    console.error('Error adding customer:', err);
+    throw err;
   }
 });
 
 // Delete customer
 ipcMain.handle('customers:delete', async (event, customerId) => {
   try {
-    const settings = await readJSONFile('settings.json') || {}
-    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {}
+    if (!customerId) {
+      throw new Error('Customer ID is required');
+    }
+
+    // Try SQL Server first
+    try {
+      const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+      const sqlConnection = sqlConnectionModule.default;
+      
+      if (sqlConnection.isConnected()) {
+        // Check for associated quotes
+        const checkQuery = 'SELECT COUNT(*) as count FROM dbo.quotes WHERE customer = @id';
+        const result = await sqlConnection.query(checkQuery, { id: customerId });
+        
+        if (result[0].count > 0) {
+          throw new Error('Cannot delete customer with associated quotes. Delete quotes first.');
+        }
+
+        const deleteQuery = 'DELETE FROM dbo.customers WHERE id = @id';
+        await sqlConnection.execute(deleteQuery, { id: customerId });
+        
+        console.log('[SQL Server] Customer deleted:', customerId);
+        return { success: true };
+      }
+    } catch (sqlError) {
+      // If SQL error is validation (quotes exist), re-throw it
+      if (sqlError.message.includes('associated quotes')) {
+        throw sqlError;
+      }
+      console.warn('[IPC] SQL Server failed, using fallback:', sqlError.message);
+    }
+
+    // Fallback to settings.json
+    const settings = await readJSONFile('settings.json') || {};
+    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {};
     
-    // Only allow deletion of custom customers (not defaults)
     if (!customCustomerData[customerId]) {
-      throw new Error('Cannot delete default customer')
+      throw new Error('Cannot delete default customer');
     }
     
-    delete customCustomerData[customerId]
-    settings.customCustomers = JSON.stringify(customCustomerData)
+    delete customCustomerData[customerId];
+    settings.customCustomers = JSON.stringify(customCustomerData);
+    await writeJSONFile('settings.json', settings);
     
-    await writeJSONFile('settings.json', settings)
-    return { success: true }
+    console.log('[Settings] Customer deleted (fallback):', customerId);
+    return { success: true };
   } catch (err) {
-    console.error('Error deleting customer:', err)
-    throw err
+    console.error('Error deleting customer:', err);
+    throw err;
   }
 });
 
 // Update customer
-ipcMain.handle('customers:update', async (event, { id, name }) => {
+ipcMain.handle('customers:update', async (event, { id, name, isOEM, email, phone }) => {
   try {
-    const settings = await readJSONFile('settings.json') || {}
-    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {}
+    if (!id) {
+      throw new Error('Customer ID is required');
+    }
+
+    // Try SQL Server first
+    try {
+      const sqlConnectionModule = await import('../src/database/sqlConnection.js');
+      const sqlConnection = sqlConnectionModule.default;
+      
+      if (sqlConnection.isConnected()) {
+        const updateQuery = `
+          UPDATE dbo.customers 
+          SET name = @name, 
+              isOEM = @isOEM,
+              contact_email = @email,
+              contact_phone = @phone,
+              updated_at = GETDATE(),
+              updated_by = @user
+          WHERE id = @id
+        `;
+
+        await sqlConnection.execute(updateQuery, {
+          id,
+          name: name || '',
+          isOEM: isOEM ? 1 : 0,
+          email: email || null,
+          phone: phone || null,
+          user: 'system'
+        });
+        
+        console.log('[SQL Server] Customer updated:', id);
+        return { success: true, id, name };
+      }
+    } catch (sqlError) {
+      console.warn('[IPC] SQL Server failed, using fallback:', sqlError.message);
+    }
+
+    // Fallback to settings.json
+    const settings = await readJSONFile('settings.json') || {};
+    const customCustomerData = settings.customCustomers ? JSON.parse(settings.customCustomers) : {};
     
-    // Only allow updating custom customers
     if (!customCustomerData[id]) {
-      throw new Error('Cannot update default customer')
+      throw new Error('Cannot update default customer');
     }
     
-    customCustomerData[id] = name
-    settings.customCustomers = JSON.stringify(customCustomerData)
+    customCustomerData[id] = name;
+    settings.customCustomers = JSON.stringify(customCustomerData);
+    await writeJSONFile('settings.json', settings);
     
-    await writeJSONFile('settings.json', settings)
-    return { id, name }
+    console.log('[Settings] Customer updated (fallback):', id);
+    return { id, name };
   } catch (err) {
-    console.error('Error updating customer:', err)
-    throw err
+    console.error('Error updating customer:', err);
+    throw err;
   }
 });
 
@@ -4465,15 +4773,19 @@ ipcMain.handle('api:get-tool-file-url', async (event, relativePath) => {
 });
 
 ipcMain.handle('api:get-logo-url', async () => {
-  const filePath = isDev 
-    ? path.join(__dirname, '..', 'public', 'Craft_Logo.png')
-    : path.join(process.resourcesPath, 'app.asar', 'dist', 'Craft_Logo.png');
-  try {
-    await fs.access(filePath);
-    return 'file://' + filePath;
-  } catch (err) {
-    console.error('Error getting logo URL:', err);
-    return '/Craft_Logo.png'; // fallback
+  if (isDev) {
+    // In development, return the Vite dev server URL
+    return 'http://localhost:5174/Craft_Logo.png';
+  } else {
+    // In production, return file:// URL
+    const filePath = path.join(process.resourcesPath, 'app.asar', 'dist', 'Craft_Logo.png');
+    try {
+      await fs.access(filePath);
+      return 'file://' + filePath;
+    } catch (err) {
+      console.error('Error getting logo URL:', err);
+      return '/Craft_Logo.png'; // fallback
+    }
   }
 });
 
@@ -5852,6 +6164,36 @@ ipcMain.handle('bom-importer:process-import', async (event, { csvContent, header
     console.error('Error processing BOM import:', err);
     return { success: false, error: err.message };
   }
+});
+
+// Database test connection handler
+ipcMain.handle('database:test-connection', async () => {
+  try {
+    const sqlConnection = (await import('../src/database/sqlConnection.js')).default;
+    const isConnected = await sqlConnection.isConnected();
+    const status = sqlConnection.getStatus();
+    
+    return {
+      connected: isConnected,
+      status: status,
+      server: '192.168.1.150\\SQLEXPRESS',
+      database: 'CraftCPQ',
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+});
+
+// Graceful SQL Server shutdown
+app.on('before-quit', async () => {
+  console.log('🛑 Shutting down SQL Server connection...');
+  await shutdownSqlServer();
+  console.log('✅ SQL Server connection closed');
 });
 
 

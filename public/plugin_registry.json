@@ -14,6 +14,20 @@
     "icon": "Hash"
   },
   {
+    "id": "assembly-io-builder",
+    "title": "Assembly I/O Builder",
+    "path": "/assembly-io-builder",
+    "description": "Create assemblies with I/O field configuration (DI, DO, AI, AO)",
+    "icon": "Layers"
+  },
+  {
+    "id": "assembly-manager",
+    "title": "Assembly Manager",
+    "path": "/assembly-manager",
+    "description": "Build, edit, and manage reusable assembly 'kits' (Legacy)",
+    "icon": "Package"
+  },
+  {
     "id": "sub-assembly-manager",
     "title": "Sub-Assembly Manager",
     "path": "/sub-assembly-manager",
@@ -54,6 +68,20 @@
     "path": "/margin-calc",
     "description": "Forward/reverse margin and price calculations",
     "icon": "Calculator"
+  },
+  {
+    "id": "quote-configurator",
+    "title": "Quote Configurator",
+    "path": "/quote-configurator",
+    "description": "Configure quotes, pricing, and BOMs",
+    "icon": "FileText"
+  },
+  {
+    "id": "project-manager",
+    "title": "Project Manager",
+    "path": "/project-manager",
+    "description": "Track projects and quote lifecycle",
+    "icon": "LayoutDashboard"
   },
   {
     "id": "manual-bom-builder",

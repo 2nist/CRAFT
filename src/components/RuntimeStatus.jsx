@@ -44,7 +44,7 @@ export default function RuntimeStatus() {
 
   return (
     <div className="ca-tab-panel">
-      <h3 className="ca-stat-title">Runtime / NAS Status</h3>
+      <h3 className="ca-stat-title">Runtime Status</h3>
       {loading && <div>Loading…</div>}
       {!loading && status && (
         <div className="mt-2">
@@ -56,7 +56,7 @@ export default function RuntimeStatus() {
 
       <div className="mt-4 flex gap-2">
         <button className="btn ca-btn" onClick={fetchStatus}>Refresh</button>
-        <button className="btn ca-btn-outline" onClick={runDiagnostics}>Run NAS Diagnostics</button>
+        <button className="btn ca-btn-outline" onClick={runDiagnostics}>Run Diagnostics</button>
       </div>
 
       {diagnostics && (
